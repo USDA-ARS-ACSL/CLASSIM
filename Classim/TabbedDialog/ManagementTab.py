@@ -1,0 +1,170 @@
+from PyQt5 import QtSql, QtCore
+from PyQt5.QtWidgets import QTreeWidgetItem, QTextEdit, QWidget, QLabel, QHBoxLayout, QListWidget, QTableWidget, QVBoxLayout, QSpacerItem, QSizePolicy
+from PyQt5.QtCore import pyqtSlot
+from CustomTool.custom1 import *
+from CustomTool.UI import *
+from DatabaseSys.Databasesupport import *
+from Models.cropdata import *
+from TabbedDialog.tableWithSignalSlot import *
+
+class ItemWordWrap(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None):
+        QtWidgets.QStyledItemDelegate.__init__(self, parent)
+        self.parent = parent
+
+
+    def paint(self, painter, option, index):
+        text = index.model().data(index) 
+        #print("text=", text)                
+        document = QtGui.QTextDocument() 
+        document.setHtml(text) 
+        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
+        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
+        painter.setPen(QtGui.QPen(Qt.green))        
+        painter.save() 
+        painter.translate(option.rect.x(), option.rect.y())         
+        document.drawContents(painter)  #draw the document with the painter        
+        painter.restore() 
+
+
+    def sizeHint(self, option, index):
+        #Size should depend on number of lines wrapped
+        text = index.model().data(index)
+        document = QtGui.QTextDocument()
+        document.setHtml(text) 
+        width = index.model().data(index, QtCore.Qt.UserRole+1)
+        if not width:
+            width = 20
+        document.setTextWidth(width) 
+        return QtCore.QSize(document.idealWidth() + 10,  document.size().height())
+
+
+#this is widget of type 1. It would be added to as a tab
+class ManagementTab_Widget(QWidget):
+    def __init__(self):
+        super(ManagementTab_Widget,self).__init__()
+        self.init_ui()
+
+
+    def init_ui(self):
+        self.setGeometry(QtCore.QRect(10,20,700,700))
+        self.setFont(QtGui.QFont("Calibri",10)) 
+        self.faqtree = QtWidgets.QTreeWidget(self)   
+        self.faqtree.setHeaderLabel('FAQ')     
+        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setUniformRowHeights(False)
+        self.faqtree.setWordWrap(True)
+        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+        self.importfaq("management")              
+        self.faqtree.header().resizeSection(1,200)       
+        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree)) # Sush:Important for word wrap
+        self.faqtree.setVisible(False)
+
+        self.mainlayout1 = QGridLayout()          
+        self.vl1 = QVBoxLayout()    
+        
+        header5 = ["Crop(s)/Experiment(s)/ Treatment(s)/Operation(s)"]  
+        self.tab_summary = QTextEdit("Crop management is a 4 step process and is implemented in a panel \
+below. This panel occasionally opens up another panel on its right side to collect supplement but \
+necessary inputs. Process begins by A).Clicking the CROP to be managed, B). ADD NEW Experiment by giving \
+it a broader categorical name like `Summer2018`. C). Experiment is further defined by ADD NEW Treatment \
+plan by giving it treatment specific name. Note EXPERIMENT can have multiple treatments plans like `With \
+Fertilizer`, `Without Fertilizer`. D). Defining the treatment individual OPERATION(S) by listing \
+operation, date of operation, operation specific parameters and crop cultivar.")
+        self.tab_summary.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.tab_summary.setReadOnly(True)   
+        
+        self.tab_summary.setMaximumHeight(80)    
+        self.tab_summary.setAlignment(QtCore.Qt.AlignTop)     
+        # no scroll bars
+        self.tab_summary.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.tab_summary.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.tab_summary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # horizontal, vertical
+        self.tab_summary.setFrameShape(QtWidgets.QFrame.NoFrame)
+
+        self.helpcheckbox = QCheckBox("Turn FAQ on?")
+        self.helpcheckbox.setChecked(False)
+        self.helpcheckbox.stateChanged.connect(self.controlfaq)
+        
+        # adding loader value. This will control if "Add Experiment/ Add Treatment/ Add Operation" should be added or not
+        self.treeWidget = TreeOfTableWidget("crop", "sitedetails", 1, ',', 2, parent=None)
+
+        # View/ViewWidget has drag-drop facilities set here. Model also needs some of the flags checked 
+        # in order for this to work.
+        self.treeWidget.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.treeWidget.setDragEnabled(True)
+        self.treeWidget.viewport().setAcceptDrops(True)
+        self.treeWidget.setAcceptDrops(True)
+        self.treeWidget.setDragDropMode(QAbstractItemView.InternalMove)
+        self.treeWidget.setDropIndicatorShown(True)
+
+        self.treeWidget.model().headers = header5
+        self.treeWidget.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.treeWidget.header().setStretchLastSection(True)
+        
+        # hide the treeWidget extra columns
+        for column in range(1,self.treeWidget.model().columnCount(QModelIndex())):
+            self.treeWidget.setColumnHidden(column,True)
+                
+        self.test1 = Tabless_Widget()
+        self.test1.sitetable1.setVisible(False) 
+        ccstatus = self.test1.make_connection_2_tree(self.treeWidget)
+        ccstatus2 = self.treeWidget.make_connection_2_table(self.test1)
+
+        if ccstatus:
+            self.test1.reset()
+
+        if ccstatus2:
+            self.treeWidget.reset()
+
+        self.gl = QGridLayout()
+        self.gl.setSpacing(1)
+        # tree view
+        self.vl1.addWidget(self.tab_summary)        
+        self.vl1.addWidget(self.helpcheckbox)
+        
+        self.spacer = QSpacerItem(10,10, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.hl1 = QHBoxLayout()
+        self.hl1.addWidget(self.treeWidget)
+        self.hl1.addWidget(self.test1.sitetable1)
+        self.vl1.addLayout(self.hl1)
+        self.vl1.addItem(self.spacer)
+        self.mainlayout1.addLayout(self.vl1,0,0,10,2)
+        self.mainlayout1.addWidget(self.faqtree,0,3)
+        self.mainlayout1.setColumnStretch(0,3)
+        self.setLayout(self.mainlayout1) 
+        self.show()
+
+
+    def fresh(self):
+        self.test1.sitetable1.clear()
+        self.test1.sitetable1.reset()
+        self.test1.setVisible(False)
+        self.test1.sitetable1.hide()
+        print("Debug: Process coming here")
+
+
+    def make_connection(self,tableWithSignalSlot_object):
+        print("$$$$$$$$$$$$ debug coming here in Tab1.py, calling fresh")
+        if self.test1.sig2 == 3:
+            print("************** debug coming here in Tab1.py, calling fresh")
+            tableWithSignalSlot_object.sig2.connect(self.fresh)
+
+
+    def importfaq(self, thetabname=None):        
+        #faqlist = read_FaqDB() 
+        faqlist = read_FaqDB(thetabname) 
+        faqcount=0
+        for item in faqlist:
+            roottreeitem = QTreeWidgetItem(self.faqtree)
+            roottreeitem.setText(0,item[2])
+            childtreeitem = QTreeWidgetItem()
+            childtreeitem.setText(0,item[3])
+            roottreeitem.addChild(childtreeitem)
+
+
+    def controlfaq(self):                
+        if self.helpcheckbox.isChecked():
+            self.faqtree.setVisible(True)
+        else:
+            self.faqtree.setVisible(False)
