@@ -193,7 +193,8 @@ $RECYCLE.BIN/
 #############
 ## Python
 #############
-Classim/__pycache__
+
+**/__pycache__/
 *.py[co]
 
 # Packages
