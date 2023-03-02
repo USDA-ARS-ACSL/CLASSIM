@@ -1,13 +1,17 @@
-# -*- mode: python -*-
+# -*- mode: python -*- 
 import sys
 sys.setrecursionlimit(5000)
 block_cipher = None
 
 options =[]
-a = Analysis(['crop_int.py'],
-             pathex=[],
+added_files= [
+   ('.\\images\\*.png','images'),
+   ('.\\images\\*.ico','images')
+   ]
+a = Analysis(['classim.py'],
+             pathex=["/%userprofile%/AppData/Local/conda/conda/envs/Classim22/Library/bin"],
              binaries=[],
-             datas=[('.\\images\\*.png','images')],
+             datas=added_files,
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -24,7 +28,7 @@ exe = EXE(pyz,
           [],
 	  exclude_binaries=True,
           name='CLASSIM',
-          version='crop_int.rc',
+          version='classim.rc',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

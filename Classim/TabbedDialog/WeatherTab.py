@@ -5,10 +5,11 @@ import pandas as pd
 import dateparser as dp
 import ssl
 import time
-from dateutil import parser
+import urllib.request
 from PyQt5 import QtSql, QtCore, QtGui
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, QSizePolicy, QRadioButton, QButtonGroup, \
-                            QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QComboBox, \
+                            QVBoxLayout, QPushButton, QSizePolicy, QRadioButton, QButtonGroup, \
+                            QMessageBox, QFileDialog, QScrollArea
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -17,10 +18,11 @@ from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from functools import partial
 from datetime import datetime, timedelta
+from dateutil import parser
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'crop_int')
+dbDir = os.path.join(gparent_dir,'classim_v3')
 if not os.path.exists(dbDir):
     os.makedirs(dbDir)
 
@@ -30,19 +32,14 @@ db = dbDir+'\\crop.db'
 ssl._create_default_https_context = ssl._create_unverified_context
 
 '''
-Contains 3 classes.
-1). Class GrowingTextEdit. Trying to make textbox height adjust with the content. Can be modified/replaced down the road. Lower 
-    priority.
-2). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the tab classes. In 
+Contains 2 classes.
+1). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the tab classes. In 
     future,we can centralize it. Lower priority.
-3). Class Weather_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. 
+2). Class Weather_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. 
     It handles all the features of Weather Tab on the interface. It has signal slot mechanism. It does interact with the 
     DatabaseSys\Databasesupport.py for all the databases related task.
     Pretty generic and self explanotory methods. 
     Refer baseline classes at http://pyqt.sourceforge.net/Docs/PyQt5/QtWidgets.html#PyQt5-QtWidgets
-
-    Tab screen is divided into 2 main panels. Left panel does the heavy lifting and interacts with user. Right panel is mainly 
-    for frequently asked questions (FAQ) stored in sqlite table "Faq".
 '''
 class ItemWordWrap(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -63,17 +60,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.translate(option.rect.x(), option.rect.y())         
         document.drawContents(painter)  #draw the document with the painter        
         painter.restore() 
-
-
-    def sizeHint(self, option, index):
-        text = index.model().data(index)
-        document = QtGui.QTextDocument()
-        document.setHtml(text) 
-        width = index.model().data(index, QtCore.Qt.UserRole+1)
-        if not width:
-            width = 20
-        document.setTextWidth(width) 
-        return QtCore.QSize(document.idealWidth() + 10,  document.size().height())
 
 
 class Weather_Widget(QWidget):
@@ -97,7 +83,8 @@ class Weather_Widget(QWidget):
         self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit()        
-        self.tab_summary.setPlainText("Here we control conversion factors, average values, on/off switches, statistical generation of weather inputs depending upon data availabilty from measurements.") 
+        self.tab_summary.setPlainText("This tab allows to add or update a weather station. A weather station can have more than one weather data, if you are uploading a weather file and you don't want this data to have the same weather_id as the weather station name, \
+please provide a column named weather_id with the identifier you want.  For sites within the US territory there is an option to download hourly data for the past 5 years. This data is from NLDAS and MRMS databases (NASA and NOAA administrations respectively).") 
         self.tab_summary.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.tab_summary.setReadOnly(True)  
         self.tab_summary.setMinimumHeight(10)    
@@ -109,7 +96,7 @@ class Weather_Widget(QWidget):
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
-       
+
         self.mainlayout = QGridLayout()
         self.spacer = QSpacerItem(10,10, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.vHeader = QVBoxLayout()
@@ -120,21 +107,24 @@ class Weather_Widget(QWidget):
 
         ## Setting up the form elements    
         stationtypelists = read_weather_metaDB()
-        self.stationtypelistlabel = QLabel("Station Type:")
+        self.stationtypelistlabel = QLabel("Station")
         self.stationtypecombo = QComboBox()        
         self.stationtypelistlabel.setBuddy(self.stationtypecombo)
         self.stationtypecombo.addItem("Select from list")
-        self.stationtypecombo.addItem("Add New Station Type")
+        self.stationtypecombo.addItem("Add New Station Name")
         for id in sorted(stationtypelists, key = lambda i: (stationtypelists[i])):            
             self.stationtypecombo.addItem(stationtypelists[id])
-        self.stationtypecombo.currentIndexChanged.connect(self.showweatherdetailscombo)
-        self.stationtypecombo.update()
+        self.stationtypecombo.currentIndexChanged.connect(self.showweatherdetailscombo,self.stationtypecombo.currentIndex())
 
         self.sitelabel = QLabel("Site")
         self.sitecombo = QComboBox()        
         self.sitecombo.addItem("Select from list")
 
+        scroll = QScrollArea(widgetResizable=True)
         self.weathersummarylabel = QLabel("")
+        scroll.setWidget(self.weathersummarylabel)
+        self.scrollWeatherSummary = QVBoxLayout()
+        self.scrollWeatherSummary.addWidget(scroll)
         self.avgwindlabel = QLabel("Average Wind (Km/h)")
         self.avgwindedit = QLineEdit("")
         self.avgrainratelabel = QLabel("Average Rain Rate (cm)")
@@ -150,7 +140,7 @@ class Weather_Widget(QWidget):
         self.downloadwflabel = QLabel("Download Weather Data (last 5 years)")
         self.buttonDownload = QPushButton("Download Data")
         self.buttonDownload.clicked.connect(self.downloadWeatherData)
-        self.stationtypelabel = QLabel("Station Type")
+        self.stationtypelabel = QLabel("Station Name")
         self.stationtypeedit = QLineEdit("")
         self.weatherbutton = QPushButton("Save")
         self.weatherdeletebutton = QPushButton("Delete")
@@ -173,7 +163,7 @@ class Weather_Widget(QWidget):
         self.mainlayout.addWidget(self.buttonUpload,7,1)
         self.mainlayout.addWidget(self.downloadwflabel,8,0)
         self.mainlayout.addWidget(self.buttonDownload,8,1)
-        self.mainlayout.addWidget(self.weathersummarylabel,9,0,1,4)
+        self.mainlayout.addLayout(self.scrollWeatherSummary,9,0,1,4)
         self.mainlayout.addWidget(self.stationtypelabel,10,0)
         self.mainlayout.addWidget(self.stationtypeedit,10,1)
         self.mainlayout.addWidget(self.weatherbutton,10,2)
@@ -200,6 +190,19 @@ class Weather_Widget(QWidget):
         self.setLayout(self.mainlayout) 
 
 
+    def convertDate(row):
+        try:
+            return parser.parse(row['date'])
+        except ValueError:
+            try:
+                return parser.parse(row['date'], dayfirst=True)
+            except ValueError:
+                try:
+                    return datetime.strptime(row['date'], '%Y-%d-%b')
+                except:
+                    return row['date']
+
+
     def checkWeatherBySite(self,siteIndex):
         siteName = str(self.sitecombo.currentText())
         if siteName == "":
@@ -217,144 +220,167 @@ class Weather_Widget(QWidget):
 
 
     def showweatherdetailscombo(self,value):
-        self.sitelabel.setVisible(False)
-        self.sitecombo.setVisible(False)
-        self.avgwindlabel.setVisible(False)
-        self.avgwindedit.setVisible(False)
-        self.avgrainratelabel.setVisible(False)
-        self.avgrainrateedit.setVisible(False)
-        self.avgco2label.setVisible(False)
-        self.avgco2edit.setVisible(False)
-        self.chemclabel.setVisible(False)
-        self.chemcedit.setVisible(False)
-        self.uploadwflabel.setVisible(False)
-        self.buttonUpload.setVisible(False)
-        self.downloadwflabel.setVisible(False)
-        self.buttonDownload.setVisible(False)
-        self.weathersummarylabel.setVisible(False)
-        self.stationtypelabel.setVisible(False)
-        self.stationtypeedit.setVisible(False)
-        self.weatherbutton.setVisible(False)
-        self.weatherdeletebutton.setVisible(False)
-        value=self.stationtypecombo.currentIndex()        
-
-        if self.stationtypecombo.itemText(value) == "Select from list":
-            return True
-
-        self.sitelists = read_sitedetailsDB()
-        self.sitecombo.clear()
-        self.sitecombo.addItem("")
-        for item in sorted(self.sitelists):            
-            self.sitecombo.addItem(item)
-
-        self.sitelabel.setVisible(True)
-        self.sitecombo.setVisible(True)
-        self.avgwindlabel.setVisible(True)
-        self.avgwindedit.setVisible(True)
-        self.avgrainratelabel.setVisible(True)
-        self.avgrainrateedit.setVisible(True)
-        self.avgco2label.setVisible(True)
-        self.avgco2edit.setVisible(True)
-        self.chemclabel.setVisible(True)
-        self.chemcedit.setVisible(True)
-        self.uploadwflabel.setVisible(True)
-        self.buttonUpload.setVisible(True)
-        self.weatherbutton.setVisible(True)
-
-        stationtype = str(self.stationtypecombo.currentText())
-        if stationtype ==  "Add New Station Type":
-            self.sitecombo.currentIndexChanged.connect(self.checkWeatherBySite,self.sitecombo.currentIndex())
-            self.weathersummarylabel.setText("")
-            self.avgwindedit.setText("")
-            self.avgrainrateedit.setText("")
-            self.avgco2edit.setText("")
-            self.chemcedit.setText("")
-            self.stationtypeedit.setText("")
-            self.stationtypelabel.setVisible(True)
-            self.stationtypeedit.setVisible(True)
-            self.weatherbutton.setText("SaveAs")
-            self.sitecombo.setEnabled(True)
-        else:
-            weathertuple = read_weatherlongDB(stationtype)  
+        if self.stationtypecombo.itemText(self.stationtypecombo.currentIndex()) == "Select from list" or \
+            self.stationtypecombo.itemText(self.stationtypecombo.currentIndex()) == "":
+            self.sitelabel.setVisible(False)
+            self.sitecombo.setVisible(False)
+            self.avgwindlabel.setVisible(False)
+            self.avgwindedit.setVisible(False)
+            self.avgrainratelabel.setVisible(False)
+            self.avgrainrateedit.setVisible(False)
+            self.avgco2label.setVisible(False)
+            self.avgco2edit.setVisible(False)
+            self.chemclabel.setVisible(False)
+            self.chemcedit.setVisible(False)
+            self.uploadwflabel.setVisible(False)
+            self.buttonUpload.setVisible(False)
+            self.downloadwflabel.setVisible(False)
+            self.buttonDownload.setVisible(False)
+            self.weathersummarylabel.setVisible(False)
             self.stationtypelabel.setVisible(False)
             self.stationtypeedit.setVisible(False)
-            self.sitecombo.setEnabled(False)
-            self.weatherbutton.setText("Update")
-            if Weather_Widget.checkWeather(stationtype):
-                self.downloadwflabel.setVisible(True)
-                self.buttonDownload.setVisible(True)
+            self.weatherbutton.setVisible(False)
+            self.weatherdeletebutton.setVisible(False)
+        else:
+            self.sitelists = read_sitedetailsDB()
+            self.sitecombo.clear()
+            self.sitecombo.addItem("Select from list")
+            for item in sorted(self.sitelists):            
+                if item != "Generic Site":
+                    self.sitecombo.addItem(item)
 
-            self.avgwindedit.setText(str(weathertuple[7]))
-            self.avgrainrateedit.setText(str(weathertuple[8]))
-            self.chemcedit.setText(str(weathertuple[9]))
-            self.avgco2edit.setText(str(weathertuple[10]))
-            self.sitecombo.setCurrentIndex(self.sitecombo.findText(str(weathertuple[12])))
+            self.sitelabel.setVisible(True)
+            self.sitecombo.setVisible(True)
+            self.avgwindlabel.setVisible(True)
+            self.avgwindedit.setVisible(True)
+            self.avgrainratelabel.setVisible(True)
+            self.avgrainrateedit.setVisible(True)
+            self.avgco2label.setVisible(True)
+            self.avgco2edit.setVisible(True)
+            self.chemclabel.setVisible(True)
+            self.chemcedit.setVisible(True)
+            self.uploadwflabel.setVisible(True)
+            self.buttonUpload.setVisible(True)
+            self.weatherbutton.setVisible(True)
+
+            stationtype = str(self.stationtypecombo.itemText(self.stationtypecombo.currentIndex()))
+            if stationtype ==  "Add New Station Name":
+                self.sitecombo.currentIndexChanged.connect(self.checkWeatherBySite,self.sitecombo.currentIndex())
+                self.weathersummarylabel.setText("")
+                self.avgwindedit.setText("")
+                self.avgrainrateedit.setText("")
+                self.avgco2edit.setText("")
+                self.chemcedit.setText("")
+                self.stationtypeedit.setText("")
+                self.stationtypelabel.setVisible(True)
+                self.stationtypeedit.setVisible(True)
+                self.weatherbutton.setText("SaveAs")
+                self.sitecombo.setEnabled(True)
+            else:
+                weathertuple = read_weatherlongDB(stationtype)  
+                self.stationtypelabel.setVisible(False)
+                self.stationtypeedit.setVisible(False)
+                self.sitecombo.setEnabled(False)
+                self.weatherbutton.setText("Update")
+                if Weather_Widget.checkWeather(stationtype):
+                    self.downloadwflabel.setVisible(True)
+                    self.buttonDownload.setVisible(True)
+
+                self.avgwindedit.setText(str(weathertuple[7]))
+                self.avgrainrateedit.setText(str(weathertuple[8]))
+                self.chemcedit.setText(str(weathertuple[9]))
+                self.avgco2edit.setText(str(weathertuple[10]))
+                self.sitecombo.setCurrentIndex(self.sitecombo.findText(str(weathertuple[12])))
         
-            self.weatherSummary = Weather_Widget.getWeatherSummary(stationtype)
-            self.weathersummarylabel.setText(self.weatherSummary)
-            self.weathersummarylabel.setVisible(True)
-            site = str(self.sitecombo.currentText())
-            self.weatherdeletebutton.setVisible(True)
-            self.weatherdeletebutton.clicked.connect(self.on_weatherdeletebuttonclick)
-        self.weatherbutton.clicked.connect(lambda:self.on_weatherbuttonclick(stationtype))
+                self.weatherSummary = Weather_Widget.getWeatherSummary(stationtype)
+                self.weathersummarylabel.setText(self.weatherSummary)
+                self.weathersummarylabel.setVisible(True)
+                site = str(self.sitecombo.currentText())
+                self.weatherdeletebutton.setVisible(True)
+                self.weatherdeletebutton.clicked.connect(self.on_weatherdeletebuttonclick)
+            self.weatherbutton.clicked.connect(lambda:self.on_weatherbuttonclick(stationtype))
 
 
     def getWeatherSummary(stationtype):
         # getting weather data from sqlite
-        conn = sqlite3.connect(db)  
+        conn, c = openDB(db)
+        if c:
+            weather_query = "select weather_id, date, hour, srad, wind, rh, rain, tmax, tmin, temperature from weather_data where stationtype=?" 
+            df_weatherdata = pd.read_sql(weather_query,conn,params=[stationtype]) 
+            weatherSummary = stationtype + " Data Availability Report"
+            if df_weatherdata.empty:
+                weatherSummary += "<br>No data available.<br>"
+            else:
+                # Convert date column to Date type
+                df_weatherdata['date'] = pd.to_datetime(df_weatherdata.date)
+                df_weatherdata = df_weatherdata.sort_values(by='date')
+                nan_value = float("NaN")
+                df_weatherdata.replace("", nan_value, inplace=True)
+                df_weatherdata = df_weatherdata.groupby('weather_id').agg({'date':['min','max'],
+                                                                           'srad':['min','max'],
+                                                                           'wind':['min','max'],
+                                                                           'rh':['min','max'],
+                                                                           'rain':['min','max'],
+                                                                           'tmax':['min','max'],
+                                                                           'tmin':['min','max'],
+                                                                           'temperature':['min','max']})
+                df_weatherdata.dropna(how='all', axis=1, inplace=True)
+                df_weatherdata = df_weatherdata.reset_index()
+                weatherSummary = df_weatherdata.to_html(index=False,justify="left")
 
+            return weatherSummary
+
+
+    def checkWeatherData(df_weatherdata):
         date = []
         sdate = []
         edate = []
-        weather_query = "select weather_id, date, hour, srad, tmax, tmin, temperature, rain, wind, rh, co2 from weather_data where weather_id = ?" 
-        df_weatherdata = pd.read_sql(weather_query,conn,params=[stationtype]) 
-        weatherSummary = stationtype + " Data Availability Report"
-        if len(df_weatherdata.index) == 0:
-            weatherSummary += "<br>No data available.<br>"
-        else:
-            # Convert date column to Date type
-            df_weatherdata['date'] = pd.to_datetime(df_weatherdata.date)
-            df_weatherdata = df_weatherdata.sort_values(by='date')
-            date = df_weatherdata.date.tolist()
-            sdate.append(date[0])
-            for i in range(1, len(date)):
-                if((date[i] != date[i-1]) and (date[i] != date[i-1] + timedelta(days=1))):
-                    edate.append(date[i-1])
-                    sdate.append(date[i])
-            edate.append(date[len(date)-1])
 
-            for sdt, edt in zip(sdate, edate):
-                df_weatherSeg = df_weatherdata.loc[(df_weatherdata.date >= sdt) & (df_weatherdata.date <= edt)]
-                startDate = sdt.strftime("%m/%d/%Y")
-                endDate = edt.strftime("%m/%d/%Y")
-                weatherSummary += "<br><i>Start Date:</i> " + startDate + "        <i>End Date:</i>" + endDate + "<br>"
+        df_weatherdata['date'] = pd.to_datetime(df_weatherdata.date)
+        df_weatherdata = df_weatherdata.sort_values(by='date')
+        if not 'hour' in df_weatherdata:
+            df_weatherdata['hour'] = pd.to_datetime(df_weatherdata['date']).dt.strftime('%H')
+        date = df_weatherdata.date.tolist()
+        sdate.append(date[0])
+        for i in range(1, len(date)):
+            if((date[i] != date[i-1]) and (date[i] != date[i-1] + timedelta(days=1))):
+                edate.append(date[i-1])
+                sdate.append(date[i])
+        edate.append(date[len(date)-1])
 
-                if df_weatherSeg['hour'].isna().sum() > 0:
-                    weatherSummary += "Daily data. " + str(df_weatherSeg['date'].count()) + " records read.<br>"
-                    if df_weatherSeg['tmax'].isna().sum() > 0:
-                        weatherSummary += str(df_weatherSeg['tmax'].isna().sum()) + " records missing for maximum temperature.<br>"
+        weatherSummary = ""
+        for sdt, edt in zip(sdate, edate):
+            df_weatherSeg = df_weatherdata.loc[(df_weatherdata.date >= sdt) & (df_weatherdata.date <= edt)]
+            startDate = sdt.strftime("%m/%d/%Y")
+            endDate = edt.strftime("%m/%d/%Y")
+            weatherSummary += "<br><i>Start Date:</i> " + startDate + "        <i>End Date:</i>" + endDate + "<br>"
 
-                    if df_weatherSeg['tmin'].isna().sum() > 0:
-                        weatherSummary += str(df_weatherSeg['tmin'].isna().sum()) + " records missing for minimum temperature.<br>"
-                else:
-                    weatherSummary += "Hourly data. " + str(df_weatherSeg['date'].count()) + " records read.<br>"
-                    if df_weatherSeg['temperature'].isnull().sum() > 0:
-                        weatherSummary += str(df_weatherSeg['temperature'].isnull().sum()) + " records missing for temperature.<br>"
+            if df_weatherSeg['hour'].isna().sum() > 0:
+                weatherSummary += "Daily data. " + str(df_weatherSeg['date'].count()) + " records read.<br>"
+                if df_weatherSeg['tmax'].isna().sum() > 0:
+                    weatherSummary += str(df_weatherSeg['tmax'].isna().sum()) + " records missing for maximum temperature.<br>"
 
-                if df_weatherSeg['srad'].isna().sum() > 0:
-                    weatherSummary += str(df_weatherSeg['srad'].isna().sum()) + " records missing for solar radiation.<br>"
+                if df_weatherSeg['tmin'].isna().sum() > 0:
+                    weatherSummary += str(df_weatherSeg['tmin'].isna().sum()) + " records missing for minimum temperature.<br>"
+            else:
+                weatherSummary += "Hourly data. " + str(df_weatherSeg['date'].count()) + " records read.<br>"
+                if df_weatherSeg['temperature'].isnull().sum() > 0:
+                    weatherSummary += str(df_weatherSeg['temperature'].isnull().sum()) + " records missing for temperature.<br>"
 
-                if df_weatherSeg['rain'].isna().sum() > 0:
-                    weatherSummary += str(df_weatherSeg['rain'].isna().sum()) + " records missing for rain.<br>"
+            if df_weatherSeg['srad'].isna().sum() > 0:
+                weatherSummary += str(df_weatherSeg['srad'].isna().sum()) + " records missing for solar radiation.<br>"
 
-                if df_weatherSeg['wind'].isna().sum() > 0:
-                    weatherSummary += str(df_weatherSeg['wind'].isna().sum()) + " records missing for wind speed..<br>"
+            if df_weatherSeg['rain'].isna().sum() > 0:
+                weatherSummary += str(df_weatherSeg['rain'].isna().sum()) + " records missing for rain.<br>"
 
-                if df_weatherSeg['rh'].isna().sum() > 0:
-                    weatherSummary += str(df_weatherSeg['rh'].isna().sum()) + " records missing for relative humidity.<br>"
+            if df_weatherSeg['wind'].isna().sum() > 0:
+                weatherSummary += str(df_weatherSeg['wind'].isna().sum()) + " records missing for wind speed.<br>"
 
-                if df_weatherSeg['co2'].isna().sum() > 0:
-                    weatherSummary += str(df_weatherSeg['co2'].isna().sum()) + " records missing for CO2.<br>"
+            if df_weatherSeg['rh'].isna().sum() > 0:
+                weatherSummary += str(df_weatherSeg['rh'].isna().sum()) + " records missing for relative humidity.<br>"
+
+            if df_weatherSeg['co2'].isna().sum() > 0:
+                weatherSummary += str(df_weatherSeg['co2'].isna().sum()) + " records missing for CO2.<br>"
 
         return weatherSummary
 
@@ -364,7 +390,7 @@ class Weather_Widget(QWidget):
         if self.weatherbutton.text() == "SaveAs":
             stationType = self.stationtypeedit.text()
             if (self.stationtypeedit.text() == ""):
-                messageUser("Station type is empty. Please, type a station type name.")
+                messageUser("Station Name is empty. Please, type a Station Name name.")
                 return False
         else:
             stationType = str(self.stationtypecombo.itemText(self.stationtypecombo.currentIndex()))
@@ -410,38 +436,26 @@ class Weather_Widget(QWidget):
             ingest_flag = messageUserIngest(out)
             if ingest_flag:
                 site = str(self.sitecombo.currentText())
-
-                data['date'] = data['date'].map(lambda date: dp.parse(str(date)))
+#                data['date'] = data['date'].map(lambda date: dp.parse(str(date),date_formats=['%d/%m/%Y','%m/%d/%Y']))
+                data['date'] = data.apply(lambda row: Weather_Widget.convertDate(row), axis=1)
+                print(data['date'])
                 if not 'hour' in data:
                     data['hour'] = pd.to_datetime(data['date']).dt.strftime('%H')
-                data['jday'] = pd.to_datetime(data['jday']).dt.strftime('%j')
-                data['date'] = pd.to_datetime(data['date']).dt.strftime('%d%b%Y').str.upper()
+                if not 'jday' in data:
+                    data['jday'] = pd.to_datetime(data['date']).dt.strftime('%j')
+                dateList = pd.to_datetime(data['date'])
 
-                conn = sqlite3.connect(dbDir + '\\crop.db') 
-                c = conn.cursor()
-                if not c:
-                    print("database not open")
-                    return False
+                conn, c = openDB(dbDir + '\\crop.db')
 
                 # Check if data already exists in the database for stationType for this date range
-                dateList = data['date']
                 minDate = min(dateList)
                 maxDate = max(dateList)
 
-                query = "select * from weather_data where site='" + site + "' and weather_id='" + stationType + \
-                        "' and date>='" + minDate + "' and date<='" + maxDate + "'"
-                c1 = c.execute(query) 
-                c1_row = c1.fetchone()
-                if not c1_row == None:  # means data already exist
-                    message = "There is already data for this site and weather type for this date range.  Would you like to replace this data?"
-                    ingest_flag2 = messageUserIngest(message)
-                    if not ingest_flag2:
-                        return False
-                    else:
-                        queryDel = "DELETE FROM weather_data where site='" + site + "' and weather_id='" + stationType + \
-                        "' and date>='" + minDate + "' and date<='" + maxDate + "'"
-                        c.execute(queryDel)
-                        conn.commit()
+                # Check id weather_id is a column on the file, if not create column
+                if not 'weather_id' in data:
+                    weather_id = stationType
+                    data['weather_id'] = stationType
+                weather_ids = "','".join(data['weather_id'].unique().tolist())
 
                 # list of database fields on weather_data table
                 dbColumns = ['weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']
@@ -450,24 +464,49 @@ class Weather_Widget(QWidget):
                     if col not in dbColumns:
                         data.drop(col, axis=1, inplace=True)
 
-                data['site'] = site
-                data['weather_id'] = stationType
- 
+                data['stationtype'] = stationType
+
                 # Time to create the columns that are missing
                 for col in dbColumns:
                     if col not in data.columns:
                         data[col] = ''
 
-                data = data[['site', 'weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']]
+                data = data[['stationtype', 'weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']]
                 numRec = data.shape[0]
                 recMessage = "Number of rows ingested into database: "+ str(numRec)
-
-                data.to_sql('weather_data',conn,if_exists="append",index=False)
-                conn.close() 
-                self.weathersummarylabel.setVisible(True)
-                self.weatherSummary = Weather_Widget.getWeatherSummary(stationType)
-                self.weathersummarylabel.setText(self.weatherSummary)
-                messageUserInfo(recMessage)
+                # Before start data ingestion check if dataset is complete
+                summary = Weather_Widget.checkWeatherData(data)
+                data['date'] = pd.to_datetime(data['date']).dt.strftime('%Y-%m-%d')
+                substr = "records missing"
+                message = "<p>This weather station can't be recorded because weather data are missing.</p>"
+                # Check for string "records missing"
+                if substr in summary:
+                    message += summary
+                    messageUserInfo(message)
+                    return False
+                else:
+                    query = f"select * from weather_data where stationtype='{stationType}' and weather_id in ('{weather_ids}')\
+ and date>='{minDate}' and date<='{maxDate}'"
+                    c1 = c.execute(query) 
+                    c1_row = c1.fetchone()
+                    if not c1_row == None:  # means data already exist
+                        message = "There is already data for this station and weather type for this date range.  Would you like to replace this data?"
+                        ingest_flag2 = messageUserIngest(message)
+                        if not ingest_flag2:
+                            return False
+                        else:
+                            queryDel = f"DELETE FROM weather_data where stationtype='{stationType}' and weather_id in ('{weather_ids}')\
+ and date>='{minDate}' and date<='{maxDate}'"
+                            #print(queryDel)
+                            c.execute(queryDel)
+                            conn.commit()
+                    
+                    data.to_sql('weather_data',conn,if_exists="append",index=False)
+                    conn.close() 
+                    self.weathersummarylabel.setVisible(True)
+                    self.weatherSummary = Weather_Widget.getWeatherSummary(stationType)
+                    self.weathersummarylabel.setText(self.weatherSummary)
+                    messageUserInfo(recMessage)
 
 
     def downloadWeatherData(self):
@@ -475,7 +514,7 @@ class Weather_Widget(QWidget):
         if self.weatherbutton.text().find("SaveAs") > -1:
             sttype = self.stationtypeedit.text()
             if (sttype == ""):
-                messageUser("Station type is empty. Please, type a station type name.")
+                messageUser("Station Name is empty. Please, type a Station Name name.")
                 return False
         msgBox = QMessageBox()
         msgBox.setText("Downloading data, please wait.  New message will show how many records were recorded in the database.")
@@ -488,28 +527,34 @@ class Weather_Widget(QWidget):
         weathertuple = extract_sitedetails(site)     
         lat = str(weathertuple[1])
         lon = str(weathertuple[2])  
-        url = "https://weather.aesl.ces.uga.edu/hourly?lat="+lat+"&lon="+lon+"&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv"
-        data = pd.read_csv(url)
-        data['jday'] = data['date']
-        data['hour'] = data['date']
-        data['date'] = pd.to_datetime(data['date']).dt.strftime('%d%b%Y').str.upper()
-        data['jday'] = pd.to_datetime(data['jday']).dt.strftime('%j')
-        data['hour'] = pd.to_datetime(data['hour']).dt.strftime('%H')
+        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv"
+        #print("url=",url)
+        #if(urllib.request.urlopen(url).getcode() != 200):
+        #    messageUser("Server is not responding, please try again later.")
+        #    return False
+        data = pd.read_csv(url,storage_options={'User-Agent':'Mozilla/5.0'})
+
+        if data.empty:
+            messageUser("Data is not available at the moment, please try again later.")
+            return False
+
+        data['jday'] = pd.to_datetime(data['date']).dt.strftime('%j')
+        data['hour'] = pd.to_datetime(data['date']).dt.strftime('%H')
+        data['date'] = pd.to_datetime(data['date']).dt.strftime('%Y-%m-%d')
         data.rename(columns={"air_temperature":"temperature","relative_humidity":"rh","wind_speed":"wind","shortwave_radiation":"srad","precipitation":"rain"}, inplace=True)
         # Convert solar radiation
         data['srad'] = data['srad'] * 3600 / 1000000
+        # Convert rh to percentage
+        data['rh'] = data['rh'] * 100
+
         msgBox.close()
-        conn = sqlite3.connect(dbDir + '\\crop.db') 
-        c = conn.cursor()
-        if not c:
-            print("database not open")
-            return False
+        conn, c = openDB(dbDir + '\\crop.db')
 
         # Check if data already exists in the database for stationType for this date range
         dateList = data['date']
         minDate = min(dateList)
         maxDate = max(dateList)
-        query = "select * from weather_data where site='" + site + "' and weather_id='" + sttype + "' and date>='" + minDate + "' and date<='" + maxDate + "'"
+        query = "select * from weather_data where stationtype='" + sttype + "' and weather_id='" + sttype + "' and date>='" + minDate + "' and date<='" + maxDate + "'"
         c1 = c.execute(query) 
         c1_row = c1.fetchone()
         if not c1_row == None:  # means data already exist
@@ -518,13 +563,13 @@ class Weather_Widget(QWidget):
             if not ingest_flag2:
                 return False
             else:
-                queryDel = "DELETE FROM weather_data where site='" + site + "' and weather_id='" + sttype + "' and date>='" + minDate + "' and date<='" + maxDate + "'"
+                queryDel = "DELETE FROM weather_data where stationtype='" + sttype + "' and weather_id='" + sttype + "' and date>='" + minDate + "' and date<='" + maxDate + "'"
                 c.execute(queryDel)
                 conn.commit()
 
         # list of database fields on weather_data table
         dbColumns = ['weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']
-        data['site'] = site
+        data['stationtype'] = sttype
         data['weather_id'] = sttype
  
         # Time to create the columns that are missing
@@ -532,7 +577,7 @@ class Weather_Widget(QWidget):
             if col not in data.columns:
                 data[col] = ''
 
-        data = data[['site', 'weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']]
+        data = data[['stationtype', 'weather_id','jday', 'date', 'hour', 'srad', 'wind', 'rh', 'rain', 'tmax', 'tmin', 'temperature', 'co2']]
         numRec = data.shape[0]
         recMessage = "Number of rows ingested into database: "+ str(numRec)
         data.to_sql('weather_data',conn,if_exists="append",index=False, chunksize=200)
@@ -550,32 +595,51 @@ class Weather_Widget(QWidget):
         '''
         sttype = str(self.stationtypecombo.currentText())
         if self.weatherbutton.text() == "SaveAs":
+            if str(self.sitecombo.currentText()) == "Select from list":
+                messageUser("Please, select a site.")
+                return False             
             sttype = self.stationtypeedit.text()
             if (sttype == ""):
-                messageUser("Station type is empty. Please, type a station type name.=",sttype)
+                messageUser("Station Name is empty. Please, type a Station Name name.")
                 return False
             matchedindex = self.stationtypecombo.findText(sttype) 
             if (matchedindex > 0):
-                messageUser("Station type exist. Please use a different name")
+                messageUser("Station Name exist. Please use a different name")
                 return False
 
+        errMess = ""
         bsolar = 1000000
         btemp = 1
         atemp = 0
         bwind = 1
         bir = 1
         avgrain = Weather_Widget.FloatOrZero(self.avgrainrateedit.text())
-        if(avgrain < 0.5 or avgrain > 4):
-            messageUserInfo("Average rain rates ranges from 0.5 to 4 cm/day.")
+        avgwind = Weather_Widget.FloatOrZero(self.avgwindedit.text())
+        avgco2 = Weather_Widget.FloatOrZero(self.avgco2edit.text())
+        chem = Weather_Widget.FloatOrZero(self.chemcedit.text())
+
+        if(avgrain < 0 or avgrain > 10):
+            errMess += "- The average rain rates ranges from 0 to 10 cm/day.<br>"
+
+        if(avgwind < 0 or avgwind > 25):
+            errMess += "- The average wind ranges from 0 to 25 km/h.<br>"
+
+        if(avgco2 < 0 or avgco2 > 2000):
+            errMess += "- The average CO2 ranges from 0 to 2000 ppm.<br>"
+
+        if(chem < 0 or chem > 10):
+            errMess += "- The average content of N in rainfall ranges from 0 to 10 kg/ha.<br>"
+
+        if(errMess != ""):     
+            messageUserInfo("You might want to check the following information:<br>"+errMess)
         
-        record_tuple = (bsolar,btemp,atemp,bwind,bir,Weather_Widget.FloatOrZero(self.avgwindedit.text()),avgrain,Weather_Widget.FloatOrZero(self.chemcedit.text()),\
-                        Weather_Widget.FloatOrZero(self.avgco2edit.text()),str(self.sitecombo.currentText()),sttype)
+        record_tuple = (bsolar,btemp,atemp,bwind,bir,avgwind,avgrain,chem,avgco2,str(self.sitecombo.currentText()),sttype)
         c1 = insert_update_weather(record_tuple,self.weatherbutton.text())
         if c1:
             self.stationtypecombo.clear()        
             stationtypelists = read_weather_metaDB() 
             self.stationtypecombo.addItem("Select from list")
-            self.stationtypecombo.addItem("Add New Station Type")
+            self.stationtypecombo.addItem("Add New Station Name")
             for id in sorted(stationtypelists, key = lambda i: (stationtypelists[i])):            
                 self.stationtypecombo.addItem(stationtypelists[id])
             self.sitelabel.setVisible(False)
@@ -613,38 +677,14 @@ class Weather_Widget(QWidget):
         if delete_flag:
             c1 = delete_weather(site,stationtype)
             if c1:
-                self.stationtypecombo.clear()        
-                stationtypelists = read_weather_metaDB() 
-                self.stationtypecombo.addItem("Select from list")
-                self.stationtypecombo.addItem("Add New Station Type")
-                for id in sorted(stationtypelists, key = lambda i: (stationtypelists[i])):            
-                    self.stationtypecombo.addItem(stationtypelists[id])
-                self.sitelabel.setVisible(False)
-                self.sitecombo.setVisible(False)
-                self.avgwindlabel.setVisible(False)
-                self.avgwindedit.setVisible(False)
-                self.avgrainratelabel.setVisible(False)
-                self.avgrainrateedit.setVisible(False)
-                self.avgco2label.setVisible(False)
-                self.avgco2edit.setVisible(False)
-                self.chemclabel.setVisible(False)
-                self.chemcedit.setVisible(False)
-                self.uploadwflabel.setVisible(False)
-                self.buttonUpload.setVisible(False)
-                self.downloadwflabel.setVisible(False)
-                self.buttonDownload.setVisible(False)
-                self.weathersummarylabel.setVisible(False)
-                self.stationtypelabel.setVisible(False)
-                self.stationtypeedit.setVisible(False)
-                self.weatherbutton.setVisible(False)
-                self.weatherdeletebutton.setVisible(False)
+                self.refresh()        
             return True
         else:
             return False
 
 
     def importfaq(self, thetabname=None):        
-        faqlist = read_FaqDB(thetabname) 
+        faqlist = read_FaqDB(thetabname,'') 
         faqcount=0
         
         for item in faqlist:
@@ -670,6 +710,8 @@ class Weather_Widget(QWidget):
 
 
     def checkUS(lat,lon):
+        if lon > 180:
+            lon = lon - 360
         # US continental bounding box
         top = 49.3457868 # north lat
         left = -124.7844079 # west long
@@ -705,3 +747,33 @@ class Weather_Widget(QWidget):
         lat = weathertuple[0]
         lon = weathertuple[1]
         return Weather_Widget.checkUS(lat,lon)
+
+
+    def refresh(self):
+        self.stationtypecombo.clear()        
+        stationtypelists = read_weather_metaDB() 
+        self.stationtypecombo.addItem("Select from list")
+        self.stationtypecombo.addItem("Add New Station Name")
+        for id in sorted(stationtypelists, key = lambda i: (stationtypelists[i])):
+            if str(stationtypelists[id]) != "Generic Site":
+                self.stationtypecombo.addItem(stationtypelists[id])
+        self.sitelabel.setVisible(False)
+        self.sitecombo.setVisible(False)
+        self.avgwindlabel.setVisible(False)
+        self.avgwindedit.setVisible(False)
+        self.avgrainratelabel.setVisible(False)
+        self.avgrainrateedit.setVisible(False)
+        self.avgco2label.setVisible(False)
+        self.avgco2edit.setVisible(False)
+        self.chemclabel.setVisible(False)
+        self.chemcedit.setVisible(False)
+        self.uploadwflabel.setVisible(False)
+        self.buttonUpload.setVisible(False)
+        self.downloadwflabel.setVisible(False)
+        self.buttonDownload.setVisible(False)
+        self.weathersummarylabel.setVisible(False)
+        self.stationtypelabel.setVisible(False)
+        self.stationtypeedit.setVisible(False)
+        self.weatherbutton.setVisible(False)
+        self.weatherdeletebutton.setVisible(False)
+        return True

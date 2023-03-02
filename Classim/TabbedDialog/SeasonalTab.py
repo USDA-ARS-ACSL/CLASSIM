@@ -1,5 +1,4 @@
 import subprocess
-#import threading
 import time
 import os
 import csv
@@ -41,6 +40,8 @@ gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
 app_dir = os.path.join(gparent_dir,'classim_v3')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
+
+    print(os.listdir())
 
 global db
 db = app_dir+'\\crop.db'
@@ -96,12 +97,12 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.restore() 
 
 
-class Rotation_Widget(QWidget):
+class Seasonal_Widget(QWidget):
     # Add a signal
-    rotationUpSig = pyqtSignal(int)    
+    rotationsig = pyqtSignal(int)    
     changedValue = pyqtSignal(int)
     def __init__(self):
-        super(Rotation_Widget,self).__init__()
+        super(Seasonal_Widget,self).__init__()
         self.init_ui()
 
 
@@ -119,11 +120,10 @@ class Rotation_Widget(QWidget):
         self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
         self.faqtree.setVisible(False)
 
-        self.tab_summary = QTextEdit("To create your rotation you first need to select in this order: Site, \
-Soil, Station Name and Weather. Please, note that when you select crop, only experiment/treatments that are scheduled \
-to happen in the timeframe that we have weather data will appear in the list.  To add or delete a rotation, please \
-select the entire row and right click. It will open a dialog box with simple instructions. Once changes are done, please \
-make sure to press the Execute Rotation button.")        
+        self.tab_summary = QTextEdit("Pick individual entries to create your simulation.  You have the ability \
+to run more than one simulation, to add or delete a simulation select the entire row and right click. It will \
+open a dialog box with simple instructions. Once changes are done, please make sure to press the Run button to \
+start your simulation.")        
         self.tab_summary.setReadOnly(True)        
         self.tab_summary.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
         self.tab_summary.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
@@ -145,11 +145,8 @@ make sure to press the Execute Rotation button.")
         self.rgroupbox = QGroupBox("Simulator")
         self.stationTypeCombo = QComboBox()        
         self.weatherCombo = QComboBox()        
-
         self.expTreatCombo = QComboBox()          
-        self.expTreatCombo.addItem("Select from list") 
 
-        self.sitelabel = QLabel("Site")
         sitelists = read_sitedetailsDB()
         self.siteCombo = QComboBox()
         self.siteCombo.addItem("Select from list")
@@ -157,16 +154,172 @@ make sure to press the Execute Rotation button.")
             self.siteCombo.addItem(item)
         self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
         
-        self.soillabel = QLabel("Soil")
         soillists = read_soilDB()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
         for key in sorted(soillists):            
             self.soilCombo.addItem(key)
         
-        self.stationTypelabel = QLabel("Station Name")
-        self.weatherlabel = QLabel("Weather")
+        croplists = read_cropDB()
+        self.cropCombo = QComboBox()          
+        self.cropCombo.addItem("Select from list")
+        for val in sorted(croplists):
+            self.cropCombo.addItem(val)
+        self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
+                
+        # Create and populate waterStress combo
+        self.comboWaterStress = QComboBox()          
+        self.comboWaterStress.addItem("Yes") # val = 0
+        self.comboWaterStress.addItem("No") # val = 1
 
+        # Create and populate nitroStress combo
+        self.comboNitroStress = QComboBox()          
+        self.comboNitroStress.addItem("Yes") # val = 0
+        self.comboNitroStress.addItem("No") # val = 1
+
+        # Create and populate Temp Variance combo
+        self.comboTempVar = QComboBox()
+        for temp in range(-10,11):
+            self.comboTempVar.addItem(str(temp))
+        self.comboTempVar.setCurrentIndex(self.comboTempVar.findText("0"))
+
+        # Create and populate Rain Variance combo
+        self.comboRainVar = QComboBox()
+        for rain in range(-100,105,5):
+            self.comboRainVar.addItem(str(rain))
+        self.comboRainVar.setCurrentIndex(self.comboRainVar.findText("0"))
+
+        # Create and populate CO2 Variance combo
+        self.comboCO2Var = QComboBox()
+        self.comboCO2Var.addItem("None")
+        for co2 in range(280,1010,10):
+            self.comboCO2Var.addItem(str(co2))
+        self.comboCO2Var.setCurrentIndex(self.comboCO2Var.findText("None"))
+
+        self.tablebasket = QTableWidget()
+        self.tablebasket.setVisible(True)        
+        self.tablebasket.horizontalScrollBar().setStyleSheet("QScrollBar:: horizontal {border: 2px solid grey; background: lightgray; height: 15px; \
+                                                             margin: 0px 20px 0 20px;} \
+                                                             QScrollBar::handle:horizontal {background: #32CC99; min-width: 20px;} \
+                                                             QScrollBar::add-line:horizontal {border: 2px solid grey; background: none; width: 20px; \
+                                                             subcontrol-position: right; subcontrol-origin: margin;} \
+                                                             QScrollBar::sub-line:horizontal {border: 2px solid grey; background: none; width: 20px; \
+                                                             subcontrol-position: left; subcontrol-origin: margin;} \
+                                                             QScrollBar::left-arrow:horizontal, {border: 2px solid grey; width: 3px; height: 3px; \
+                                                             background: white;} \
+                                                             QScrollBar::right-arrow:horizontal, {border: 2px solid grey; width: 3px; height: 3px; \
+                                                             background: white;}")
+        self.tablebasket.verticalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tablebasket.verticalHeader().customContextMenuRequested.connect(self.tableverticalheader_popup)
+        self.tablebaskethheaderlabels = ["Site","Soil","Station Name","Weather","Crop","Experiment/Treatment", "StartYear","EndYear","Water\nStress","Nitrogen\nStress","Temp\nVariance (oC)","Rain\nVariance (%)","CO2\nVariance (ppm)"]
+        self.tablebasket.clear()
+        self.tablebasket.setRowCount(0)
+        self.tablebasket.setRowCount(1)
+        self.tablebasket.setColumnCount(13)
+        self.tablebasket.setAlternatingRowColors(True)
+        self.tablebasket.setHorizontalHeaderLabels(self.tablebaskethheaderlabels)
+
+        self.tablebasket.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(5,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(6,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(7,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(8,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(9,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(10,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(11,QHeaderView.ResizeToContents)
+        self.tablebasket.horizontalHeader().setSectionResizeMode(12,QHeaderView.ResizeToContents)
+
+        self.tablebasket.setCellWidget(0,0,self.siteCombo)
+        self.tablebasket.setCellWidget(0,1,self.soilCombo)
+        self.tablebasket.setCellWidget(0,2,self.stationTypeCombo)
+        self.tablebasket.setCellWidget(0,3,self.weatherCombo)
+        self.tablebasket.setCellWidget(0,4,self.cropCombo)
+        self.tablebasket.setCellWidget(0,5,self.expTreatCombo)
+        self.tablebasket.setCellWidget(0,8,self.comboWaterStress)
+        self.tablebasket.setCellWidget(0,9,self.comboNitroStress)
+        self.tablebasket.setCellWidget(0,10,self.comboTempVar)
+        self.tablebasket.setCellWidget(0,11,self.comboRainVar)
+        self.tablebasket.setCellWidget(0,12,self.comboCO2Var)
+
+        self.rlabel = QLabel("Simulator")
+        self.simStatus = QLabel("")
+        self.simStatus.setWordWrap(True)
+        self.buttonrun = QPushButton("Run")
+        self.buttonrun.setObjectName("buttonrun")
+        self.buttonreset = QPushButton("Reset")
+        self.buttonreset.setObjectName("buttonreset") 
+       
+        # Output hourly/daily
+        self.step_hourly = QRadioButton("Hourly")
+        self.step_daily = QRadioButton("Daily")
+        self.step_hourly.setObjectName("step_hourly")
+        self.step_daily.setObjectName("step_daily")
+        self.step_g = QButtonGroup()
+
+        self.step_hourly.setChecked(True)
+        self.step_g.addButton(self.step_hourly,1)
+        self.step_g.addButton(self.step_daily,2)
+
+        self.subgrid1 = QGridLayout()
+        self.subgrid1.addWidget(self.tablebasket,2,0,4,5)
+
+        self.SimulationFlabel = QLabel("Simulation Output Interval")
+        self.subgrid1.addWidget(self.SimulationFlabel,6,0)
+        self.subgrid1.addWidget(self.step_hourly,6,1)
+        self.subgrid1.addWidget(self.step_daily,6,2)
+        
+        self.SimulationFlabel.setObjectName("SimulationFlabel")
+
+        self.subgrid1.addWidget(self.buttonrun,7,0)
+        self.subgrid1.addWidget(self.buttonreset,7,1)
+        self.subgrid1.addWidget(self.simStatus,8,0,1,5)
+        
+        self.buttonrun.clicked.connect(self.buttonrunclicked)
+        self.buttonreset.clicked.connect(self.reset)
+        self.tablebasket.resizeColumnsToContents()
+        self.tablebasket.resizeRowsToContents()  
+              
+        self.hl2 = QHBoxLayout()                
+        self.rgroupbox.setLayout(self.subgrid1)
+        self.hl2.addWidget(self.rgroupbox)
+        
+        self.vl1.addLayout(self.hl1)
+        self.vl1.addWidget(self.helpcheckbox)
+        self.vl1.addLayout(self.hl2)
+        self.vl1.addStretch(1)
+        self.mainlayout1.addLayout(self.vl1,0,0)
+        self.mainlayout1.setColumnStretch(0,3)
+        self.mainlayout1.addWidget(self.faqtree,0,4)
+        self.setLayout(self.mainlayout1)
+  
+
+    def reset(self):
+
+        while self.tablebasket.rowCount() > 0:
+            self.tablebasket.removeRow(0)        
+        self.tablebasket.insertRow(0)
+
+        self.stationTypeCombo = QComboBox()        
+        self.weatherCombo = QComboBox()        
+        self.expTreatCombo = QComboBox()          
+
+        sitelists = read_sitedetailsDB()
+        self.siteCombo = QComboBox()
+        self.siteCombo.addItem("Select from list")
+        for item in sitelists: 
+            self.siteCombo.addItem(item)
+        self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
+        
+        soillists = read_soilDB()
+        self.soilCombo = QComboBox()
+        self.soilCombo.addItem("Select from list")
+        for key in sorted(soillists):            
+            self.soilCombo.addItem(key)
+        
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
@@ -203,188 +356,17 @@ make sure to press the Execute Rotation button.")
             self.comboCO2Var.addItem(str(co2))
         self.comboCO2Var.setCurrentIndex(self.comboCO2Var.findText("None"))
 
-        self.tablebasket = QTableWidget()
-        self.tablebasket.setVisible(True)        
-        self.tablebasket.horizontalScrollBar().setStyleSheet("QScrollBar:: horizontal {border: 2px solid grey; background: lightgray; height: 15px; \
-                                                             margin: 0px 20px 0 20px;} \
-                                                             QScrollBar::handle:horizontal {background: #32CC99; min-width: 20px;} \
-                                                             QScrollBar::add-line:horizontal {border: 2px solid grey; background: none; width: 20px; \
-                                                             subcontrol-position: right; subcontrol-origin: margin;} \
-                                                             QScrollBar::sub-line:horizontal {border: 2px solid grey; background: none; width: 20px; \
-                                                             subcontrol-position: left; subcontrol-origin: margin;} \
-                                                             QScrollBar::left-arrow:horizontal, {border: 2px solid grey; width: 3px; height: 3px; \
-                                                             background: white;} \
-                                                             QScrollBar::right-arrow:horizontal, {border: 2px solid grey; width: 3px; height: 3px; \
-                                                      background: white;}")
-        self.tablebasket.verticalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tablebasket.verticalHeader().customContextMenuRequested.connect(self.tableverticalheader_popup)
-        self.tablebaskethheaderlabels = ["Crop","Experiment/Treatment", "Start Date","End Date","Water\nStress","Nitrogen\nStress","Temp\nVariance (oC)","Rain\nVariance (%)","CO2\nVariance (ppm)"]
-        self.tablebasket.clear()
-        self.tablebasket.setRowCount(0)
-        self.tablebasket.setRowCount(1)
-        self.tablebasket.setColumnCount(9)
-        self.tablebasket.setAlternatingRowColors(True)
-        self.tablebasket.setHorizontalHeaderLabels(self.tablebaskethheaderlabels)
-
-        self.tablebasket.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(5,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(6,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(7,QHeaderView.ResizeToContents)
-        self.tablebasket.horizontalHeader().setSectionResizeMode(8,QHeaderView.ResizeToContents)
-
-        self.tablebasket.setCellWidget(0,0,self.cropCombo)
-        self.tablebasket.setCellWidget(0,1,self.expTreatCombo)
-        self.tablebasket.setItem(0,2,QTableWidgetItem(""))
-        self.tablebasket.setItem(0,3,QTableWidgetItem(""))
-        self.tablebasket.setCellWidget(0,4,self.comboWaterStress)
-        self.tablebasket.setCellWidget(0,5,self.comboNitroStress)
-        self.tablebasket.setCellWidget(0,6,self.comboTempVar)
-        self.tablebasket.setCellWidget(0,7,self.comboRainVar)
-        self.tablebasket.setCellWidget(0,8,self.comboCO2Var)
-
-        self.simStatus = QLabel("")
-        self.simStatus.setWordWrap(True)
-        self.buttonrun = QPushButton("Execute Rotation")
-        self.buttonrun.setObjectName("buttonrun")
-        self.buttonreset = QPushButton("Reset")
-        self.buttonreset.setObjectName("buttonreset") 
-     
-        # Output hourly/daily
-        self.step_hourly = QRadioButton("Hourly")
-        self.step_daily = QRadioButton("Daily")
-        self.step_hourly.setObjectName("step_hourly")
-        self.step_daily.setObjectName("step_daily")
-        self.step_g = QButtonGroup()
-
-        self.step_hourly.setChecked(True)
-        self.step_g.addButton(self.step_hourly,1)
-        self.step_g.addButton(self.step_daily,2)
-
-        self.subgrid1 = QGridLayout()
-
-        # Add site, soil, station type and weather
-        self.subgrid1.addWidget(self.sitelabel,0,0)
-        self.subgrid1.addWidget(self.siteCombo,0,1)
-        self.subgrid1.addWidget(self.soillabel,0,2)
-        self.subgrid1.addWidget(self.soilCombo,0,3)
-        self.subgrid1.addWidget(self.stationTypelabel,1,0)
-        self.subgrid1.addWidget(self.stationTypeCombo,1,1)
-        self.subgrid1.addWidget(self.weatherlabel,1,2)
-        self.subgrid1.addWidget(self.weatherCombo,1,3)
- 
-        self.subgrid1.addWidget(self.tablebasket,2,0,4,4)
-
-        self.SimulationFlabel = QLabel("Simulation Output Interval")
-        self.subgrid1.addWidget(self.SimulationFlabel,6,0)
-        self.subgrid1.addWidget(self.step_hourly,6,1)
-        self.subgrid1.addWidget(self.step_daily,6,2,1,2)
-        
-        self.SimulationFlabel.setObjectName("SimulationFlabel")
-
-        self.subgrid1.addWidget(self.buttonrun,7,0)
-        self.subgrid1.addWidget(self.buttonreset,7,1)
-        self.subgrid1.addWidget(self.simStatus,8,0,1,4)
-        
-        self.buttonrun.clicked.connect(self.buttonrunclicked)
-        self.buttonreset.clicked.connect(self.reset)
-        self.tablebasket.resizeColumnsToContents()
-        self.tablebasket.resizeRowsToContents()  
-              
-        self.hl2 = QHBoxLayout()                
-        self.rgroupbox.setLayout(self.subgrid1)
-        self.hl2.addWidget(self.rgroupbox)
-        
-        self.vl1.addLayout(self.hl1)
-        self.vl1.addWidget(self.helpcheckbox)
-        self.vl1.addLayout(self.hl2)
-        self.vl1.addStretch(1)
-        self.mainlayout1.addLayout(self.vl1,0,0)
-        self.mainlayout1.setColumnStretch(0,3)
-        self.mainlayout1.addWidget(self.faqtree,0,4)
-        self.setLayout(self.mainlayout1)
-  
-
-    def reset(self):
-        self.siteCombo = QComboBox()
-        sitelists = read_sitedetailsDB()
-        self.siteCombo.addItem("Select from list")
-        for item in sitelists: 
-            self.siteCombo.addItem(item)
-        self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
-        
-        self.soilCombo = QComboBox()
-        soillists = read_soilDB()
-        self.soilCombo.addItem("Select from list")
-        for key in sorted(soillists):            
-            self.soilCombo.addItem(key)
-        
-        self.cropCombo = QComboBox()          
-        croplists = read_cropDB()
-        self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
-            self.cropCombo.addItem(val)
-        self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
- 
-        self.stationTypeCombo = QComboBox()        
-        self.weatherCombo = QComboBox()    
-    
-        self.subgrid1.addWidget(self.siteCombo,0,1)
-        self.subgrid1.addWidget(self.soilCombo,0,3)
-        self.subgrid1.addWidget(self.stationTypeCombo,1,1)
-        self.subgrid1.addWidget(self.weatherCombo,1,3)
-               
-        # Create and populate waterStress combo
-        self.comboWaterStress = QComboBox()          
-        self.comboWaterStress.addItem("Yes") # val = 0
-        self.comboWaterStress.addItem("No") # val = 1
-
-        # Create and populate nitroStress combo
-        self.comboNitroStress = QComboBox()          
-        self.comboNitroStress.addItem("Yes") # val = 0
-        self.comboNitroStress.addItem("No") # val = 1
-        
-        # Create and populate Temp Variance combo
-        self.comboTempVar = QComboBox()
-        for temp in range(-10,11):
-            self.comboTempVar.addItem(str(temp))
-        self.comboTempVar.setCurrentIndex(self.comboTempVar.findText("0"))
-
-        # Create and populate Rain Variance combo
-        self.comboRainVar = QComboBox()
-        for rain in range(-100,105,5):
-            self.comboRainVar.addItem(str(rain))
-        self.comboRainVar.setCurrentIndex(self.comboRainVar.findText("0"))
-
-        # Create and populate CO2 Variance combo
-        self.comboCO2Var = QComboBox()
-        self.comboCO2Var.addItem("None")
-        for co2 in range(280,1010,10):
-            self.comboCO2Var.addItem(str(co2))
-        self.comboCO2Var.setCurrentIndex(self.comboCO2Var.findText("None"))
-
-        while self.tablebasket.rowCount() > 0:
-            self.tablebasket.removeRow(0)        
-        self.tablebasket.insertRow(0)
- 
-        self.expTreatCombo = QComboBox()          
-        self.expTreatCombo.addItem("Select from list") 
-
-        self.tablebasket.setCellWidget(0,0,self.cropCombo)
-        self.tablebasket.setCellWidget(0,1,self.expTreatCombo)
-        self.tablebasket.setItem(0,2,QTableWidgetItem(""))
-        self.tablebasket.setItem(0,3,QTableWidgetItem(""))
-        self.tablebasket.setCellWidget(0,4,self.comboWaterStress)
-        self.tablebasket.setCellWidget(0,5,self.comboNitroStress)
-        self.tablebasket.setCellWidget(0,6,self.comboTempVar)
-        self.tablebasket.setCellWidget(0,7,self.comboRainVar)
-        self.tablebasket.setCellWidget(0,8,self.comboCO2Var)
-
-        self.simStatus.setText("")
-        self.simStatus.repaint()
+        self.tablebasket.setCellWidget(0,0,self.siteCombo)
+        self.tablebasket.setCellWidget(0,1,self.soilCombo)
+        self.tablebasket.setCellWidget(0,2,self.stationTypeCombo)
+        self.tablebasket.setCellWidget(0,3,self.weatherCombo)
+        self.tablebasket.setCellWidget(0,4,self.cropCombo)
+        self.tablebasket.setCellWidget(0,5,self.expTreatCombo)
+        self.tablebasket.setCellWidget(0,8,self.comboWaterStress)
+        self.tablebasket.setCellWidget(0,9,self.comboNitroStress)
+        self.tablebasket.setCellWidget(0,10,self.comboTempVar)
+        self.tablebasket.setCellWidget(0,11,self.comboRainVar)
+        self.tablebasket.setCellWidget(0,12,self.comboCO2Var)
 
 
     def tableverticalheader_popup(self, pos):
@@ -415,9 +397,30 @@ make sure to press the Execute Rotation button.")
         howmanyrows = self.tablebasket.rowCount()
         if howmanyrows == 0:
             self.tablebasket.insertRow(howmanyrows)
+            self.weatherCombo = QComboBox()        
             self.expTreatCombo = QComboBox()          
-            self.expTreatCombo.addItem("Select from list") 
+            self.comboNitroStress = QComboBox()          
 
+            sitelists = read_sitedetailsDB()
+            self.siteCombo = QComboBox()
+            self.siteCombo.addItem("Select from list")
+            for item in sitelists: 
+               self.siteCombo.addItem(item)
+            self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
+        
+            self.soillists = read_soilDB()
+            self.soilCombo = QComboBox()
+            self.soilCombo.addItem("Select from list")
+            for key in sorted(self.soillists):            
+                self.soilCombo.addItem(key)
+        
+            stationtypelists = read_weather_metaDB()
+            self.stationTypeCombo = QComboBox()        
+            self.stationTypeCombo.addItem("Select from list")
+            for key in sorted(stationtypelists):
+                if stationtypelists[key] != "Add New Station Name":
+                    self.stationTypeCombo.addItem(stationtypelists[key])
+                
             croplists = read_cropDB()
             self.cropCombo = QComboBox()          
             self.cropCombo.addItem("Select from list")
@@ -453,15 +456,17 @@ make sure to press the Execute Rotation button.")
                 self.comboCO2Var.addItem(str(co2))
             self.comboCO2Var.setCurrentIndex(self.comboCO2Var.findText("None"))
 
-            self.tablebasket.setCellWidget(0,0,self.cropCombo)
-            self.tablebasket.setCellWidget(0,1,self.expTreatCombo)
-            self.tablebasket.setItem(0,2,QTableWidgetItem(""))
-            self.tablebasket.setItem(0,3,QTableWidgetItem(""))
-            self.tablebasket.setCellWidget(0,4,self.comboWaterStress)
-            self.tablebasket.setCellWidget(0,5,self.comboNitroStress)
-            self.tablebasket.setCellWidget(0,6,self.comboTempVar)
-            self.tablebasket.setCellWidget(0,7,self.comboRainVar)
-            self.tablebasket.setCellWidget(0,8,self.comboCO2Var)
+            self.tablebasket.setCellWidget(0,0,self.siteCombo)
+            self.tablebasket.setCellWidget(0,1,self.soilCombo)
+            self.tablebasket.setCellWidget(0,2,self.stationTypeCombo)
+            self.tablebasket.setCellWidget(0,3,self.weatherCombo)
+            self.tablebasket.setCellWidget(0,4,self.cropCombo)
+            self.tablebasket.setCellWidget(0,5,self.expTreatCombo)
+            self.tablebasket.setCellWidget(0,8,self.comboWaterStress)
+            self.tablebasket.setCellWidget(0,9,self.comboNitroStress)
+            self.tablebasket.setCellWidget(0,10,self.comboTempVar)
+            self.tablebasket.setCellWidget(0,11,self.comboRainVar)
+            self.tablebasket.setCellWidget(0,12,self.comboCO2Var)
 
 
     def insertrowbelow(self):
@@ -472,9 +477,29 @@ make sure to press the Execute Rotation button.")
         newrowindex = crow + 1
 
         self.tablebasket.insertRow(newrowindex)
+        self.weatherCombo = QComboBox()        
         self.expTreatCombo = QComboBox()          
-        self.expTreatCombo.addItem("Select from list") 
 
+        sitelists = read_sitedetailsDB()
+        self.siteCombo = QComboBox()
+        self.siteCombo.addItem("Select from list")
+        for item in sitelists: 
+           self.siteCombo.addItem(item)
+        self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
+        
+        self.soillists = read_soilDB()
+        self.soilCombo = QComboBox()
+        self.soilCombo.addItem("Select from list")
+        for key in sorted(self.soillists):            
+            self.soilCombo.addItem(key)
+        
+        stationtypelists = read_weather_metaDB()
+        self.stationTypeCombo = QComboBox()        
+        self.stationTypeCombo.addItem("Select from list")
+        for key in sorted(stationtypelists):
+            if stationtypelists[key] != "Add New Station Name":
+                self.stationTypeCombo.addItem(stationtypelists[key])
+                
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
@@ -511,19 +536,26 @@ make sure to press the Execute Rotation button.")
             self.comboCO2Var.addItem(str(co2))
         self.comboCO2Var.setCurrentIndex(self.comboCO2Var.findText("None"))
 
-        self.tablebasket.setCellWidget(newrowindex,0,self.cropCombo)
-        self.tablebasket.setCellWidget(newrowindex,1,self.expTreatCombo)
-        self.tablebasket.setItem(newrowindex,2,QTableWidgetItem(""))
-        self.tablebasket.setItem(newrowindex,3,QTableWidgetItem(""))
-        self.tablebasket.setCellWidget(newrowindex,4,self.comboWaterStress)
-        self.tablebasket.setCellWidget(newrowindex,5,self.comboNitroStress)
-        self.tablebasket.setCellWidget(newrowindex,6,self.comboTempVar)
-        self.tablebasket.setCellWidget(newrowindex,7,self.comboRainVar)
-        self.tablebasket.setCellWidget(newrowindex,8,self.comboCO2Var)
+        self.tablebasket.setCellWidget(newrowindex,0,self.siteCombo)
+        self.tablebasket.setCellWidget(newrowindex,1,self.soilCombo)
+        self.tablebasket.setCellWidget(newrowindex,2,self.stationTypeCombo)
+        self.tablebasket.setCellWidget(newrowindex,3,self.weatherCombo)
+        self.tablebasket.setCellWidget(newrowindex,4,self.cropCombo)
+        self.tablebasket.setCellWidget(newrowindex,5,self.expTreatCombo)
+        self.tablebasket.setItem(newrowindex,6,QTableWidgetItem(""))
+        self.tablebasket.setItem(newrowindex,7,QTableWidgetItem(""))
+        self.tablebasket.setCellWidget(newrowindex,8,self.comboWaterStress)
+        self.tablebasket.setCellWidget(newrowindex,9,self.comboNitroStress)
+        self.tablebasket.setCellWidget(newrowindex,10,self.comboTempVar)
+        self.tablebasket.setCellWidget(newrowindex,11,self.comboRainVar)
+        self.tablebasket.setCellWidget(newrowindex,12,self.comboCO2Var)
 
 
     def showstationtypecombo(self):
         site = self.siteCombo.currentText()
+        crow = self.tablebasket.currentRow()
+        if(crow == -1):
+            crow = 0
         
         self.stationTypeCombo = QComboBox()        
         stationtypelists = read_weather_metaDBforsite(site)        
@@ -533,12 +565,15 @@ make sure to press the Execute Rotation button.")
                 self.stationTypeCombo.addItem(stationtypelists[key])
         self.stationTypeCombo.currentIndexChanged.connect(self.showweathercombo)
 
-        self.subgrid1.addWidget(self.stationTypeCombo,1,1,1,1)
+        self.tablebasket.setCellWidget(crow,2,self.stationTypeCombo)
         return True
 
 
     def showweathercombo(self):
         stationtype = self.stationTypeCombo.currentText()
+        crow = self.tablebasket.currentRow()
+        if(crow == -1):
+            crow = 0
         
         self.weatherCombo = QComboBox()        
         weather_id_lists = read_weather_id_forstationtype(stationtype)
@@ -548,59 +583,46 @@ make sure to press the Execute Rotation button.")
             if item != "Add New Station Name":
                 self.weatherCombo.addItem(item)
 
-        self.subgrid1.addWidget(self.weatherCombo,1,3,1,1)
+        self.tablebasket.setCellWidget(crow,3,self.weatherCombo)
         return True
 
 
     def showexperimentcombo(self):
+        crop = self.cropCombo.currentText()
         crow = self.tablebasket.currentRow()
         if(crow == -1):
             crow = 0
-        crop =  self.tablebasket.cellWidget(crow,0).currentText()
-
-        stationtype = self.stationTypeCombo.currentText()
-        if stationtype == "" or stationtype == "Select from list":
-            messageUserInfo("You need to select 'Station Name' first!")
-            self.cropCombo.setCurrentIndex(self.cropCombo.findText("Select from list"))
-            return False
-        weatherID = self.weatherCombo.currentText()
-        if weatherID == "" or weatherID == "Select from list":
-            messageUserInfo("You need to select 'Weather' first!")
-            self.cropCombo.setCurrentIndex(self.cropCombo.findText("Select from list"))
-            return False
         
         self.expTreatCombo = QComboBox()          
         if crop != "Select from list":
-            self.experimentlists = getExpTreatByCropWeatherDate(crop,stationtype,weatherID)            
+            self.experimentlists = getExpTreatByCrop(crop)            
             self.expTreatCombo.addItem("Select from list") 
             for val in sorted(self.experimentlists):
                 self.expTreatCombo.addItem(val)
-
         self.expTreatCombo.currentIndexChanged.connect(self.showtreatmentyear)
-        self.tablebasket.setCellWidget(crow,1,self.expTreatCombo)
-        self.tablebasket.setItem(crow,2,QTableWidgetItem(""))
-        self.tablebasket.setItem(crow,3,QTableWidgetItem(""))
+        self.tablebasket.setCellWidget(crow,5,self.expTreatCombo)
         return True
 
 
     def showtreatmentyear(self):
-        crow = self.tablebasket.currentRow()
-        if(crow == -1):
-            crow = 0
-        crop =  self.tablebasket.cellWidget(crow,0).currentText()
-        experiment = self.tablebasket.cellWidget(crow,1).currentText()
+        currentrow = self.tablebasket.currentRow()
+        if(currentrow == -1):
+            currentrow = 0
+        crop = self.cropCombo.currentText()
+        experiment = self.expTreatCombo.currentText()
         if experiment == "Select from list":
-            self.tablebasket.setItem(crow,2,QTableWidgetItem(""))
-            self.tablebasket.setItem(crow,3,QTableWidgetItem(""))
+            self.tablebasket.setItem(currentrow,6,QTableWidgetItem(""))
+            self.tablebasket.setItem(currentrow,7,QTableWidgetItem(""))
         else:
             cropExperimentTreatment = crop + "/" +  experiment
             #print("cropExperimentTreatment=",cropExperimentTreatment)
             # get weather years
-            weatherdate_list = read_weatherdate_fromtreatment(cropExperimentTreatment)
-            sdate = weatherdate_list[0].strftime("%m/%d/%Y")
-            edate = weatherdate_list[-1].strftime("%m/%d/%Y")
-            self.tablebasket.setItem(crow,2,QTableWidgetItem(sdate))
-            self.tablebasket.setItem(crow,3,QTableWidgetItem(edate))
+            weatheryears_list = read_weatheryears_fromtreatment(cropExperimentTreatment)
+            syear = str(weatheryears_list[0])
+            eyear = str(weatheryears_list[-1])
+            self.tablebasket.setItem(currentrow,6,QTableWidgetItem(syear))
+            self.tablebasket.setItem(currentrow,7,QTableWidgetItem(eyear))
+            self.tablebasket.setItem(currentrow,10,QTableWidgetItem("here"))
         return True
 
 
@@ -621,7 +643,7 @@ make sure to press the Execute Rotation button.")
 
     def controlfaq(self):                
         if self.helpcheckbox.isChecked():
-            self.importfaq("rotation")              
+            self.importfaq("seasonal")              
             self.faqtree.setVisible(True)
         else:
             self.faqtree.setVisible(False)
@@ -639,117 +661,100 @@ make sure to press the Execute Rotation button.")
         regexp_forwardslash = QtCore.QRegExp('[/]')       
 
         # Extracting user values from the FUNNEL
-        lsitename = self.siteCombo.currentText()
-        lsoilname = self.soilCombo.currentText()
-        lstationtype = self.stationTypeCombo.currentText()
-        lweather = self.weatherCombo.currentText()
-
-        # enter the record and get its ID
-        if lsitename == "Select from list":
-            messageUser("You need to select Site.")
-            return False
-
-        if lsoilname == "Select from list":
-            messageUser("You need to select Soilname.")
-            return False
-
-        if lstationtype == "Select from list":
-            messageUser("You need to select Station Name.")
-            return False
-
-        if lweather == "Select from list":
-            messageUser("You need to select Weather.")
-            return False
-
-        # Need to validate if there is any gap among the treatment dates
-        for irow in range(0,self.tablebasket.rowCount()-1):
-            prevRunEndDate = datetime.strptime(self.tablebasket.item(irow,3).text(),'%m/%d/%Y')
-            nextRunStartDate = datetime.strptime(self.tablebasket.item(irow+1,2).text(),'%m/%d/%Y')
-            if (prevRunEndDate + timedelta(days=1)) != nextRunStartDate:
-                messageUser("There is a date gap or overlap between runs " + str(irow+1) + " and " + str(irow+2) + ".")
-                return False
-
-        rotationID = getNextRotationID()
- 
         for irow in range(0,self.tablebasket.rowCount()):
-            lcrop = self.tablebasket.cellWidget(irow,0).currentText()
-            if lcrop == "Select from list":
-                messageUser("You need to select Crop.")
-                return False
-
-            lexperiment = self.tablebasket.cellWidget(irow,1).currentText()
-            if lexperiment == "Select from list":
-                messageUser("You need to select Experiment/Treatment.")
-                return False
-
-            lwaterstress = self.tablebasket.cellWidget(irow,4).currentText()
+            lsitename = self.tablebasket.cellWidget(irow,0).currentText()
+            lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
+            lstationtype = self.tablebasket.cellWidget(irow,2).currentText()
+            lweather = self.tablebasket.cellWidget(irow,3).currentText()
+            lcrop = self.tablebasket.cellWidget(irow,4).currentText()
+            lexperiment = self.tablebasket.cellWidget(irow,5).currentText()
+            lwaterstress = self.tablebasket.cellWidget(irow,8).currentText()
             if(lwaterstress == "Yes"):
                 waterStressFlag = 0
             else:
                 waterStressFlag = 1
-
-            lnitrostress = self.tablebasket.cellWidget(irow,5).currentText()
+            lnitrostress = self.tablebasket.cellWidget(irow,9).currentText()
             if(lnitrostress == "Yes"):
                 nitroStressFlag = 0
             else:
                 nitroStressFlag = 1
-
-            lstartdate = self.tablebasket.item(irow,2).text()
-            lenddate = self.tablebasket.item(irow,3).text()
-
-            lstartyear = int(lstartdate.split('/')[2])
-            lendyear = int(lenddate.split('/')[2])
-
-            ltempVar = self.tablebasket.cellWidget(irow,6).currentText()
-            lrainVar = self.tablebasket.cellWidget(irow,7).currentText()
-            lCO2Var = self.tablebasket.cellWidget(irow,8).currentText()
+            ltempVar = self.tablebasket.cellWidget(irow,10).currentText()
+            lrainVar = self.tablebasket.cellWidget(irow,11).currentText()
+            lCO2Var = self.tablebasket.cellWidget(irow,12).currentText()
             if lCO2Var == "None":
                 lCO2Var = 0
 
+            if lsitename == "Select from list":
+                messageUser("You need to select Site.")
+                return False
+
+            if lsoilname == "Select from list":
+                messageUser("You need to select Soilname.")
+                return False
+
+            if lstationtype == "Select from list":
+                messageUser("You need to select Station Name.")
+                return False
+
+            if lweather == "Select from list":
+                messageUser("You need to select Weather.")
+                return False
+
+            if lcrop == "Select from list":
+                messageUser("You need to select Crop.")
+                return False
+
+            if lexperiment == "Select from list":
+                messageUser("You need to select Experiment/Treatment.")
+                return False
+
+            lstartyear = int(self.tablebasket.item(irow,6).text())
+            lendyear = int(self.tablebasket.item(irow,7).text())
+            lcomment = self.tablebasket.item(irow,10).text()
+
             cropTreatment = lcrop + "/" + lexperiment
-            #print("working on:",lsitename,cropTreatment,lstationtype,lweather,lsoilname,lstartyear,lendyear,waterStressFlag,nitroStressFlag)
+            print("working on:",lsitename,cropTreatment,lstationtype,lweather,lsoilname,lstartyear,lendyear,waterStressFlag,nitroStressFlag)
                 
-            simulation_name = update_pastrunsDB(rotationID,lsitename,cropTreatment,lstationtype,lweather,lsoilname,str(lstartyear),\
-                                                str(lendyear),str(waterStressFlag),str(nitroStressFlag),str(ltempVar),str(lrainVar),str(lCO2Var)) 
-            #print("simulation_name=",simulation_name[0])
+            simulation_name = update_pastrunsDB(0,lsitename,cropTreatment,lstationtype,lweather,lsoilname,str(lstartyear),str(lendyear),
+                                                str(waterStressFlag),str(nitroStressFlag),str(ltempVar),str(lrainVar),str(lCO2Var)) 
+            #print("Debug: simulation_name=",simulation_name)
 
             # this will execute the 2 exe's: uncomment it in final stage: 
-            self.prepare_and_execute(simulation_name[0],rotationID,irow,lstartyear)                
+            self.prepare_and_execute(simulation_name,irow,lstartyear)                
 
         
-    def prepare_and_execute(self,simulation_name,rotationID,irow,theyear):
+    def prepare_and_execute(self,simulation_name,irow,theyear):
         """
         this will create input files, and execute both exe's
         """
-        regexp_forwardslash = QtCore.QRegExp('[/]')
-        self.simulation_name = str(simulation_name)
-        field_path = os.path.join(runpath1,self.simulation_name)
+        regexp_forwardslash = QtCore.QRegExp('[/]')       
+        field_path = os.path.join(runpath1,str(simulation_name[0]))
         if not os.path.exists(field_path):
             os.makedirs(field_path)
 
-        field_name = self.siteCombo.currentText()  
-        lsitename = self.siteCombo.currentText()
-        lsoilname = self.soilCombo.currentText()
-        lstationtype = self.stationTypeCombo.currentText()
-        lweather = self.weatherCombo.currentText()
-        lcrop = self.tablebasket.cellWidget(irow,0).currentText()
-        lexperiment = self.tablebasket.cellWidget(irow,1).currentText().split('/')[0]
-        ltreatmentname = self.tablebasket.cellWidget(irow,1).currentText().split('/')[1]
-        lstartyear = int(self.tablebasket.item(irow,2).text().split('/')[2])
-        lendyear = int(self.tablebasket.item(irow,3).text().split('/')[2])
-        lwaterstress = self.tablebasket.cellWidget(irow,4).currentText()
+        field_name= self.tablebasket.cellWidget(irow,0).currentText()  
+        lsitename = self.tablebasket.cellWidget(irow,0).currentText()
+        lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
+        lstationtype = self.tablebasket.cellWidget(irow,2).currentText()
+        lweather = self.tablebasket.cellWidget(irow,3).currentText()
+        lcrop = self.tablebasket.cellWidget(irow,4).currentText()
+        lexperiment = self.tablebasket.cellWidget(irow,5).currentText().split('/')[0]
+        ltreatmentname = self.tablebasket.cellWidget(irow,5).currentText().split('/')[1]
+        lstartyear = int(self.tablebasket.item(irow,6).text())
+        lendyear = int(self.tablebasket.item(irow,7).text())
+        lwaterstress = self.tablebasket.cellWidget(irow,8).currentText()
         if(lwaterstress == "Yes"):
             waterStressFlag = 0
         else:
             waterStressFlag = 1
-        lnitrostress = self.tablebasket.cellWidget(irow,5).currentText()
+        lnitrostress = self.tablebasket.cellWidget(irow,9).currentText()
         if(lnitrostress == "Yes"):
             nitroStressFlag = 0
         else:
             nitroStressFlag = 1
-        ltempVar = self.tablebasket.cellWidget(irow,6).currentText()
-        lrainVar = self.tablebasket.cellWidget(irow,7).currentText()
-        lCO2Var = self.tablebasket.cellWidget(irow,8).currentText()
+        ltempVar = self.tablebasket.cellWidget(irow,10).currentText()
+        lrainVar = self.tablebasket.cellWidget(irow,11).currentText()
+        lCO2Var = self.tablebasket.cellWidget(irow,12).currentText()
 
         #copy water.dat file from store to runpath1
         src_file = repository_dir+'\\Water.DAT'
@@ -782,9 +787,9 @@ make sure to press the Execute Rotation button.")
         hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_name,field_path,ltempVar,lrainVar,lCO2Var)
         WriteSoluteFile(lsoilname,field_name,field_path)
         hourlyFlag = 1 if self.step_hourly.isChecked() else 0
-        WriteTimeFileData(ltreatmentname,lexperiment,lcrop,lstationtype,hourlyFlag,field_name,field_path,hourly_flag,1)
+        WriteTimeFileData(ltreatmentname,lexperiment,lcrop,lstationtype,hourlyFlag,field_name,field_path,hourly_flag,0)
         WriteNitData(lsoilname,field_name,field_path,rowSpacing)
-        self.WriteLayer(irow,lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
+        self.WriteLayer(lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
         WriteSoiData(lsoilname,field_name,field_path)
         WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
         WriteRunFile(lcrop,lsoilname,field_name,cultivar,field_path,lstationtype)            
@@ -803,12 +808,10 @@ make sure to press the Execute Rotation button.")
         pp = subprocess.Popen([createsoilexe,layerdest_file,"/GN",grid_name,"/SN",createsoil_opfile],cwd=field_path)
         while pp.poll() is None:
             time.sleep(1)
-        print("Process ended, ret code:", pp.returncode)
 
         #print("Debug before subprocess 2dsoil")
         runname = field_path+"\\Run"+field_name+".dat"       
         #print("Debug:subprocess, runname:",runname)
-        #endOpDate
         #sdate = sdate - timedelta(days=22)
         edate = edate + timedelta(days=22)
         self.simStatus.setText("")
@@ -827,7 +830,7 @@ make sure to press the Execute Rotation button.")
                 file_ext = ["g01","G03","G04","G05","G07"]
             elif(lcrop == "cotton"):
                 p = subprocess.Popen([gossymexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
-                file_ext = ["g01","g03","g04","g05","g07"]
+                file_ext = ["g01","G03","G04","G05","G07"]
             else: # fallow
                 p = subprocess.Popen([maizsimexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
                 file_ext = ["G03","G05","G07"]
@@ -855,14 +858,14 @@ make sure to press the Execute Rotation button.")
             table_name = ext.lower()+"_"+lcrop
             missingRec += checkNaNInOutputFile(table_name,g_name2)
 
-        missingRec += checkNaNInOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp")
-        if lcrop == "potato" or lcrop == "soybean":
-            missingRec += checkNaNInOutputFile("nitrogen_"+lcrop,field_path+"\\\\nitrogen.crp")
+        if lcrop != "fallow":
+            missingRec += checkNaNInOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp")
+            if lcrop == "potato" or lcrop == "soybean":
+                missingRec += checkNaNInOutputFile("nitrogen_"+lcrop,field_path+"\\\\nitrogen.crp")
 
         if missingRec != "":
-            self.simStatus.setText("<b>Something went wrong with this run for management " + ltreatmentname + " (" + lcrop + ").  The details are shown below.  We are unable to store results of this run until the problem can be resolved.  Additional details shown below.  The following file/columns displayed NaN values:</b><br>"+missingRec)
-            delete_pastrunsDB_rotationID(rotationID,run_dir,lcrop)
-            self.rotationUpSig.emit(int(rotationID)) #emitting the simulation id (integer)
+            delete_pastrunsDB(str(simulation_name[0]),lcrop)
+            self.simStatus.setText("<b>Something went wrong with this run.  The details are shown below.  We are unable to store results of this run until the problem can be resolved.  Additional details shown below.  The following file/columns displayed NaN values:</b><br>"+missingRec)
         else:
             # Ingesting table  into cropOutput database
             self.simStatus.setText("<b>Ingesting output files in the database.</b>")
@@ -873,26 +876,25 @@ make sure to press the Execute Rotation button.")
                 table_name = ext.lower()+"_"+lcrop
                 # Ingest .grd file and Area from G03 file on the geometry table
                 if ext == 'G03' or ext == 'g03':
-                    ingestGeometryFile(field_path+"\\\\"+field_name+".grd",g_name2,self.simulation_name)
+                    ingestGeometryFile(field_path+"\\\\"+field_name+".grd",g_name2,str(simulation_name[0]))
                     os.remove(field_path+"\\"+field_name+".grd")
                 #print("Working on = ",table_name)
-                ingestOutputFile(table_name,g_name2,self.simulation_name)
+                ingestOutputFile(table_name,g_name2,str(simulation_name[0]))
                 if remOutputFilesFlag:
                     os.remove(g_name)
                 #print("Work done")
 
-            if lcrop != "fallow":
-                ingestOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp",self.simulation_name)
-                if remOutputFilesFlag:
-                    os.remove(field_path+"\\\\plantstress.crp")
+            ingestOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp",str(simulation_name[0]))
+            if remOutputFilesFlag:
+                os.remove(field_path+"\\\\plantstress.crp")
 
             if lcrop == "soybean" or lcrop == "potato":
-                ingestOutputFile("nitrogen_"+lcrop,field_path+"\\\\nitrogen.crp",self.simulation_name)
+                ingestOutputFile("nitrogen_"+lcrop,field_path+"\\\\nitrogen.crp",str(simulation_name[0]))
                 if remOutputFilesFlag:
                     os.remove(field_path+"\\\\nitrogen.crp")
-
-            self.simStatus.setText("<b>Check your simulation results on Rotation Output tab.</b>")
-        self.rotationUpSig.emit(int(rotationID)) #emitting the simulation id (integer)
+ 
+            self.rotationsig.emit(int(simulation_name[0])) #emitting the simulation id (integer)
+            self.simStatus.setText("<b>Check your simulation results on Output tab.</b>")
         self.simStatus.repaint()
         #end of prepare_and_execute
 
@@ -916,9 +918,9 @@ make sure to press the Execute Rotation button.")
         cultivar = "fallow"
 
         #get management tree                    
-        cropname = self.tablebasket.cellWidget(irow,0).currentText()
-        experiment = self.tablebasket.cellWidget(irow,1).currentText().split('/')[0]
-        treatmentname = self.tablebasket.cellWidget(irow,1).currentText().split('/')[1]
+        cropname = self.tablebasket.cellWidget(irow,4).currentText()
+        experiment = self.tablebasket.cellWidget(irow,5).currentText().split('/')[0]
+        treatmentname = self.tablebasket.cellWidget(irow,5).currentText().split('/')[1]
 
         #find cropid
         #use crop to find exid in eperiment table
@@ -930,12 +932,12 @@ make sure to press the Execute Rotation button.")
         operationList = read_operationsDB_id(tid) #gets all the operations
 
         for ii,jj in enumerate(operationList):
-            print(jj[0])
             if jj[1] == 'Simulation Start':
                 BeginDate=jj[2] #month/day/year
                 if cropname == "fallow":
                     SowingDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=370)).strftime('%m/%d/%Y')
                 initCond = readOpDetails(jj[0],jj[1])
+                print(initCond)
 
                 depth = initCond[0][6]
                 length = initCond[0][5]
@@ -964,8 +966,8 @@ make sure to press the Execute Rotation button.")
                 if cropname == "fallow":
                     EndDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=365)).strftime('%m/%d/%Y')
             
-        site = self.siteCombo.currentText()
-        soil = self.soilCombo.currentText()
+        site = self.tablebasket.cellWidget(irow,0).currentText()
+        soil = self.tablebasket.cellWidget(irow,1).currentText()
         tsite_tuple = extract_sitedetails(site)   
         #maximum profile depth     
         maxSoilDepth=read_soillongDB_maxdepth(soil)
@@ -982,7 +984,7 @@ make sure to press the Execute Rotation button.")
             print("Could not open file")
         else:
             yseed = maxSoilDepth - yseed
-            fout = QTextStream(fh)            
+            fout = QTextStream(fh)
             CODEC="UTF-8"
             fout.setCodec(CODEC)
             fout<<"***Initialization data for location"<<"\n"
@@ -1022,20 +1024,18 @@ make sure to press the Execute Rotation button.")
             fout<<"output soils data (g03, g04, g05 and g06 files) 1 if true"<<"\n"
             fout<<"no soil files        output soil files"<<"\n"
             fout<<"    0                     1  "<<"\n"
-                
+               
         fh.close()
 
         return RowSP, rootWeightPerSlab, cultivar
 
 
-    def WriteLayer(self,irow,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
+    def WriteLayer(self,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
         '''
         Writes Layer file (*.lyr)
-        If irow > 0, we will read information from previous run from cropOutput database to get part 
-        of the information needed to build the lyr file.
         '''
         # get Grid Ratio for the soil
-        gridratio_list = read_soilgridratioDB(soilname)
+        gridratio_list =read_soilgridratioDB(soilname)
         NumObs = len(gridratio_list)
         CODEC="UTF-8"
         # read rowSpacing
@@ -1050,7 +1050,7 @@ make sure to press the Execute Rotation button.")
             fout.setCodec(CODEC)  
             fout<<"surface ratio    internal ratio: ratio of the distance between two neighboring nodes"<<"\n"
             for rrow in range(0,NumObs):
-                record_tuple = gridratio_list[rrow]
+                record_tuple=gridratio_list[rrow]
                 fout<<'%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3])<<"\n"
 
             fout<<"RowSpacing"<<"\n"
@@ -1068,85 +1068,11 @@ make sure to press the Execute Rotation button.")
 
             fout<<"    cm           'w'/'m'   %/100    ppm         ppm        ppm         ppm         ppm         ppm       ppm    ppm    \
                    cm       C      frac   frac     frac   g/cm3  cm3/cm3  cm3/cm3"<<"\n"
-            fout<<"Bottom_depth    Init_Type    OM    Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N    no3    NH4    \
+            fout<<"Bottom depth    Init Type    OM    Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N    no3    NH4    \
                    hNew    Tmpr    Sand    Silt    Clay    BD    TH33    TH1500    thr    ths    tha    th    Alfa    \
                    n    Ks    Kk    thk"<<"\n"
-            #print("soilname=",soilname)
-            print("simID=",self.simulation_name)
+            print("soilname=",soilname)
             soilgrid_list = read_soilshortDB(soilname)
-
-            # irow > 0, it means that this is not the first simulation on the rotetion, so to build the layer file we read information from geometry,
-            # g03 and g07 tables for the previous simulation
-            if irow > 0:
-                # Previous run mumber
-                runID = str(int(self.simulation_name) - 1)
-                lcrop = self.tablebasket.cellWidget(irow-1,0).currentText()
-                #print("runID=",runID)
-
-                # Read geometry table for this simulation
-                geo_df = readGeometrySimID(runID)
-
-                tableName = "g03_" + lcrop
-                updtSoilgridInfo = readSoilInfoCropOutputDB(lcrop,tableName,runID)
-                new_df = updtSoilgridInfo['Date_Time'].str.split(' ',expand=True)
-                #print("new_df=",new_df)
-                updtSoilgridInfo['Date'] = new_df[0]
-                maxDate = max(updtSoilgridInfo['Date'])
-                updtSoilgridInfo = updtSoilgridInfo.loc[(updtSoilgridInfo['Date']==maxDate)]
-
-                # Merge g03 table with geometry table
-                updtSoilgrid = pd.merge(geo_df,updtSoilgridInfo,how='inner',left_on=['X','Y'],right_on=['X','Y'])
-
-                # Since 2dsoil assigns Y values from the max depth ->0 where the surface is the maximum Depth and the bottom
-                # of the profile is 0, we have to reverse this for the layer file. Thus we subtract the max depth from all
-                # the Y's'
-                maxY = max(updtSoilgrid['Y'])
-                updtSoilgrid['Y'] = maxY-updtSoilgrid['Y']
-                
-                updtSoilgrid['thNew'] = updtSoilgrid['thNew'].astype(float)
-                updtSoilgrid['Temp'] = updtSoilgrid['Temp'].astype(float)
-                # mult=hNew/abs(hNew)
-                updtSoilgrid['mult'] = updtSoilgrid['mult'].astype(float)
-                updtSoilgrid['NO3N'] = updtSoilgrid['NO3N'].astype(float)
-                updtSoilgrid['NH4N'] = updtSoilgrid['NH4N'].astype(float)
-                # Values in the g03 file are ug/cm3 of *soil water* => need to convert  NO3 grams NO3 per 1 million grams of SOIL for *lyr file
-                # ug/cm3(water) * (cm3(water)/cm3(soil)) => ug/cm3(soil) 
-                updtSoilgrid['NO3N_theta']= updtSoilgrid['NO3N'] * updtSoilgrid['thNew']
-                # delete this line we don't need it  NH4 is not dissolved in water
-                #updtSoilgrid['NH4N_theta']= updtSoilgrid['NH4N'] * updtSoilgrid['thNew'] 
-
-                # Constants used to calculate OM
-                # Carbon proportion in OM
-                percentC = 0.58
-                # Nitrogen proportion in OM
-                percentN = 0.05
-
-                tableNameG07 = "g07_" + lcrop
-                updtSoilgridInfoG07 = readSoilInfoCropOutputDB(lcrop,tableNameG07,runID)
-                new_df = updtSoilgridInfoG07['Date_Time'].str.split(' ',expand=True)
-                updtSoilgridInfoG07['Date'] = new_df[0]
-                maxDate = max(updtSoilgridInfoG07['Date'])
-                updtSoilgridInfoG07 = updtSoilgridInfoG07.loc[(updtSoilgridInfoG07['Date']==maxDate)]
-
-                # Merge g07 table with geometry table
-                updtSoilgridG07 = pd.merge(geo_df,updtSoilgridInfoG07,how='inner',left_on=['X','Y'],right_on=['X','Y'])
-
-                # Since 2dsoil assigns Y values from the max depth ->0 where the surface is the maximum Depth and the bottom
-                # of the profile is 0, we have to reverse this for the layer file. Thus we subtract the max depth from all
-                # the Y's'
-                maxY = max(updtSoilgridG07['Y'])
-                updtSoilgridG07['Y'] = maxY-updtSoilgridG07['Y']
-                           
-                updtSoilgridG07['Humus_C'] = updtSoilgridG07['Humus_C'].astype(float)
-                updtSoilgridG07['Humus_N'] = updtSoilgridG07['Humus_N'].astype(float)
-                updtSoilgridG07['Litter_C'] = updtSoilgridG07['Litter_C'].astype(float)
-                updtSoilgridG07['Litter_N'] = updtSoilgridG07['Litter_N'].astype(float)
-                updtSoilgridG07['Manure_C'] = updtSoilgridG07['Manure_C'].astype(float)
-                updtSoilgridG07['Manure_N'] = updtSoilgridG07['Manure_N'].astype(float)
-                updtSoilgridG07['Root_C'] = updtSoilgridG07['Root_C'].astype(float)
-                updtSoilgridG07['Root_N'] = updtSoilgridG07['Root_N'].astype(float)
-
-            layer = 1
             for rrow in range(0,len(soilgrid_list)):
                 record_tuple = soilgrid_list[rrow]
                 record_tuple = [float(i) for i in record_tuple]
@@ -1154,145 +1080,71 @@ make sure to press the Execute Rotation button.")
                     initType = "'m'"
                 else:
                     initType = "'w'"
-
-                if irow > 0:
-                    # Start grouping the data by Layer
-                    dfG03 = updtSoilgrid.loc[(updtSoilgrid['Layer']==layer)]
-                    dfG07 = updtSoilgridG07.loc[(updtSoilgridG07['Layer']==layer)]
-                    dfG03['BD'] = record_tuple[10]
-                    
-                    # calculate soil mass of node
-                    dfG03['soilMass'] = dfG03['BD'] * dfG03['Area'] # result is grams of soil in node
-
-                    # Calculate mass of NO3 and NH4 for each node
-                    # theta= cm3 water/cm3 soil NO3 is ug NO3/cm3 soil water
-                    # NO3N_theta = ug NO3/cm3 area
-                    # NO3_Theta * area = total ug of NO3 in the node
-                    dfG03['NO3N_theta_w']= dfG03['NO3N_theta']*dfG03['Area']  # result is total ug NO3 in the node
-                    #NNH4 is not dissolved in water so we use soil mass
-                    dfG03['NH4N_w'] = dfG03['NH4N']*dfG03['soilMass'] # this should give total ug of NH4 in the node
-
-                    dfG07['Humus_C_w'] = dfG07['Humus_C']*dfG03['soilMass'] # this should give total ug of Humus_C  in the node
-                                                                            # humus components are output as ug/g of soil in 2dsoil
-                    dfG07['Humus_N_w'] = dfG07['Humus_N']*dfG03['soilMass']  # this should give total ug of Humus_N  in the node
-                    dfG07['Litter_C_w'] = dfG07['Litter_C']*dfG03['soilMass'] # this should give total ug of Litter_C  in the node
-                    dfG07['Litter_N_w'] = dfG07['Litter_N']*dfG03['soilMass'] # this should give total ug of Litter_N  in the node
-                    dfG07['Manure_C_w'] = dfG07['Manure_C']*dfG03['soilMass'] # this should give total ug of Manure_C  in the node
-                    dfG07['Manure_N_w'] = dfG07['Manure_N']*dfG03['soilMass'] # this should give total ug of Manure_N  in the node
-                    dfG07['Root_C_w'] = dfG07['Root_C']*dfG03['soilMass']  # this should give total ug of Root_C  in the node 
-                                                                                 # 2dsoil outputs RootC and RootN as ug/g soil
-                    dfG07['Root_N_w'] = dfG07['Root_N']*dfG03['soilMass'] # this should give total ug of Root_N  in the node
-                    # nodal calculations end here.
-                 
-                    dfG07 = dfG07.groupby(['Layer'],as_index=False).agg({'Humus_C_w':['sum'],'Humus_N_w':['sum'],'Litter_C_w':['sum'],
-                                                                         'Litter_N_w':['sum'],'Manure_C_w':['sum'],'Manure_N_w':['sum'],
-                                                                         'Root_C_w':['sum'],'Root_N_w':['sum']})
-                    dfG07.columns = ["_".join(x) for x in dfG07.columns.ravel()]
-                                     
-                    # Leave only necessary columns
-                    dfG03 = dfG03[['thNew','mult','NO3N_theta_w','NH4N_w','Temp','Layer','soilMass']]
-                    dfG03 = dfG03.groupby(['Layer'],as_index=False).agg({'thNew':['mean'],'NO3N_theta_w':['sum'],'NH4N_w':['sum'],
-                                                                         'soilMass':['sum'],'Temp':['mean'],'mult':['mean']})
-                    dfG03.columns = ["_".join(x) for x in dfG03.columns.ravel()]
-                    #print("dfG03=",dfG03)
-                    #print("dfG07=",dfG07)
- 
-                    initType = "'w'"
-
-                    # Calculate OM and Matric potential
-                    Humus_C_layer = dfG07['Humus_C_w_sum']/dfG03['soilMass_sum']  #units are ug/g or ppm
-                    Humus_N_layer = dfG07['Humus_N_w_sum']/dfG03['soilMass_sum']
-                    Litter_C_layer = dfG07['Litter_C_w_sum']/dfG03['soilMass_sum']
-                    Litter_N_layer = dfG07['Litter_N_w_sum']/dfG03['soilMass_sum']
-                    Manure_C_layer = dfG07['Manure_C_w_sum']/dfG03['soilMass_sum']
-                    Manure_N_layer = dfG07['Manure_N_w_sum']/dfG03['soilMass_sum']
-                    Root_C_layer = dfG07['Root_C_w_sum']/dfG03['soilMass_sum']
-                    Root_N_layer = dfG07['Root_N_w_sum']/dfG03['soilMass_sum']
-
-                   
-                    OM_layer =  (Humus_C_layer+Root_C_layer)/percentC+Humus_N_layer+Root_N_layer   # total ug of soil OM components
-                    # 1% OM is .01 g OM/g soil = 10 mg OM/g= 10,000 ug/g
-                    # in 2dsoil OM is input as a fraction or %100 
-                    dfG07['OM']=OM_layer/10000.0/100
-        
-        
-                    # Convert "ug/cm3(soil)" to "ug/g (soil)" same as ppm, by dividing by Bulk density (g/cm3)
-                    #DT  NO3 is now total ug in the grams in the layer. NO3 in the layer file is mg/gram
-                    NO3_layer = dfG03['NO3N_theta_w_sum']/dfG03['soilMass_sum']  #result is mg NO3/g soil
-                    NH4_layer = dfG03['NH4N_w_sum']/dfG03['soilMass_sum']   # result is mg NH4/g soil
-
-                    fout<<'%-14d%-6s%-14.5f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-20.1f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
-                           %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,dfG07['OM'],Humus_C_layer,Humus_N_layer,Litter_C_layer,Litter_N_layer,Manure_C_layer,Manure_N_layer,
-                           NO3_layer,NH4_layer,dfG03['thNew_mean'],dfG03['Temp_mean'],record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],
-                           record_tuple[12],record_tuple[13],record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],
-                           record_tuple[21])<<"\n"
-                else:
-                    fout<<'%-14d%-6s%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-20.1f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
-                           %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],
-                           record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
-                           record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],record_tuple[21])<<"\n"
-                layer = layer + 1
+                fout<<'%-14d%-6s%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
+                       %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3], record_tuple[4],record_tuple[5],record_tuple[6],
+                       record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
+                       record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],record_tuple[21])<<"\n"
         fout<<"\n"
         fh.close()
 
 
     def refresh(self):
         sitelists = read_sitedetailsDB()
-        lsitename = self.siteCombo.currentText()
-        self.siteCombo = QComboBox()
-        self.siteCombo.addItem("Select from list")
-        for item in sitelists: 
-            self.siteCombo.addItem(item)
-        if(self.siteCombo.findText(lsitename, QtCore.Qt.MatchFixedString) >= 0):
-            self.siteCombo.setCurrentIndex(self.siteCombo.findText(lsitename, QtCore.Qt.MatchFixedString))
-        else:
-            self.siteCombo.setCurrentIndex(0)
-        self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
-        self.subgrid1.addWidget(self.siteCombo,0,1,1,1)
-
         self.soillists = read_soilDB()
-        lsoilname = self.soilCombo.currentText()
-        self.soilCombo = QComboBox()
-        self.soilCombo.addItem("Select from list")
-        for key in sorted(self.soillists):            
-            self.soilCombo.addItem(key)
-        if(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString) >= 0):
-            self.soilCombo.setCurrentIndex(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString))
-        else:
-            self.soilCombo.setCurrentIndex(0)
-        self.subgrid1.addWidget(self.soilCombo,0,3,1,1)
-
-        stationtypelists = read_weather_metaDBforsite(lsitename)
-        lstationtype = self.stationTypeCombo.currentText()
-        self.stationTypeCombo = QComboBox()        
-        self.stationTypeCombo.addItem("Select from list")
-        for key in sorted(stationtypelists):
-            if stationtypelists[key] != "Add New Station Name":
-                self.stationTypeCombo.addItem(stationtypelists[key])
-                if(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString) >= 0):
-                    self.stationTypeCombo.setCurrentIndex(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString))
-                else:
-                    self.stationTypeCombo.setCurrentIndex(0)
-        self.stationTypeCombo.currentIndexChanged.connect(self.showweathercombo)
-        self.subgrid1.addWidget(self.stationTypeCombo,1,1,1,1)
-
-        weather_id_lists = read_weather_id_forstationtype(lstationtype)
-        lweather = self.weatherCombo.currentText()
-        self.weatherCombo = QComboBox()        
-        self.weatherCombo.addItem("Select from list")
-        for item in sorted(weather_id_lists):
-            if item != "Add New Station Name":
-                self.weatherCombo.addItem(item)
-                if(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString) >= 0):
-                    self.weatherCombo.setCurrentIndex(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString))
-                else:
-                    self.weatherCombo.setCurrentIndex(0)
-        self.subgrid1.addWidget(self.weatherCombo,1,3,1,1)
-
         for irow in range(0,self.tablebasket.rowCount()):
-            lcrop = self.tablebasket.cellWidget(irow,0).currentText()
+            lsitename = self.tablebasket.cellWidget(irow,0).currentText()
+            self.siteCombo = QComboBox()
+            self.siteCombo.addItem("Select from list")
+            for item in sitelists: 
+                self.siteCombo.addItem(item)
+            if(self.siteCombo.findText(lsitename, QtCore.Qt.MatchFixedString) >= 0):
+                self.siteCombo.setCurrentIndex(self.siteCombo.findText(lsitename, QtCore.Qt.MatchFixedString))
+            else:
+                self.siteCombo.setCurrentIndex(0)
+            self.siteCombo.currentIndexChanged.connect(self.showstationtypecombo)
+            self.tablebasket.setCellWidget(irow,0,self.siteCombo)
+
+            lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
+            self.soilCombo = QComboBox()
+            self.soilCombo.addItem("Select from list")
+            for key in sorted(self.soillists):            
+                self.soilCombo.addItem(key)
+            if(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString) >= 0):
+                self.soilCombo.setCurrentIndex(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString))
+            else:
+                self.soilCombo.setCurrentIndex(0)
+            self.tablebasket.setCellWidget(irow,1,self.soilCombo)
+
+            stationtypelists = read_weather_metaDBforsite(lsitename)
+            lstationtype = self.tablebasket.cellWidget(irow,2).currentText()
+            self.stationTypeCombo = QComboBox()        
+            self.stationTypeCombo.addItem("Select from list")
+            for key in sorted(stationtypelists):
+                if stationtypelists[key] != "Add New Station Name":
+                    self.stationTypeCombo.addItem(stationtypelists[key])
+                    if(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString) >= 0):
+                        self.stationTypeCombo.setCurrentIndex(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString))
+                    else:
+                        self.stationTypeCombo.setCurrentIndex(0)
+            self.stationTypeCombo.currentIndexChanged.connect(self.showweathercombo)
+            self.tablebasket.setCellWidget(irow,2,self.stationTypeCombo)
+
+            weather_id_lists = read_weather_id_forstationtype(lstationtype)
+            lweather = self.tablebasket.cellWidget(irow,3).currentText()
+            self.weatherCombo = QComboBox()        
+            self.weatherCombo.addItem("Select from list")
+            for item in sorted(weather_id_lists):
+                if item != "Add New Station Name":
+                    self.weatherCombo.addItem(item)
+                    if(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString) >= 0):
+                        self.weatherCombo.setCurrentIndex(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString))
+                    else:
+                        self.weatherCombo.setCurrentIndex(0)
+            self.tablebasket.setCellWidget(irow,3,self.weatherCombo)
+
+            lcrop = self.tablebasket.cellWidget(irow,4).currentText()
             self.experimentlists = getExpTreatByCrop(lcrop)            
-            lexptreat = self.tablebasket.cellWidget(irow,1).currentText()
+            lexptreat = self.tablebasket.cellWidget(irow,5).currentText()
             self.expTreatCombo = QComboBox()          
             self.expTreatCombo.addItem("Select from list") 
             for val in sorted(self.experimentlists):
@@ -1302,4 +1154,4 @@ make sure to press the Execute Rotation button.")
             else:
                 self.expTreatCombo.setCurrentIndex(0)
             self.expTreatCombo.currentIndexChanged.connect(self.showtreatmentyear)
-            self.tablebasket.setCellWidget(irow,1,self.expTreatCombo)
+            self.tablebasket.setCellWidget(irow,5,self.expTreatCombo)

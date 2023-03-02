@@ -113,17 +113,14 @@ if __name__ == '__main__':
     else:
         mQFont.setPointSize(11)
 
-    mQFont.setPointSizeF(11)
-    mQFont.setPixelSize(11)
+    mQFont.setPointSizeF(7)
+    mQFont.setPixelSize(7)
     app.setFont(mQFont)
     
     import sys
     sys.excepthook = except_hook
 
-    conn = sqlite3.connect(dbDir + '\\crop.db')
-    c = conn.cursor()   
-    if not c:
-       print("database not open")
-    else:
+    conn, c = openDB(dbDir + '\\crop.db')
+    if c:
         ManagementTab = Tabs_Widget()
         sys.exit(app.exec_())

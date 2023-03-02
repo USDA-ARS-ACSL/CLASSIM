@@ -1,7 +1,5 @@
 import os
 import sys
-sys.path.insert(0, './helper')
-from module_soiltriangle import *
 from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, \
                             QVBoxLayout, QSpacerItem, QSizePolicy, QHeaderView
 from PyQt5.QtGui import QIcon, QPixmap
@@ -15,21 +13,14 @@ from collections import deque
 from pathlib import Path
 
 global runpath1
-global twodsoilexe
-global createsoilexe
-global rosettaexe
 global app_dir
 global repository_dir
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'crop_int')
+app_dir = os.path.join(gparent_dir,'classim_v3')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
-
-twodsoilexe= app_dir+'\\2dsoil.exe'
-createsoilexe= app_dir+'\\createsoilfiles.exe'
-rosettaexe= app_dir+'\\rosetta.exe'
 
 run_dir = os.path.join(app_dir,'run')
 if not os.path.exists(run_dir):
@@ -78,18 +69,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.restore() 
 
 
-    def sizeHint(self, option, index):
-        #Size should depend on number of lines wrapped
-        text = index.model().data(index)
-        document = QtGui.QTextDocument()
-        document.setHtml(text) 
-        width = index.model().data(index, QtCore.Qt.UserRole+1)
-        if not width:
-            width = 20
-        document.setTextWidth(width) 
-        return QtCore.QSize(document.idealWidth() + 10,  document.size().height())
-
-
 class Welcome_Widget(QTabWidget):
     # Add a signal to notify parent tab that user has selected following tabindex#     
     welcomesig = pyqtSignal(int)
@@ -114,11 +93,21 @@ class Welcome_Widget(QTabWidget):
         
         self.mainlayout1 = QHBoxLayout()  
         self.welcomeglayout1 = QVBoxLayout()  
+
+        # Read crop.db user version
+        conn, c = openDB(dbDir + '\\crop.db')
+        query = "pragma user_version"
+        cropDB = pd.read_sql_query(query,conn)
         
+        # Read cropOutput.db user version
+        conn, c = openDB(dbDir + '\\cropOutput.db')
+        query = "pragma user_version"
+        cropOutDB = pd.read_sql_query(query,conn)
+
         self.tab_label = QLabel("Welcome "+ gusername+ " !!")
         self.summary = '''
 <p>Crop, Land And Soil SIMulation (CLASSIM) was developed to facilitate the execution of crop models like MAIZSIM and SPUDSIM.  
-To run the simulation use the Rotation Builder tab.</p>
+To run the simulation use the Seasonal Run tab or to build a rotation use the Rotation Builder tab.</p>
 <>Before you proceed with the simulation, verify if the necessary information is already on the system otherwise you can add it going to the following tabs</p>
 <ol>
     <li>Site</li>
@@ -127,7 +116,8 @@ To run the simulation use the Rotation Builder tab.</p>
     <li>Cultivar</li>
     <li>Management</li>
 </ol>
-<p>After the simulation is completed, go to Output tab to see the simulation summary and to plot graphics.</p>
+<p>The model output can be seen on Seasonal Output or Rotation Output tab.</p>
+<p>Database: crop.db (version ''' + str(cropDB['user_version'][0]) + ''') and cropOutput.db (version ''' + str(cropOutDB['user_version'][0]) + ''').</p>
 '''
         self.tab_summary = QTextEdit(self.summary)
         self.tab_summary.setReadOnly(True)        
@@ -142,11 +132,13 @@ To run the simulation use the Rotation Builder tab.</p>
         self.USDAGraph = QLabel()
         self.USDApixmap = QPixmap("./images/USDA_logo.png")
         self.USDAGraph.setPixmap(self.USDApixmap)
-                      
+                
         self.welcomeglayout1.addWidget(self.USDAGraph)
+        self.USDAGraph.resize(self.USDApixmap.width(),self.USDApixmap.height())
         self.welcomeglayout1.addWidget(self.tab_label)        
         self.welcomeglayout1.addWidget(self.tab_summary)
         self.welcomeglayout1.addWidget(self.ClassimGraph)
+        self.ClassimGraph.resize(self.pixmap.width(),self.pixmap.height())
         self.welcomeglayout1.addStretch()
 
         self.mainlayout1.addLayout(self.welcomeglayout1)
@@ -155,7 +147,7 @@ To run the simulation use the Rotation Builder tab.</p>
         
 
     def importfaq(self, thetabname=None):        
-        faqlist = read_FaqDB(thetabname) 
+        faqlist = read_FaqDB(thetabname,'') 
         faqcount=0
         
         for item in faqlist:

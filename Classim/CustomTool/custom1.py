@@ -4,8 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from contextlib import contextmanager
 from TabbedDialog import *
 from DatabaseSys.Databasesupport import *
-from PyQt5.QtCore import Qt, QModelIndex, QVariant, QAbstractItemModel, QDataStream, QIODevice
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import Qt, QModelIndex, QVariant, QAbstractItemModel, QIODevice
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QGroupBox, QLabel, QWidget, QListWidget, QListWidgetItem, QTableWidget, \
                             QTableWidgetItem, QPushButton, QRadioButton, QCheckBox
 
@@ -98,7 +97,7 @@ class BranchNode(object):
     def insertChildAtIndex(self,child,pos):
         child.parent = self
         ## do we need sorting
-        print("InsertChildAtIndex",pos)
+        #print("InsertChildAtIndex",pos)
         if 0<= pos <= len(self.children):
             self.children.insert(pos,(child.orderKey(),child))
 
@@ -113,7 +112,7 @@ class BranchNode(object):
         """
         Removes the child object from the children list 
         """
-        print("Remove node")
+        #print("Remove node")
         if row <0 or row >= len(self.children):
             return False
         child = self.children.pop(row)        
@@ -122,7 +121,7 @@ class BranchNode(object):
 
 
     def removeChild(self,row):
-        print("Remove node new")
+        #print("Remove node new")
         if row <0 or row >= len(self.children):
             return False
         child = self.children.pop(row)
@@ -157,7 +156,7 @@ class LeafNode(object):
 
 
      def asRecord(self):
-         print("asRecord:leaf")
+         #print("asRecord:leaf")
          record = []
          branch = self.parent
          while branch is not None:
@@ -165,7 +164,7 @@ class LeafNode(object):
              branch = branch.parent
 
          assert record and not record[0]
-         print("size of record=",len(record))
+         #print("size of record=",len(record))
          record = record[1:]
          return record + self.fields
 
@@ -174,7 +173,7 @@ class LeafNode(object):
         """
         Removes the child object from the children list 
         """
-        print("Remove node")
+        #print("Remove node")
         if row <0 or row >= len(self.fields):
             return False
         child = self.fields.pop(row)        
@@ -219,7 +218,7 @@ class TreeOfTableModel(QAbstractItemModel):
         """
           Sets the data
         """
-        print("Set Data Called")
+        #print("Set Data Called")
         if value:
             item = index.internalPointer()
             item.set_value(value)            
@@ -239,7 +238,7 @@ class TreeOfTableModel(QAbstractItemModel):
 
 
     def dragMoveEvent(self, event):
-        print("Tree:dragMove event entered")
+        #print("Tree:dragMove event entered")
         if event.mimeData().hasFormat("application/x-ltreedata"):
             event.accept()
         else:
@@ -247,7 +246,7 @@ class TreeOfTableModel(QAbstractItemModel):
 
 
     def dragEnterEvent(self, event):
-        print("Tree:dragEnter event entered")
+        #print("Tree:dragEnter event entered")
         if event.mimeData().hasFormat("application/x-ltreedata"):
             event.accept()
         else:
@@ -278,7 +277,7 @@ class TreeOfTableModel(QAbstractItemModel):
            
         if generation_count ==3:
             temp_str =temp_str2     
-        print("temp_str=", temp_str)
+        #print("temp_str=", temp_str)
         mimeData = QtCore.QMimeData()
         mimeData.setText(temp_str)
         return mimeData
@@ -295,13 +294,13 @@ class TreeOfTableModel(QAbstractItemModel):
         
 
     def insertRows(self,row,count, parentIndex):
-        print("Insert Rows")
-        print("parents.len=",len(parentIndex.internalPointer()))
+        #print("Insert Rows")
+        #print("parents.len=",len(parentIndex.internalPointer()))
         self.beginInsertRows(parentIndex,row,(row +(count-1)))
         parentItem = parentIndex.internalPointer().insertChildAtIndex(row)
         # should we add something like parentItem.insertChild()
         self.endInsertRows()
-        print("parents.len=",len(parentIndex.internalPointer()))
+        #print("parents.len=",len(parentIndex.internalPointer()))
         return True
     
             
@@ -309,14 +308,14 @@ class TreeOfTableModel(QAbstractItemModel):
         parentNode = parentIndex
         if not parentIndex.isValid():
             #parent can be invalid when it is a root node (root parent returns an empty QModelIndex)
-            print("Debug: parentIndex not valid.")
+            #print("Debug: parentIndex not valid.")
             parentNode = self.root
         self.removeRows(row,1,parentNode)
         return True
 
 
     def load2(self,databasename,tablename,nesting,separator,loader=2):
-        print("inside TreeOfTabelModel, load")
+        #print("inside TreeOfTabelModel, load")
         assert nesting >0        
         self.nesting = nesting
         self.root = BranchNode("")
@@ -341,7 +340,7 @@ class TreeOfTableModel(QAbstractItemModel):
         """
         This will call addExperiment, addtreatment, addoperation functions iteratively
         """
-        print("Inside addCropExperiment: laoder=",loader)        
+        #print("Inside addCropExperiment: laoder=",loader)        
         try:
             for i in range(len(fields)):
                 root = self.root
@@ -389,7 +388,7 @@ class TreeOfTableModel(QAbstractItemModel):
         loader=2, default, then they will be added to tree. "
         """      
         for i in range(len(therlist)):            
-            key = thecropname #fields[i] #fields[i].lower()
+            key = thecropname
             root = self.root
             oldroot =root
             branch = None
@@ -406,9 +405,9 @@ class TreeOfTableModel(QAbstractItemModel):
                 oldroot = root
                 root = branch
 
-            # now work on populating this new branch            
-            new_branches = read_treatmentDB(root.name)         
-            ##print("new_branches = ", new_branches)
+            # now work on populating this new branch  
+            new_branches = read_treatmentDB(key,root.name)    
+            #print("new_branches = ", new_branches)
             theader5 = ["1","2","3","4","5","6","7","8","9"]
             temp_leaves = ["Operations","B"]
             ### adding here to see if it will enable the empty tree display
@@ -416,35 +415,28 @@ class TreeOfTableModel(QAbstractItemModel):
             assert branch is not None
             for k in range(len(new_branches)):
                 branch = BranchNode(new_branches[k])
-                new_leaves = read_operationsDB(root.name,new_branches[k])
-                
+                new_leaves = read_operationsDB(thecropname,root.name,new_branches[k])
+
                 if new_leaves is not None:
                     root.insertChild(branch)
                     for j in range(len(new_leaves)):                             
                         self.columns = max(self.columns, len(theader5))
                         branch.insertChild(BranchNode(new_leaves[j][0]))   
-                        tmp_bra = branch.childAtRow(j) #branch.children[j] 
-                        # down later, making it a fixed size of 8 items. If not 8 items then insert blank str    
+                        tmp_bra = branch.childAtRow(j)
                         tmp_header =[] 
                         op = str(new_leaves[j][0])
-
-                        if(op == "Simulation Start"):
-                            tmp_header.append("Date: "+str(new_leaves[j][6]))
-                        if(op == "Initial Field Values"):
-                            tmp_header.append("Cultivar: "+str(new_leaves[j][16]))
-                        if new_leaves[j][1] == 1:
-                            tmp_header.append("Depth (cm): "+str(new_leaves[j][4]))
-                        if new_leaves[j][2] == 1:
-                            tmp_header.append("Quantity (Kg/ha): "+str(new_leaves[j][5]))
-                        if new_leaves[j][3] == 1:
-                            tmp_header.append("Date: "+str(new_leaves[j][6]))
-                        if new_leaves[j][7] == 1:
-                            tmp_header.append("Cultivar: "+str(new_leaves[j][16]))
-                        tmp_header.append("op_id="+str(new_leaves[j][17]))
+                        if op == "Tillage" and str(new_leaves[j][1]) == "":
+                            tmp_header.append("No Tillage")
+                        elif op == "Fertilizer":
+                            fertInfo = readOpDetails(str(new_leaves[j][2]),op)
+                            tmp_header.append(fertInfo[0][3])
+                        else:
+                            tmp_header.append("Date: "+str(new_leaves[j][1]))
+                        tmp_header.append("op_id="+str(new_leaves[j][2]))
 
                         tmp_bra.insertChild(LeafNode(tmp_header,tmp_bra))                     
                     if loader==2:
-                        branch.insertChild(BranchNode("Add New Operation")) 
+                        branch.insertChild(BranchNode("Add New Operation"))
             if loader==2:
                 branch = BranchNode("Add New Treatment")
                 root.insertChild(branch)
@@ -454,7 +446,7 @@ class TreeOfTableModel(QAbstractItemModel):
   
     def asRecord(self,index):
         leaf = self.nodeFromIndex(index)
-        print("asRecord:Model")
+        #print("asRecord:Model")
         if leaf is not None and isinstance(leaf, LeafNode):
             return leaf.asRecord()
         return []
@@ -493,28 +485,13 @@ class TreeOfTableModel(QAbstractItemModel):
         if isinstance(node, BranchNode):
             return (QVariant(node.toString())) if index.column() ==0 else QVariant(str(""))
         return QVariant(node.field(index.column()))
-        
-
+  
+      
     def headerData(self,section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             #print("headerData: section=",section," headers=",self.headers)
             return (QVariant(self.headers[section])) if section < len(self.headers) else QVariant()
         return QVariant()
-
-
-    def indexold(self,row,column, parent):
-        assert self.root
-        branch = self.nodeFromIndex(parent)
-        print("Debug: custom1.py:TreeOfTableModel index(): type of branch = ",type(branch)," branch name=",branch.name,\
-              " row=",row, " column=",column)
-        if branch.name == "aa4":
-            print("debug index, row=",row)
-
-        #print(" child name=",branch.children[row][NODE].name)
-        assert branch is not None
-
-        return self.createIndex(row,column, branch.childAtRow(row))
-
 
     def index(self,row,column, parent):
         if self.hasIndex(row,column,parent):

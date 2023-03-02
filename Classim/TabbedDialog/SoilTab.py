@@ -8,10 +8,11 @@ from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from functools import partial
-import requests
+from decimal import Decimal
 import json
 import xmltodict
 import pandas as pd
+import requests
 
 '''
 Contains 2 classes.
@@ -52,18 +53,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.restore() 
 
 
-    def sizeHint(self, option, index):
-        #Size should depend on number of lines wrapped
-        text = index.model().data(index)
-        document = QtGui.QTextDocument()
-        document.setHtml(text) 
-        width = index.model().data(index, QtCore.Qt.UserRole+1)
-        if not width:
-            width = 20
-        document.setTextWidth(width) 
-        return QtCore.QSize(document.idealWidth() + 10,  document.size().height())
-
-
 #this is widget of type 1. It would be added to as a tab
 class Soil_Widget(QWidget):
     def __init__(self):
@@ -102,7 +91,6 @@ UPDATE/SAVE button.")
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
         
         self.vl1 = QVBoxLayout()
-        self.vl2 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
         self.hl2 = QHBoxLayout()
         self.mainlayout1 = QGridLayout()
@@ -113,7 +101,7 @@ UPDATE/SAVE button.")
 
         self.save_update_button = QPushButton("Save")
         self.delete_button = QPushButton("Delete")
-        self.currentsoillabel = QLabel("Soil Name:")
+        self.currentsoillabel = QLabel("Soil Name")
         self.soilname2 = QLineEdit()
         self.system_msg = QLineEdit()
         self.system_msg.setFrame(False)
@@ -128,21 +116,29 @@ UPDATE/SAVE button.")
         
         ## main sub tab 
         self.soillists = read_soilDB()
-        self.soillistlabel2 = QLabel("Soil List")
-        self.sitelabel = QLabel("Site List")
+        self.soillistlabel2 = QLabel("Soil")
+        self.sitelabel = QLabel("Site")
+        self.bottomBClabel = QLabel("Soil Boundary Condition")
 
         self.soilcombo = QComboBox()
         self.sitecombo = QComboBox()
+        # Create and populate bottomBCcombo
+        self.bottomBCcombo = QComboBox()
+        self.bottomBCcombo.addItem("Unsaturated Drainage") # val = -7
+        self.bottomBCcombo.addItem("Water Table")          # val = 1
+        self.bottomBCcombo.addItem("Seepage")              # val = -2
+
         self.soilselectionlabel= QLabel("Soil Properties")
         self.soiltable1 = QTableWidget()
         self.soiltable1.verticalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
         self.soiltable1.verticalHeader().customContextMenuRequested.connect(self.soiltableverticalheader_popup)
-        self.vl2.addWidget(self.soilselectionlabel)
         self.soilselectionlabel.setVisible(False)
         self.soiltable1.setVisible(False)
         self.sitecombo.setVisible(False)
         self.sitelabel.setVisible(False)
- 
+        self.bottomBClabel.setVisible(False)
+        self.bottomBCcombo.setVisible(False)
+
         self.soiltable1.horizontalScrollBar().setStyleSheet("QScrollBar:: horizontal {border: 2px solid grey; background: lightgray; height: 15px; \
                                                              margin: 0px 20px 0 20px;} \
                                                              QScrollBar::handle:horizontal {background: #32CC99; min-width: 20px;} \
@@ -169,7 +165,9 @@ UPDATE/SAVE button.")
         self.soilpagegl.addWidget(self.soilcombo,2,1)
         self.soilpagegl.addWidget(self.sitelabel,3,0)
         self.soilpagegl.addWidget(self.sitecombo,3,1)
-        self.soilpagegl.addLayout(self.vl2,5,0,-1,-1)        
+        self.soilpagegl.addWidget(self.bottomBClabel,4,0)
+        self.soilpagegl.addWidget(self.bottomBCcombo,4,1)
+        self.soilpagegl.addWidget(self.soilselectionlabel,5,0,-1,-1)        
         self.soilpagegl.addWidget(self.soiltable1,5,1,-1,-1)
         self.vl1.setContentsMargins(1,1,1,1)
         self.vl1.addLayout(self.hl1)        
@@ -231,13 +229,14 @@ UPDATE/SAVE button.")
             self.save_update_button.setVisible(True)
             self.soilname2.setVisible(True)
             self.delete_button.setVisible(False)
-            self.currentsoillabel.setVisible(False)
+            self.currentsoillabel.setVisible(True)
             self.soilselectionlabel.setVisible(False)
             self.sitecombo.setEnabled(True) 
-            #self.sitecombo.currentIndexChanged.connect(self.loadSoilProfile,self.sitecombo.currentIndex())
+            self.bottomBClabel.setVisible(True)
+            self.bottomBCcombo.setVisible(True)
 
             self.save_update_button.setText("SaveAs")
-            self.soilname2.setText("Provide soil name")
+            self.soilname2.setText("")
             self.soilname2.setReadOnly(False)
 
             self.soiltable1.clear()
@@ -299,8 +298,16 @@ UPDATE/SAVE button.")
                             self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem(str(row['depth'])))
                         elif col == 1:
                             self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem(str(row['OM'])))
+                        elif col == 2:    
+                            self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem("25"))
+                        elif col == 3:    
+                            self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem("4"))
+                        elif col == 4:    
+                            self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem("-200"))
                         elif col == 5:    
                             self.soiltable1.setCellWidget(ccurentrow-1,col,self.comboInitType)
+                        elif col == 6:    
+                            self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem("25"))
                         elif col == 7:
                             self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem(str(row['sand'])))
                         elif col == 8:
@@ -313,6 +320,7 @@ UPDATE/SAVE button.")
                             self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem(str(row['th33'])))
                         else:
                             self.soiltable1.setItem(ccurentrow-1,col,QTableWidgetItem("-1"))
+
             except KeyError:
                 print("No data!")
                 self.soiltable1.clear()
@@ -327,7 +335,7 @@ UPDATE/SAVE button.")
                 self.comboInitType.addItem("w") # val = 2
 
                 # This list holds the soil long table default values
-                soillonglist = [0,0,0,0,-200,1,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
+                soillonglist = [0,0,25,4,-200,1,25,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
                 colnum=0
                 for val in soillonglist:
                     if colnum == 5:    
@@ -341,9 +349,6 @@ UPDATE/SAVE button.")
 
 
     def showsoildetailscombo(self,value):
-        print("**** debug: showsoildetailscombo called,itemtext=",\
-              self.soilcombo.itemText(self.soilcombo.currentIndex()))
-        
         # Selected "Select from list"
         if self.soilcombo.itemText(self.soilcombo.currentIndex()) == "Select From List":
             self.soiltable1.setVisible(False)                
@@ -354,6 +359,8 @@ UPDATE/SAVE button.")
             self.sitecombo.setVisible(False)
             self.sitelabel.setVisible(False)
             self.soilselectionlabel.setVisible(False)
+            self.bottomBClabel.setVisible(False)
+            self.bottomBCcombo.setVisible(False)
         else:
             self.sitelists = read_sitedetailsDB()
             self.sitecombo.clear()
@@ -369,13 +376,14 @@ UPDATE/SAVE button.")
 
             # Selected "add new soil"
             if self.soilcombo.itemText(self.soilcombo.currentIndex()) == "Add New Soil":
-                print("New soil!")
                 self.soiltable1.setVisible(False)                
                 self.save_update_button.setVisible(False)
                 self.soilname2.setVisible(False)
                 self.delete_button.setVisible(False)
                 self.currentsoillabel.setVisible(False)
                 self.soilselectionlabel.setVisible(False)
+                self.bottomBClabel.setVisible(False)
+                self.bottomBCcombo.setVisible(False)
                 self.sitecombo.setEnabled(True)
                 self.sitecombo.setCurrentIndex(self.sitecombo.findText("Select From List"))
                 self.sitecombo.currentIndexChanged.connect(self.loadSoilProfile,self.sitecombo.currentIndex())
@@ -396,6 +404,8 @@ UPDATE/SAVE button.")
                 self.soilname2.setVisible(True)
                 self.delete_button.setVisible(True)
                 self.currentsoillabel.setVisible(True)
+                self.bottomBClabel.setVisible(True)
+                self.bottomBCcombo.setVisible(True)
                 self.save_update_button.setText("Update")  
                 self.soilname2.setText(self.soilcombo.itemText(value))  
                 self.soilname2.setReadOnly(True)
@@ -407,7 +417,20 @@ UPDATE/SAVE button.")
                 #print("sitename=",sitename[0])
                 self.sitecombo.setCurrentIndex(self.sitecombo.findText(sitename[0]))
                 self.sitecombo.setEnabled(False)
-          
+                gridratio_list = read_soilgridratioDB(self.soilcombo.itemText(value))
+                for rrow in range(0,len(gridratio_list)):
+                    record_tuple = gridratio_list[rrow]
+                    bottomBCval = int(record_tuple[6])
+
+                if(bottomBCval == 1):
+                   matchedindexBC = self.bottomBCcombo.findText("Water Table")
+                elif(bottomBCval == -2):
+                   matchedindexBC = self.bottomBCcombo.findText("Seepage")
+                else:
+                   matchedindexBC = self.bottomBCcombo.findText("Unsaturated Drainage")
+
+                self.bottomBCcombo.setCurrentIndex(matchedindexBC)
+         
                 self.soiltable1.clear()
                 self.soiltable1.setRowCount(0)
                 self.soiltable1.setAlternatingRowColors(True)
@@ -654,7 +677,7 @@ UPDATE/SAVE button.")
 
 
     def importfaq(self, thetabname=None):        
-        faqlist = read_FaqDB(thetabname) 
+        faqlist = read_FaqDB(thetabname,'') 
         faqcount=0
         
         for item in faqlist:
@@ -722,6 +745,8 @@ UPDATE/SAVE button.")
         self.soilcombo.blockSignals(False)  
         self.sitecombo.setVisible(False)
         self.sitelabel.setVisible(False)
+        self.bottomBClabel.setVisible(False)
+        self.bottomBCcombo.setVisible(False)
 
 
     @pyqtSlot()
@@ -729,9 +754,20 @@ UPDATE/SAVE button.")
         '''
         aim: to save the soil data from the soil tab
         '''
-        print("debug: SoilTab::on_savebuttonclick(): savebutton_name=",self.save_update_button.text())
-        soilgrid_list =[1,2,3,4.5,6,8.5,11,14,19,23,27,33,38]
-        soilgridratio_list =[1.6,0.05,2.1,2,10,23,1]
+        try:
+            self.save_update_button.disconnect()
+        except:
+            pass
+        #print("debug: SoilTab::on_savebuttonclick(): savebutton_name=",self.save_update_button.text())
+        bottomBC = self.bottomBCcombo.itemText(self.bottomBCcombo.currentIndex())
+        if(bottomBC == "Water Table"):
+            bottomBCval = 1
+        elif(bottomBC == "Seepage"):
+            bottomBCval = -2
+        else:
+            bottomBCval = -7
+
+        soilgridratio_list =[1.2,0.5,2.1,3,10,23,bottomBCval]
         next_gridratio_id =0
         self.system_msg.clear()
         #find is it update or save
@@ -748,27 +784,64 @@ UPDATE/SAVE button.")
             # save soilgridratiolist and preserve the value of new gridratio_id        
             next_gridratio_id = insert_soilgridratioDB(tuple(soilgridratio_list))
             #inserts the soil, gridratio
-            if not check_and_insert_soilDB(soilname,site_id,next_gridratio_id):
-                print("This name already exist.")
-                return False 
+            check_and_insert_soilDB(soilname,site_id,next_gridratio_id)
+            rowNum = self.soiltable1.rowCount() - 1
         elif self.save_update_button.text() == "Update":
             delete_soillong(self.soilname2.text())
+            rowNum = self.soiltable1.rowCount()
+            updateBottomBC(self.soilname2.text(),bottomBCval)
 
-        for rrow in range(self.soiltable1.rowCount()): 
-            retrieved_datalist= []
-            colnum = 0            
+        wrnMess = ""
+        errMess = "" 
+        for rrow in range(rowNum):
+            retrieved_datalist = []
             for ccol in range(self.soiltable1.columnCount()):
-                #if self.soiltable1.item(rrow,ccol):
-                    if(colnum == 5):
+                if(ccol == 5):
+                    opt = self.soiltable1.cellWidget(rrow,ccol).currentText()
+                    if(opt == "m"):
+                        val = 1
+                    if(opt == "w"):
+                        val = 2
+                    retrieved_datalist.append(int(val))
+                else:
+                    retrieved_datalist.append(self.soiltable1.item(rrow,ccol).text())
+            #print("debug:soil_widget:on_savebutton_click(): working on layer#",rrow," ",retrieved_datalist)
+            retrieved_datalist[1] = float(retrieved_datalist[1])/100
+            lLev = self.soiltable1.item(rrow,0).text()
+            hNew = Decimal(self.soiltable1.item(rrow,4).text())
+            sand = Decimal(self.soiltable1.item(rrow,7).text())
+            silt = Decimal(self.soiltable1.item(rrow,8).text())
+            clay = Decimal(self.soiltable1.item(rrow,9).text())
+
+            if(sand+silt+clay != 100):
+                errMess += "For bottom depth " + lLev + " cm: sand, silt and clay should add up to 100%.<br>"
+
+            if(hNew>=0 and val==1):
+                wrnMess += "For bottom depth " + lLev + " cm: if HNew >= 0, the unit type should be 'w', otherwise this will be treated as ponded water surface.<br>"
+
+        if errMess != "":
+            if self.save_update_button.text() == "SaveAs":
+                delete_soilDB(self.soilname2.text())
+            messageUser(errMess)
+            self.save_update_button.clicked.connect(lambda:self.on_savebuttonclick())
+        else:
+            for rrow in range(rowNum):
+                retrieved_datalist = []
+                errMess = "" 
+                for ccol in range(self.soiltable1.columnCount()):
+                    if(ccol == 5):
                         opt = self.soiltable1.cellWidget(rrow,ccol).currentText()
                         if(opt == "m"):
                             val = 1
                         if(opt == "w"):
                             val = 2
-                        retrieved_datalist.append(float(val))
+                        retrieved_datalist.append(int(val))
                     else:
                         retrieved_datalist.append(self.soiltable1.item(rrow,ccol).text())
-                    colnum = colnum + 1
-            #print("debug:soil_widget:on_savebutton_click(): working on layer#",rrow," ",retrieved_datalist)
-            insert_into_soillong(self.soilname2.text(), tuple(retrieved_datalist))
-        self.reset_view()
+                #print("debug:soil_widget:on_savebutton_click(): working on layer#",rrow," ",retrieved_datalist)
+                retrieved_datalist[1] = float(retrieved_datalist[1])/100
+                insert_into_soillong(self.soilname2.text(), tuple(retrieved_datalist))
+
+            if  wrnMess != "":
+                messageUserInfo(wrnMess)
+            self.reset_view()

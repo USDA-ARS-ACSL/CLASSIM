@@ -8,17 +8,19 @@ from CustomTool.custom1 import *
 from DatabaseSys.Databasesupport import *
 from TabbedDialog.ManagementTab import *
 from TabbedDialog.tableWithSignalSlot import *
+from TabbedDialog.SeasonalTab import *
 from TabbedDialog.RotationTab import *
 from TabbedDialog.SoilTab import *
 from TabbedDialog.WeatherTab import *
 from TabbedDialog.CultivarTab import *
+from TabbedDialog.RotOutputTab import *
 from TabbedDialog.OutputTab import *
 from TabbedDialog.WelcomeTab import *
 from TabbedDialog.SiteTab import *
 import os
 
 '''
-This is main tab for the interface. Crop_int.py (application main entry point) call this tab class.  All the other tabs (Welcome, 
+This is main tab for the interface. classim.py (application main entry point) call this tab class.  All the other tabs (Welcome, 
 Site, Soil, Cultivar, Weather, Management, Rotation, Output) are attached as sub-tabs to it.
 
 Important: These subtabs are/ and can be linked to each other via "make_connection" method. Take a look.. Useful for 
@@ -65,18 +67,19 @@ class Tabs_Widget(QTabWidget):
     def init_ui(self):
         QtWidgets.QMainWindow().setMinimumSize(QtCore.QSize(1000,800))
         font = QtWidgets.QMainWindow().font()
-        font.setPointSize(11)
         QtWidgets.QMainWindow().setFont(font)
         self.setFont(font)
-        
+
         self.Welcometab = Welcome_Widget()
         self.sitetab = SiteWidget()        
         self.soiltab = Soil_Widget()
         self.WeatherTab = Weather_Widget()
-        self.Cultivartab =Cultivar_Widget()
-        self.Managementtab =ManagementTab_Widget()
+        self.Cultivartab = Cultivar_Widget()
+        self.Managementtab = ManagementTab_Widget()
+        self.Seasonaltab = Seasonal_Widget()
         self.Rotationtab = Rotation_Widget()
         self.Outputtab = Output2_Widget()
+        self.RotOutputtab = RotOutput_Widget()
                 
         self.Managementtab.setUpdatesEnabled(True)
         self.addTab(self.Welcometab, ("  Welcome  "))        
@@ -85,8 +88,10 @@ class Tabs_Widget(QTabWidget):
         self.addTab(self.WeatherTab, "  Weather ")
         self.addTab(self.Cultivartab,"  Cultivar  ")             
         self.addTab(self.Managementtab, ("  Management  ")   )        
+        self.addTab(self.Seasonaltab, "  Seasonal Run  ")      
         self.addTab(self.Rotationtab, "  Rotation Builder  ")      
-        self.addTab(self.Outputtab, "  Output  ")
+        self.addTab(self.Outputtab, "  Seasonal Output  ")
+        self.addTab(self.RotOutputtab, "  Rotation Output  ")
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(9)
@@ -99,8 +104,12 @@ class Tabs_Widget(QTabWidget):
         if self.isWindowModified():
             print("Debug window modified")
         
-        # Connecting Output tab with Rotation tab
-        self.Outputtab.make_connection(self.Rotationtab)
+        # Connecting Output tab with Seasonal tab
+        self.Outputtab.make_connection(self.Seasonaltab)
+
+        # Connecting RotOutput tab with Rotation tab
+        self.RotOutputtab.make_connection(self.Rotationtab)
+
         self.make_connection(self.Welcometab)     
         self.show()
         self.currentChanged.connect(self.OncurrentChanged)
@@ -111,15 +120,23 @@ class Tabs_Widget(QTabWidget):
 
 
     def OnTabChanged(self,MyCurrentTab):
-        if MyCurrentTab >=1 and  MyCurrentTab <=7:
+        if MyCurrentTab >=1 and  MyCurrentTab <=9:
             self.setCurrentIndex(MyCurrentTab)
         else:
             self.setCurrentIndex(0)
 
 
     def OncurrentChanged(self,MyCurrentTab):
+        if self.currentIndex() == 3:
+            self.WeatherTab.refresh()
+        if self.currentIndex() == 4:
+            self.soiltab.reset_view()
         if self.currentIndex() == 5:
             self.Managementtab.fresh()
+        if self.currentIndex() == 6:
+            self.Seasonaltab.refresh()
+        if self.currentIndex() == 7:
+            self.Rotationtab.refresh()
 
 
     def center(self):

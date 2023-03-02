@@ -6,6 +6,7 @@ from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
+from CustomTool.createManRepWindow import *
 
 class ItemWordWrap(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -27,18 +28,7 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.restore() 
 
 
-    def sizeHint(self, option, index):
-        #Size should depend on number of lines wrapped
-        text = index.model().data(index)
-        document = QtGui.QTextDocument()
-        document.setHtml(text) 
-        width = index.model().data(index, QtCore.Qt.UserRole+1)
-        if not width:
-            width = 20
-        document.setTextWidth(width) 
-        return QtCore.QSize(document.idealWidth() + 10,  document.size().height())
-
-
+ 
 #this is widget of type 1. It would be added to as a tab
 class ManagementTab_Widget(QWidget):
     def __init__(self):
@@ -57,24 +47,25 @@ class ManagementTab_Widget(QWidget):
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("management")              
         self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree)) # Sush:Important for word wrap
+        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
         self.faqtree.setVisible(False)
 
         self.mainlayout1 = QGridLayout()          
         self.vl1 = QVBoxLayout()    
         
         header5 = ["Crop(s)/Experiment(s)/ Treatment(s)/Operation(s)"]  
-        self.tab_summary = QTextEdit("Crop management is a 4 step process and is implemented in a panel \
-below. This panel occasionally opens up another panel on its right side to collect supplement but \
-necessary inputs. Process begins by A).Clicking the CROP to be managed, B). ADD NEW Experiment by giving \
-it a broader categorical name like `Summer2018`. C). Experiment is further defined by ADD NEW Treatment \
-plan by giving it treatment specific name. Note EXPERIMENT can have multiple treatments plans like `With \
-Fertilizer`, `Without Fertilizer`. D). Defining the treatment individual OPERATION(S) by listing \
-operation, date of operation, operation specific parameters and crop cultivar.")
+        self.tab_summary = QTextEdit("Crop management is a 4 step process and is implemented in a panel below. This \
+panel occasionally opens up another panel on its right side to collect supplement but necessary inputs. Process begins \
+by A).Clicking the CROP to be managed, B). ADD NEW Experiment by giving it a broader categorical name like `Summer2018`. \
+C). Experiment is further defined by ADD NEW Treatment plan by giving it treatment specific name. Note EXPERIMENT can \
+have multiple treatments plans like `With Fertilizer`, `Without Fertilizer`. D). Defining the treatment individual \
+OPERATION(S) by listing operation, date of operation, operation specific parameters and crop cultivar.<br><b>NOTE</b>: \
+If you are modeling multiple treatments that only vary in one management aspect (ex. multiple N levels), use the CopyTo \
+button to create copies of the treatment information so you do not need to fill in all of the management data multiple times.")
         self.tab_summary.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.tab_summary.setReadOnly(True)   
         
-        self.tab_summary.setMaximumHeight(80)    
+        self.tab_summary.setMaximumHeight(90)    
         self.tab_summary.setAlignment(QtCore.Qt.AlignTop)     
         # no scroll bars
         self.tab_summary.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
@@ -85,6 +76,12 @@ operation, date of operation, operation specific parameters and crop cultivar.")
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        # Creates the management report window
+        self.manRepWindow = createManRepWindow()
+        # Button to toggle management report window
+        self.manRepButton = QPushButton("Open Management Report")
+        self.manRepButton.clicked.connect(self.toggleManRepWindow)
         
         # adding loader value. This will control if "Add Experiment/ Add Treatment/ Add Operation" should be added or not
         self.treeWidget = TreeOfTableWidget("crop", "sitedetails", 1, ',', 2, parent=None)
@@ -119,9 +116,9 @@ operation, date of operation, operation specific parameters and crop cultivar.")
 
         self.gl = QGridLayout()
         self.gl.setSpacing(1)
-        # tree view
         self.vl1.addWidget(self.tab_summary)        
         self.vl1.addWidget(self.helpcheckbox)
+        self.vl1.addWidget(self.manRepButton)
         
         self.spacer = QSpacerItem(10,10, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.hl1 = QHBoxLayout()
@@ -136,12 +133,18 @@ operation, date of operation, operation specific parameters and crop cultivar.")
         self.show()
 
 
+    def toggleManRepWindow(self):
+        if self.manRepWindow.isVisible():
+            self.manRepWindow.hide()
+        else:
+            self.manRepWindow.show()
+
+
     def fresh(self):
         self.test1.sitetable1.clear()
         self.test1.sitetable1.reset()
         self.test1.setVisible(False)
         self.test1.sitetable1.hide()
-        print("Debug: Process coming here")
 
 
     def make_connection(self,tableWithSignalSlot_object):
@@ -152,8 +155,7 @@ operation, date of operation, operation specific parameters and crop cultivar.")
 
 
     def importfaq(self, thetabname=None):        
-        #faqlist = read_FaqDB() 
-        faqlist = read_FaqDB(thetabname) 
+        faqlist = read_FaqDB(thetabname,'') 
         faqcount=0
         for item in faqlist:
             roottreeitem = QTreeWidgetItem(self.faqtree)

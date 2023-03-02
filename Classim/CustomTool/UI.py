@@ -1,20 +1,8 @@
-import sqlite3
 import re
 import os
-import pandas as pd
 
 from PyQt5 import QtSql, QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMessageBox
-from datetime import datetime as dt
-from datetime import datetime, timedelta
-from DatabaseSys.Databasesupport import *
-
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'crop_int')
-if not os.path.exists(dbDir):
-    os.makedirs(dbDir)
-
 
 def messageUser(errMessage):
     '''
@@ -28,7 +16,7 @@ def messageUser(errMessage):
     msg.setText(errMessage)
     msg.setWindowTitle("Error")
     msg.exec_()
-    return False
+    return True
 
 
 def messageUserInfo(errMessage):

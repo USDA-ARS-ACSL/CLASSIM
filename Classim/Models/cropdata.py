@@ -26,7 +26,7 @@ class cropbasedatalist():
 class ServerModel(TreeOfTableModel):
     def __init__(self,parent=None):
         super(ServerModel,self).__init__(parent)
-        print("inside servermodel")
+        #print("inside servermodel")
 
 
     def data(self,index,role):        
@@ -86,7 +86,7 @@ class TreeOfTableWidget(QTreeView):
         self.setModel(model)
         
         try:
-            print("Inside TreeOfTableWidget __init__")
+            #print("Inside TreeOfTableWidget __init__")
             model.load2(databasename, tablename, nesting, separator, loader)   
         except IOError as e:
             QMessageBox.warning(self,"Server Info-Error",unicode(e))
@@ -100,7 +100,7 @@ class TreeOfTableWidget(QTreeView):
 
 
     def tclicked(self,index):   
-        print("cropdata: tclicked:In Signal,Click here")   
+        #print("cropdata: tclicked:In Signal,Click here")   
         if not isinstance(index.model().nodeFromIndex(index), LeafNode):   
             treedepth = self.model().getDepth(index)  # important, gives how deep in the tree            
             if(treedepth==2): #if(index.model().nodeFromIndex(index).name == "Add New Experiment"):
@@ -108,7 +108,7 @@ class TreeOfTableWidget(QTreeView):
                     str_experimentname = index.model().nodeFromIndex(index).name                    
                     str_cropname = index.model().nodeFromIndex(index).parent.name                    
                     self.getExperiment.emit(1,str_experimentname,str_cropname)                    
-                else:                    
+                else:   
                     str_experimentname = index.model().nodeFromIndex(index).name
                     str_cropname = index.model().nodeFromIndex(index).parent.name
                     self.getExperiment.emit(5,str_experimentname,str_cropname)
@@ -130,8 +130,8 @@ class TreeOfTableWidget(QTreeView):
                 str_cropname = currentnode.parent.parent.parent.name                
                 self.getNewOperation.emit(3,str_treatmentname,str_experimentname,str_cropname)
             elif(treedepth >= 4):  #len(index.model().nodeFromIndex(index)) > 4):
-                print("debug: It is an operation, name=", index.model().nodeFromIndex(index).name)                 
-                print("debug: nesting=",self.nesting, "depth=", treedepth)
+                #print("debug: It is an operation, name=", index.model().nodeFromIndex(index).name)                 
+                #print("debug: nesting=",self.nesting, "depth=", treedepth)
                 currentnode = index.model().nodeFromIndex(index)  
                 currentnodeparent = currentnode.parent.name #do we need this
                 currentnodeparentindex = self.model().createIndex(1,0,currentnodeparent) 
@@ -146,7 +146,7 @@ class TreeOfTableWidget(QTreeView):
                 str_cropname = currentnode.parent.parent.parent.name
                 self.getOperation.emit(4,str_treatmentname,str_experimentname,str_cropname,str_operationname,index)
             else:
-                print("debug:cropdata: getExperiment. emit 0")
+                #print("debug:cropdata: getExperiment. emit 0")
                 self.getExperiment.emit(0,'Blank','Blank')
               
 
@@ -155,26 +155,26 @@ class TreeOfTableWidget(QTreeView):
 
 
     def make_connection_2_table(self,table_object):
-         print("In make_connection_2_table")
+         #print("In make_connection_2_table")
          cstatus = table_object.sig2.connect(self.update_tree)
          cstatus2 = table_object.sig2t.connect(self.update_tree3)
-         print("Out make_connection_2_table")
+         #print("Out make_connection_2_table")
          return cstatus
 
 
     @pyqtSlot(int)
     def update_tree(self,intval):
-        print("debug:cropdata.py: update_tree:intval=",intval)
+        #print("debug:cropdata.py: update_tree:intval=",intval)
         if intval ==2:
-            print("debug: new entry either in experiment/treatment/operation")
+            #print("debug: new entry either in experiment/treatment/operation")
             self.model().emitDataChanged()
             
         if intval ==3: # for delete experiment
             s_current = self.currentIndex()
             # preserve the parent link before the remove operation, type QModelIndex
             s_parent = self.currentIndex().parent() 
-            print("CropData, row count before remove=",self.model().rowCount(self.currentIndex().parent()))
-            print("CropData, row # to be removed=",self.currentIndex().row())     
+            #print("CropData, row count before remove=",self.model().rowCount(self.currentIndex().parent()))
+            #print("CropData, row # to be removed=",self.currentIndex().row())     
             # what if the node to be removed has children and grandchildren? Do we need to remove them?? 
             if s_parent.isValid(): #agmip or crop
                 row2del = self.currentIndex().row()                
@@ -187,7 +187,7 @@ class TreeOfTableWidget(QTreeView):
                     nnode_childindex = self.model().index(0,0,nnode_2delindex) 
                     for operationloop in range(len(nnode_child)): #O, Simulation Start etc
                         leaf_child= nnode_child[0] #operationloop]
-                        print("Debug: leaf_child=",leaf_child)
+                        #print("Debug: leaf_child=",leaf_child)
                         # deleting the operation
                         delstatus_operation = self.model().removeRow(0,nnode_childindex) 
                     # deleting the treatment
@@ -207,7 +207,7 @@ class TreeOfTableWidget(QTreeView):
                 s_current = self.model().parent(s_current)
             
             self.model().beginResetModel()
-            print("Inside update_tree, intval=1")
+            #print("Inside update_tree, intval=1")
             self.model().load2(self.databasename, self.tablename,self.nesting,self.separator)
             self.model().endResetModel()
             self.model().layoutChanged.emit()
@@ -218,7 +218,7 @@ class TreeOfTableWidget(QTreeView):
             nnode = self.model().nodeFromIndex(QModelIndex())
             for i in range(tlen): #len(test_list)):       
                 nnode = nnode.child(test_list.pop()) #   nodeFromIndex(n_parent)
-                print("i1=",i," child=",nnode.name)
+                #print("i1=",i," child=",nnode.name)
             
             n_parent = self.model().createIndex(0,0,nnode)
             self.setCurrentIndex(n_parent)
@@ -237,9 +237,9 @@ class TreeOfTableWidget(QTreeView):
                 test_list.append(s_current.row())
                 s_current = self.model().parent(s_current)
             
-            print("debug: new entry either in experiment/treatment/operation: intval=",intval)
+            #print("debug: new entry either in experiment/treatment/operation: intval=",intval)
             self.model().beginResetModel()
-            print("Inside update_tree, intval=1")
+            #print("Inside update_tree, intval=1")
             self.model().load2(self.databasename, self.tablename,self.nesting,self.separator)
             self.model().endResetModel()
             self.model().layoutChanged.emit()
@@ -250,8 +250,8 @@ class TreeOfTableWidget(QTreeView):
             nnode = self.model().nodeFromIndex(QModelIndex())
             for i in range(tlen): #len(test_list)):       
                 nnode = nnode.child(test_list.pop()) #   nodeFromIndex(n_parent)
-                print("i1=",i," child=",nnode.name)
-            
+                #print("i1=",i," child=",nnode.name)
+                        
             n_parent = self.model().createIndex(0,0,nnode)
             self.setCurrentIndex(n_parent)
             self.setExpanded(n_parent,True)
@@ -277,7 +277,7 @@ class TreeOfTableWidget(QTreeView):
             if len(s_root.children) >0: #root
                 for croploop in range(len(s_root.children)):
                     crop_2delindex= self.model().index(0,0,s_rootindex)                             
-                    crop_2del = self.model().nodeFromIndex(crop_2delindex) #corn
+                    crop_2del = self.model().nodeFromIndex(crop_2delindex) #maize
 
                     for experimentloop in range(len(crop_2del.children)):
                         exp_2delindex = self.model().index(0,0,crop_2delindex)                             
@@ -302,11 +302,11 @@ class TreeOfTableWidget(QTreeView):
                 # treatment names have to be unique??
                 for rootloop in range(len(s_root.children)):
                     delstatus_crop=s_root.children.pop(-1) #0)
-                    print("debug: popped=",delstatus_crop)
+                    #print("debug: popped=",delstatus_crop)
 
             # check root, root children, roo_children.type
             self.model().beginResetModel()
-            print("Inside update_tree, intval=6")
+            #print("Inside update_tree, intval=6")
             self.model().load2(self.databasename, self.tablename,self.nesting,self.separator)
             self.model().endResetModel()
             self.model().layoutChanged.emit()
@@ -318,7 +318,7 @@ class TreeOfTableWidget(QTreeView):
             tmp_str0=''
             for i in range(tlen): #len(test_list)):       
                 nnode = nnode.child(test_list.pop()) #   nodeFromIndex(n_parent)                
-                print("i2=",i," child=",nnode.name)
+                #print("i2=",i," child=",nnode.name)
                 tmp_str0 = tmp_str0 + nnode.name
                 if i < tlen-1:
                     tmp_str0 = tmp_str0 + "->"
@@ -349,7 +349,7 @@ class TreeOfTableWidget(QTreeView):
             if len(s_root.children) >0: #root
                 for croploop in range(len(s_root.children)):
                     crop_2delindex= self.model().index(0,0,s_rootindex)                             
-                    crop_2del = self.model().nodeFromIndex(crop_2delindex) #corn
+                    crop_2del = self.model().nodeFromIndex(crop_2delindex) #maize
 
                     for experimentloop in range(len(crop_2del.children)):
                         exp_2delindex = self.model().index(0,0,crop_2delindex)                             
@@ -373,11 +373,11 @@ class TreeOfTableWidget(QTreeView):
                 # treatment names have to be unique??
                 for rootloop in range(len(s_root.children)):
                     delstatus_crop=s_root.children.pop(-1) #0)
-                    print("debug: popped=",delstatus_crop)
+                    #print("debug: popped=",delstatus_crop)
 
             # check root, root children, roo_children.type
             self.model().beginResetModel()
-            print("Inside update_tree, intval=66")
+            #print("Inside update_tree, intval=66")
             self.model().load2(self.databasename, self.tablename,self.nesting,self.separator)
             self.model().endResetModel()
             self.model().layoutChanged.emit()
@@ -389,7 +389,7 @@ class TreeOfTableWidget(QTreeView):
             tmp_str0=''
             for i in range(tlen): #len(test_list)):       
                 nnode = nnode.child(test_list.pop()) #   nodeFromIndex(n_parent)                
-                print("i3=",i," child=",nnode.name)
+                #print("i3=",i," child=",nnode.name)
                 tmp_str0 = tmp_str0 + nnode.name
                 if i < tlen-1:
                     tmp_str0 = tmp_str0 + "->"
@@ -403,7 +403,7 @@ class TreeOfTableWidget(QTreeView):
 
     @pyqtSlot(int,str,str,str,str)
     def update_tree3(self,intval,experimentname,cropname,treatmentname,operationname):
-        print("inside update_tree3: intval, experiment, crop names=",intval,experimentname,cropname)
+        #print("inside update_tree3: intval, experiment, crop names=",intval,experimentname,cropname)
         if(intval ==2):
             # find which row to expand
             t6 = None #QModelIndex() # initialize to root
@@ -423,25 +423,25 @@ class TreeOfTableWidget(QTreeView):
             else:
                 self.expand(tmp3)
             
-            print("debug: experient name=", experimentname)
-            print("debug: new entry either in experiment/treatment/operation")
+            #print("debug: experient name=", experimentname)
+            #print("debug: new entry either in experiment/treatment/operation")
 
         if intval ==4: # for insert experiment
             s_current = self.currentIndex() # this would be index of "Add New Experiment"
-            # preserve the parent link before the remove operation. This would be corn crop
+            # preserve the parent link before the remove operation. This would be maize crop
             s_parent = self.currentIndex().parent() 
-            print("CropData, row count before remove=",self.model().rowCount(self.currentIndex().parent()))
+            #print("CropData, row count before remove=",self.model().rowCount(self.currentIndex().parent()))
             s_root = self.currentIndex().parent()             
-            print("CropData, row count before insert=",self.model().rowCount(self.currentIndex().parent()))
+            #print("CropData, row count before insert=",self.model().rowCount(self.currentIndex().parent()))
             self.model().beginInsertRows(s_root,s_current.row(),s_current.row())              
-            pnode = self.model().nodeFromIndex(s_root)     # this will give parent node, corn 
+            pnode = self.model().nodeFromIndex(s_root)     # this will give parent node, maize 
             # creating a new node with experiment name and add a subnode of "Add New Treatment"
             newbranch =BranchNode(experimentname)
             newbranch.insertChild(BranchNode("Add New Treatment"))
             # this should insert the new experiment node just before the "Add New Experiment"
             pnode.insertChildAtIndex(newbranch,s_current.row()) 
             self.model().endInsertRows()
-            print("CropData, row count after insert=",self.model().rowCount(self.currentIndex().parent()))
+            #print("CropData, row count after insert=",self.model().rowCount(self.currentIndex().parent()))
 
             test_list = []
             while s_current.isValid():
@@ -455,7 +455,7 @@ class TreeOfTableWidget(QTreeView):
             nnode = self.model().nodeFromIndex(QModelIndex())
             for i in range(tlen): #len(test_list)):       
                 nnode = nnode.child(test_list.pop()) #   nodeFromIndex(n_parent)            
-                print("i=",i," child=",nnode.name)
+                #print("i=",i," child=",nnode.name)
             
             n_parent = self.model().createIndex(0,0,nnode)
             self.setCurrentIndex(n_parent)
@@ -463,10 +463,10 @@ class TreeOfTableWidget(QTreeView):
     
         
     def dragEnterEvent(self, QDragEnterEvent):
-        print("Inside dragenter, treewidget")
+        #print("Inside dragenter, treewidget")
         return super().dragEnterEvent(QDragEnterEvent)
 
 
     def dropEvent(self, QDropEvent):
-        print("Inside drop, treewidget")
+        #print("Inside drop, treewidget")
         return super().dropEvent(QDropEvent)        
