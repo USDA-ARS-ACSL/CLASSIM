@@ -1,0 +1,36 @@
+Soil table
+
+Bottom_depth
+OM_pct - organic matter (%)
+NO3  Nitrate (ug/cm3) (ppm)
+NH4 Ammonia ug/cm3 (PPM)
+HnNew Soil matric potential (should be <0)
+Tmpr  Soil temperature (C)
+Sand  Sand fraction (%)
+Silt  Silt fraction (%)
+Clay  Clay fraction (%)
+BD - bulk density of soil in horizon
+TH33 - soil water content at capillary pressure of 330 cm
+TH1500 - soil water content at capillary pressure of 15000 cm
+thr - residual soil water content
+ths - saturated soil water content
+tha
+th - volumetric soil water content
+Alfa - related to the inverse of the air entry suction
+n - measure of the pore-size distribution
+Ks - saturated hydraulic conductivity
+Kk
+thk
+kh
+kL
+km
+kn
+kd
+fe
+fh
+r0
+rL - root length
+rm - root mass
+fa
+nq
+cs
