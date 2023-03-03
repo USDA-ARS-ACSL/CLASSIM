@@ -209,11 +209,12 @@ pip-log.txt
 
 #project specific files
 
-*.zip
+#*.zip
 *.dbg
 
 /CLASSIMDirectoryStructure/
-CLASSIMDirectoryStructure.zip
+/Databases/
+
 
 # Unit test / coverage reports
 .coverage
@@ -232,3 +233,4 @@ CLASSIMDirectoryStructure.zip
 *.o
 
 
+/CLASSIMDirectoryStructure.zip
