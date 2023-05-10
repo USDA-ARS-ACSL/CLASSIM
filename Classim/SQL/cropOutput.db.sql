@@ -1,48 +1,4 @@
 BEGIN TRANSACTION;
-DROP TABLE IF EXISTS "g05_maize";
-CREATE TABLE IF NOT EXISTS "g05_maize" (
-	"g05_maize_id"	INTEGER,
-	"Date_Time"	TEXT,
-	"PSoilEvap"	REAL,
-	"ASoilEVap"	REAL,
-	"PET_PEN"	REAL,
-	"PE_T_int"	REAL,
-	"transp"	REAL,
-	"CumRain"	REAL,
-	"infil"	REAL,
-	"FLuxAct"	REAL,
-	"Drainage"	REAL,
-	"Runoff"	REAL,
-	"cover"	REAL,
-	"PSIM"	REAL,
-	"SeasPSoEv"	REAL,
-	"SeasASoEv"	REAL,
-	"SeasPTran"	REAL,
-	"SeasATran"	REAL,
-	"SeasRain"	REAL,
-	"SeasInfil"	REAL,
-	"Runoff_02"	REAL,
-	"Runoff_03"	REAL
-);
-DROP TABLE IF EXISTS "g02_maize";
-CREATE TABLE IF NOT EXISTS "g02_maize" (
-	"g02_maize_id"	INTEGER,
-	"Date_Time"	TEXT,
-	"jday"	NUMERIC,
-	"Lvs_Init"	NUMERIC,
-	"Lvs_Apr"	REAL,
-	"Leaf_#"	INTEGER,
-	"area"	REAL,
-	"mass"	REAL,
-	"Sen_Area"	REAL,
-	"Pntl_Area"	REAL,
-	"Elong_age"	REAL,
-	"CarbRat"	REAL,
-	"SLA"	REAL,
-	"dropped"	INTEGER,
-	"state"	INTEGER,
-	"GDDSum"	INTEGER
-);
 DROP TABLE IF EXISTS "plantStress_maize";
 CREATE TABLE IF NOT EXISTS "plantStress_maize" (
 	"plantStress_maize_id"	INTEGER NOT NULL,
@@ -145,31 +101,6 @@ CREATE TABLE IF NOT EXISTS "g01_potato" (
 	"Wstress2"	REAL,
 	"Wstress3"	REAL
 );
-DROP TABLE IF EXISTS "g05_potato";
-CREATE TABLE IF NOT EXISTS "g05_potato" (
-	"g05_potato_id"	INTEGER NOT NULL,
-	"Date_Time"	TEXT NOT NULL,
-	"PSoilEvap"	REAL,
-	"ASoilEVap"	REAL,
-	"PET_PEN"	REAL,
-	"PE_T_int"	REAL,
-	"transp"	REAL,
-	"CumRain"	REAL,
-	"infil"	REAL,
-	"FLuxAct"	REAL,
-	"Drainage"	REAL,
-	"Runoff"	REAL,
-	"cover"	REAL,
-	"PSIM"	REAL,
-	"SeasPSoEv"	REAL,
-	"SeasASoEv"	REAL,
-	"SeasPTran"	REAL,
-	"SeasATran"	REAL,
-	"SeasRain"	REAL,
-	"SeasInfil"	REAL,
-	"Runoff_02"	REAL DEFAULT 0,
-	"Runoff_03"	REAL DEFAULT 0
-);
 DROP TABLE IF EXISTS "nitrogen_potato";
 CREATE TABLE IF NOT EXISTS "nitrogen_potato" (
 	"nitrogen_potato_id"	INTEGER NOT NULL,
@@ -202,31 +133,6 @@ CREATE TABLE IF NOT EXISTS "plantStress_potato" (
 	"Dev_stage"	REAL,
 	"Heat_veg"	REAL,
 	"Heat_repre"	REAL
-);
-DROP TABLE IF EXISTS "g05_fallow";
-CREATE TABLE IF NOT EXISTS "g05_fallow" (
-	"g05_fallow_id"	INTEGER,
-	"Date_Time"	REAL,
-	"PSoilEvap"	REAL,
-	"ASoilEVap"	REAL,
-	"PET_PEN"	REAL,
-	"PE_T_int"	REAL,
-	"transp"	REAL,
-	"CumRain"	REAL,
-	"infil"	REAL,
-	"FLuxAct"	REAL,
-	"Drainage"	REAL,
-	"Runoff"	REAL,
-	"cover"	REAL,
-	"PSIM"	REAL,
-	"SeasPSoEv"	REAL,
-	"SeasASoEv"	REAL,
-	"SeasPTran"	REAL,
-	"SeasATran"	REAL,
-	"SeasRain"	REAL,
-	"SeasInfil"	REAL,
-	"Runoff_02"	REAL,
-	"Runoff_03"	REAL
 );
 DROP TABLE IF EXISTS "g07_fallow";
 CREATE TABLE IF NOT EXISTS "g07_fallow" (
@@ -346,56 +252,6 @@ CREATE TABLE IF NOT EXISTS "g01_soybean" (
 	"Nstress"	REAL,
 	"Limit"	TEXT
 );
-DROP TABLE IF EXISTS "g05_cotton";
-CREATE TABLE IF NOT EXISTS "g05_cotton" (
-	"g05_cotton_id"	INTEGER,
-	"Date_Time"	TIMESTAMP,
-	"PSoilEvap"	REAL,
-	"ASoilEVap"	REAL,
-	"PET_PEN"	REAL,
-	"PE_T_int"	REAL,
-	"transp"	REAL,
-	"CumRain"	REAL,
-	"infil"	REAL,
-	"FLuxAct"	REAL,
-	"Drainage"	REAL,
-	"Runoff"	REAL,
-	"cover"	REAL,
-	"PSIM"	REAL,
-	"SeasPSoEv"	REAL,
-	"SeasASoEv"	REAL,
-	"SeasPTran"	REAL,
-	"SeasATran"	REAL,
-	"SeasRain"	REAL,
-	"SeasInfil"	REAL,
-	"Runoff_02"	REAL,
-	"Runoff_03"	REAL
-);
-DROP TABLE IF EXISTS "g05_soybean";
-CREATE TABLE IF NOT EXISTS "g05_soybean" (
-	"g05_soybean_id"	INTEGER,
-	"Date_Time"	TIMESTAMP,
-	"PSoilEvap"	REAL,
-	"ASoilEVap"	REAL,
-	"PET_PEN"	REAL,
-	"PE_T_int"	REAL,
-	"transp"	REAL,
-	"CumRain"	REAL,
-	"infil"	REAL,
-	"FLuxAct"	REAL,
-	"Drainage"	REAL,
-	"Runoff"	REAL,
-	"cover"	REAL,
-	"PSIM"	REAL,
-	"SeasPSoEv"	REAL,
-	"SeasASoEv"	REAL,
-	"SeasPTran"	REAL,
-	"SeasATran"	REAL,
-	"SeasRain"	REAL,
-	"SeasInfil"	REAL,
-	"Runoff_02"	REAL,
-	"Runoff_03"	REAL
-);
 DROP TABLE IF EXISTS "nitrogen_soybean";
 CREATE TABLE IF NOT EXISTS "nitrogen_soybean" (
 	"nitrogen_soybean_id"	INTEGER,
@@ -441,77 +297,6 @@ CREATE TABLE IF NOT EXISTS "geometry" (
 	"Layer"	INTEGER,
 	"Area"	NUMERIC
 );
-DROP TABLE IF EXISTS "g03_cotton";
-CREATE TABLE IF NOT EXISTS "g03_cotton" (
-	"g03_cotton_id"	INTEGER,
-	"Date_Time"	TIMESTAMP,
-	"X"	REAL,
-	"Y"	REAL,
-	"hNew"	REAL,
-	"thNew"	REAL,
-	"Q"	REAL,
-	"NO3N"	REAL,
-	"NH4N"	REAL,
-	"Temp"	REAL,
-	"GasCon"	REAL
-);
-DROP TABLE IF EXISTS "g03_fallow";
-CREATE TABLE IF NOT EXISTS "g03_fallow" (
-	"g03_fallow_id"	INTEGER,
-	"Date_Time"	REAL,
-	"X"	REAL,
-	"Y"	REAL,
-	"hNew"	REAL,
-	"thNew"	REAL,
-	"Q"	REAL,
-	"NO3N"	REAL,
-	"NH4N"	REAL,
-	"Temp"	REAL,
-	"GasCon"	REAL
-);
-DROP TABLE IF EXISTS "g03_maize";
-CREATE TABLE IF NOT EXISTS "g03_maize" (
-	"g03_maize_id"	INTEGER,
-	"Date_Time"	TEXT,
-	"X"	REAL,
-	"Y"	REAL,
-	"hNew"	REAL,
-	"thNew"	REAL,
-	"Q"	REAL,
-	"NO3N"	REAL,
-	"NH4N"	REAL,
-	"Temp"	REAL,
-	"GasCon"	REAL
-);
-DROP TABLE IF EXISTS "g03_soybean";
-CREATE TABLE IF NOT EXISTS "g03_soybean" (
-	"g03_soybean_id"	INTEGER,
-	"Date_Time"	TIMESTAMP,
-	"X"	REAL,
-	"Y"	REAL,
-	"hNew"	REAL,
-	"thNew"	REAL,
-	"Q"	REAL,
-	"NO3N"	REAL,
-	"NH4N"	REAL,
-	"Temp"	REAL,
-	"GasCon"	REAL
-);
-DROP TABLE IF EXISTS "g03_potato";
-CREATE TABLE IF NOT EXISTS "g03_potato" (
-	"g03_potato_id"	INTEGER NOT NULL,
-	"Date_Time"	TEXT NOT NULL,
-	"X"	REAL,
-	"Y"	REAL,
-	"hNew"	REAL,
-	"thNew"	REAL,
-	"VZ"	REAL,
-	"VX"	REAL,
-	"Q"	REAL,
-	"ConcN"	REAL,
-	"Temp"	REAL,
-	"GasCon"	REAL
-);
 DROP TABLE IF EXISTS "g04_potato";
 CREATE TABLE IF NOT EXISTS "g04_potato" (
 	"g04_potato_id"	INTEGER,
@@ -541,5 +326,280 @@ CREATE TABLE IF NOT EXISTS "g04_soybean" (
 	"WaterSink"	REAL,
 	"NitSink"	REAL,
 	"GasSink"	REAL
+);
+DROP TABLE IF EXISTS "plantStress_fallow";
+CREATE TABLE IF NOT EXISTS "plantStress_fallow" (
+	"date"	TEXT,
+	"time"	TEXT,
+	"waterstress"	TEXT,
+	"N_stress"	TEXT,
+	"Shade_Stress"	TEXT,
+	"PotentialArea"	TEXT,
+	"plantStress_fallow_id"	INTEGER
+);
+DROP TABLE IF EXISTS "g05_soybean";
+CREATE TABLE IF NOT EXISTS "g05_soybean" (
+	"g05_soybean_id"	INTEGER,
+	"Date_Time"	TIMESTAMP,
+	"PSoilEvap"	REAL,
+	"ASoilEVap"	REAL,
+	"PET_PEN"	REAL,
+	"PE_T_int"	REAL,
+	"transp"	REAL,
+	"CumRain"	REAL,
+	"infil"	REAL,
+	"FLuxAct"	REAL,
+	"Drainage"	REAL,
+	"N_Leach"	REAL DEFAULT 0,
+	"Runoff"	REAL,
+	"cover"	REAL,
+	"PSIM"	REAL,
+	"SeasPSoEv"	REAL,
+	"SeasASoEv"	REAL,
+	"SeasPTran"	REAL,
+	"SeasATran"	REAL,
+	"SeasRain"	REAL,
+	"SeasInfil"	REAL,
+	"CO2Flux"	REAL,
+	"O2Flux"	REAL
+);
+DROP TABLE IF EXISTS "g03_potato";
+CREATE TABLE IF NOT EXISTS "g03_potato" (
+	"g03_potato_id"	INTEGER NOT NULL,
+	"Date_Time"	TEXT NOT NULL,
+	"X"	REAL,
+	"Y"	REAL,
+	"hNew"	REAL,
+	"thNew"	REAL,
+	"Q"	REAL,
+	"NO3N"	REAL,
+	"NH4N"	REAL,
+	"Temp"	REAL,
+	"CO2Conc"	REAL,
+	"O2Conc"	REAL
+);
+DROP TABLE IF EXISTS "g03_cotton";
+CREATE TABLE IF NOT EXISTS "g03_cotton" (
+	"g03_cotton_id"	INTEGER,
+	"Date_Time"	TIMESTAMP,
+	"X"	REAL,
+	"Y"	REAL,
+	"hNew"	NUMERIC,
+	"thNew"	REAL,
+	"Q"	REAL,
+	"NO3N"	REAL,
+	"NH4N"	REAL,
+	"Temp"	REAL,
+	"CO2Conc"	REAL,
+	"O2Conc"	REAL
+);
+DROP TABLE IF EXISTS "g03_maize";
+CREATE TABLE IF NOT EXISTS "g03_maize" (
+	"g03_maize_id"	INTEGER,
+	"Date_Time"	TEXT,
+	"X"	NUMERIC,
+	"Y"	NUMERIC,
+	"hNew"	REAL,
+	"thNew"	REAL,
+	"Q"	REAL,
+	"NO3N"	REAL,
+	"NH4N"	REAL,
+	"Temp"	REAL,
+	"CO2Conc"	REAL,
+	"O2Conc"	REAL
+);
+DROP TABLE IF EXISTS "g03_soybean";
+CREATE TABLE IF NOT EXISTS "g03_soybean" (
+	"g03_soybean_id"	INTEGER,
+	"Date_Time"	TIMESTAMP,
+	"X"	NUMERIC,
+	"Y"	NUMERIC,
+	"hNew"	NUMERIC,
+	"thNew"	REAL,
+	"Q"	REAL,
+	"NO3N"	REAL,
+	"NH4N"	REAL,
+	"Temp"	REAL,
+	"CO2Conc"	REAL,
+	"O2Conc"	REAL
+);
+DROP TABLE IF EXISTS "g05_cotton";
+CREATE TABLE IF NOT EXISTS "g05_cotton" (
+	"g05_cotton_id"	INTEGER,
+	"Date_Time"	TIMESTAMP,
+	"PSoilEvap"	REAL,
+	"ASoilEVap"	REAL,
+	"PET_PEN"	REAL,
+	"PE_T_int"	REAL,
+	"transp"	REAL,
+	"CumRain"	REAL,
+	"infil"	REAL,
+	"FLuxAct"	REAL,
+	"Drainage"	REAL,
+	"N_Leach"	REAL,
+	"Runoff"	REAL,
+	"cover"	REAL,
+	"PSIM"	REAL,
+	"SeasPSoEv"	REAL,
+	"SeasASoEv"	REAL,
+	"SeasPTran"	REAL,
+	"SeasATran"	REAL,
+	"SeasRain"	REAL,
+	"SeasInfil"	REAL,
+	"CO2Flux"	REAL,
+	"O2Flux"	REAL
+);
+DROP TABLE IF EXISTS "g05_fallow";
+CREATE TABLE IF NOT EXISTS "g05_fallow" (
+	"g05_fallow_id"	INTEGER,
+	"Date_Time"	REAL,
+	"PSoilEvap"	REAL,
+	"ASoilEVap"	REAL,
+	"PET_PEN"	REAL,
+	"PE_T_int"	REAL,
+	"transp"	REAL,
+	"CumRain"	REAL,
+	"infil"	REAL,
+	"FLuxAct"	REAL,
+	"Drainage"	REAL,
+	"N_Leach"	REAL,
+	"Runoff"	REAL,
+	"cover"	REAL,
+	"PSIM"	REAL,
+	"SeasPSoEv"	REAL,
+	"SeasASoEv"	REAL,
+	"SeasPTran"	REAL,
+	"SeasATran"	REAL,
+	"SeasRain"	REAL,
+	"SeasInfil"	REAL,
+	"CO2Flux"	REAL,
+	"O2Flux"	REAL
+);
+DROP TABLE IF EXISTS "g05_maize";
+CREATE TABLE IF NOT EXISTS "g05_maize" (
+	"g05_maize_id"	INTEGER,
+	"Date_Time"	TEXT,
+	"PSoilEvap"	NUMERIC,
+	"ASoilEVap"	REAL,
+	"PET_PEN"	REAL,
+	"PE_T_int"	REAL,
+	"transp"	REAL,
+	"CumRain"	REAL,
+	"infil"	REAL,
+	"FLuxAct"	REAL,
+	"Drainage"	REAL,
+	"N_Leach"	REAL,
+	"Runoff"	REAL,
+	"cover"	REAL,
+	"PSIM"	REAL,
+	"SeasPSoEv"	REAL,
+	"SeasASoEv"	REAL,
+	"SeasPTran"	REAL,
+	"SeasATran"	REAL,
+	"SeasRain"	REAL,
+	"SeasInfil"	REAL,
+	"CO2Flux"	REAL,
+	"O2Flux"	REAL
+);
+DROP TABLE IF EXISTS "g05_potato";
+CREATE TABLE IF NOT EXISTS "g05_potato" (
+	"g05_potato_id"	INTEGER NOT NULL,
+	"Date_Time"	TEXT NOT NULL,
+	"PSoilEvap"	REAL,
+	"ASoilEVap"	REAL,
+	"PET_PEN"	REAL,
+	"PE_T_int"	REAL,
+	"transp"	REAL,
+	"CumRain"	REAL,
+	"infil"	REAL,
+	"FLuxAct"	REAL,
+	"Drainage"	REAL,
+	"N_Leach"	REAL,
+	"Runoff"	REAL,
+	"cover"	REAL,
+	"PSIM"	REAL,
+	"SeasPSoEv"	REAL,
+	"SeasASoEv"	REAL,
+	"SeasPTran"	REAL,
+	"SeasATran"	REAL,
+	"SeasRain"	REAL,
+	"SeasInfil"	REAL,
+	"CO2Flux"	REAL,
+	"O2Flux"	REAL
+);
+DROP TABLE IF EXISTS "g03_fallow";
+CREATE TABLE IF NOT EXISTS "g03_fallow" (
+	"g03_fallow_id"	INTEGER,
+	"Date_Time"	REAL,
+	"X"	REAL,
+	"Y"	REAL,
+	"hNew"	REAL,
+	"thNew"	REAL,
+	"Q"	REAL,
+	"NO3N"	REAL,
+	"NH4N"	REAL,
+	"Temp"	REAL,
+	"CO2Conc"	REAL,
+	"O2Conc"	INTEGER
+);
+DROP TABLE IF EXISTS "g01_cotton";
+CREATE TABLE IF NOT EXISTS "g01_cotton" (
+	"g01_cotton_id"	INTEGER,
+	"Date_Time"	TIMESTAMP,
+	"PlantH"	REAL,
+	"LAI"	REAL,
+	"LInt"	REAL,
+	"Nodes"	INTEGER,
+	"Sites"	INTEGER,
+	"N_Squares"	INTEGER,
+	"N_GB"	INTEGER,
+	"N_OB"	INTEGER,
+	"NLvsLoss"	INTEGER,
+	"NSqLoss"	INTEGER,
+	"NBollsLoss"	INTEGER,
+	"NFruitShed"	INTEGER,
+	"PetShd_DM"	REAL,
+	"GB_lossDM"	REAL,
+	"Lf_lossDM"	REAL,
+	"Rt_lossDM"	REAL,
+	"Dd_WtDM"	REAL,
+	"SquareDM"	REAL,
+	"GB_DM"	REAL,
+	"OB_DM"	REAL,
+	"LeafDM"	REAL,
+	"StemDM"	REAL,
+	"RootDM"	NUMERIC,
+	"ResC"	REAL,
+	"PlantDM"	REAL,
+	"R_S"	REAL,
+	"Yield"	NUMERIC,
+	"Temp"	REAL,
+	"L_Temp"	REAL,
+	"Rain"	REAL,
+	"SRad"	INTEGER,
+	"PFD"	REAL,
+	"RH"	REAL,
+	"LeafN"	REAL,
+	"StemN"	REAL,
+	"SeedN"	REAL,
+	"BurrN"	REAL,
+	"RootN"	REAL,
+	"Nloss"	REAL,
+	"PlantN"	REAL,
+	"N_uptake"	REAL,
+	"S_Psi"	REAL,
+	"L_Psi"	REAL,
+	"LArea"	REAL,
+	"VPD"	REAL,
+	"StCond"	REAL,
+	"Pnet"	REAL,
+	"PGross"	REAL,
+	"L_Res"	REAL,
+	"Main_Res"	REAL,
+	"Resp"	REAL,
+	"SPnet"	REAL,
+	"C_Bal"	REAL,
+	"Nstress_Pn"	REAL,
+	"Note"	TEXT
 );
 COMMIT;

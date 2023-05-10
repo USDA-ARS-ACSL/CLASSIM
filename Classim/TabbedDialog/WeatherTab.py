@@ -1,15 +1,11 @@
-import sqlite3
-import re
 import os
 import pandas as pd
-import dateparser as dp
 import ssl
-import time
-import urllib.request
-from PyQt5 import QtSql, QtCore, QtGui
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QComboBox, \
-                            QVBoxLayout, QPushButton, QSizePolicy, QRadioButton, QButtonGroup, \
-                            QMessageBox, QFileDialog, QScrollArea
+from urllib.request import Request, urlopen
+from urllib.error import URLError
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QVBoxLayout, QPushButton, QSizePolicy, \
+                            QMessageBox, QFileDialog, QScrollArea, QCheckBox, QGridLayout
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -22,7 +18,7 @@ from dateutil import parser
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'classim_v3')
+dbDir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(dbDir):
     os.makedirs(dbDir)
 
@@ -127,7 +123,7 @@ please provide a column named weather_id with the identifier you want.  For site
         self.scrollWeatherSummary.addWidget(scroll)
         self.avgwindlabel = QLabel("Average Wind (Km/h)")
         self.avgwindedit = QLineEdit("")
-        self.avgrainratelabel = QLabel("Average Rain Rate (cm)")
+        self.avgrainratelabel = QLabel("Average Rain Rate (cm/hr)")
         self.avgrainrateedit = QLineEdit("")
         self.avgco2label = QLabel("Average CO2 (ppm)")
         self.avgco2edit = QLineEdit("")
@@ -245,7 +241,7 @@ please provide a column named weather_id with the identifier you want.  For site
             self.sitelists = read_sitedetailsDB()
             self.sitecombo.clear()
             self.sitecombo.addItem("Select from list")
-            for item in sorted(self.sitelists):            
+            for item in self.sitelists:         
                 if item != "Generic Site":
                     self.sitecombo.addItem(item)
 
@@ -316,14 +312,9 @@ please provide a column named weather_id with the identifier you want.  For site
                 df_weatherdata = df_weatherdata.sort_values(by='date')
                 nan_value = float("NaN")
                 df_weatherdata.replace("", nan_value, inplace=True)
-                df_weatherdata = df_weatherdata.groupby('weather_id').agg({'date':['min','max'],
-                                                                           'srad':['min','max'],
-                                                                           'wind':['min','max'],
-                                                                           'rh':['min','max'],
-                                                                           'rain':['min','max'],
-                                                                           'tmax':['min','max'],
-                                                                           'tmin':['min','max'],
-                                                                           'temperature':['min','max']})
+                df_weatherdata = df_weatherdata.groupby('weather_id').agg({'date':['min','max'],'srad':['min','max'],'wind':['min','max'],
+                                                                           'rh':['min','max'],'rain':['min','max'],'tmax':['min','max'],
+                                                                           'tmin':['min','max'],'temperature':['min','max']})
                 df_weatherdata.dropna(how='all', axis=1, inplace=True)
                 df_weatherdata = df_weatherdata.reset_index()
                 weatherSummary = df_weatherdata.to_html(index=False,justify="left")
@@ -386,12 +377,10 @@ please provide a column named weather_id with the identifier you want.  For site
 
 
     def upload_csv(self):
-        sttype = str(self.stationtypecombo.currentText())
         if self.weatherbutton.text() == "SaveAs":
             stationType = self.stationtypeedit.text()
             if (self.stationtypeedit.text() == ""):
-                messageUser("Station Name is empty. Please, type a Station Name name.")
-                return False
+                return messageUser("Station Name is empty. Please, type a Station Name name.")
         else:
             stationType = str(self.stationtypecombo.itemText(self.stationtypecombo.currentIndex()))
         dialog = QFileDialog()
@@ -420,8 +409,7 @@ please provide a column named weather_id with the identifier you want.  For site
                 message = message + "Column temperature is missing. "
 
         if message != '':
-            messageUser(message)
-            return False
+            return messageUser(message)
         else:
             out = "Would you like to proceed with the ingestion of the following data?\n\n"
             for i, j in data.iterrows():
@@ -435,10 +423,7 @@ please provide a column named weather_id with the identifier you want.  For site
                     out = out[:-1] + "\n"
             ingest_flag = messageUserIngest(out)
             if ingest_flag:
-                site = str(self.sitecombo.currentText())
-#                data['date'] = data['date'].map(lambda date: dp.parse(str(date),date_formats=['%d/%m/%Y','%m/%d/%Y']))
                 data['date'] = data.apply(lambda row: Weather_Widget.convertDate(row), axis=1)
-                print(data['date'])
                 if not 'hour' in data:
                     data['hour'] = pd.to_datetime(data['date']).dt.strftime('%H')
                 if not 'jday' in data:
@@ -446,14 +431,12 @@ please provide a column named weather_id with the identifier you want.  For site
                 dateList = pd.to_datetime(data['date'])
 
                 conn, c = openDB(dbDir + '\\crop.db')
-
                 # Check if data already exists in the database for stationType for this date range
                 minDate = min(dateList)
                 maxDate = max(dateList)
 
                 # Check id weather_id is a column on the file, if not create column
                 if not 'weather_id' in data:
-                    weather_id = stationType
                     data['weather_id'] = stationType
                 weather_ids = "','".join(data['weather_id'].unique().tolist())
 
@@ -482,8 +465,7 @@ please provide a column named weather_id with the identifier you want.  For site
                 # Check for string "records missing"
                 if substr in summary:
                     message += summary
-                    messageUserInfo(message)
-                    return False
+                    return messageUser(message)
                 else:
                     query = f"select * from weather_data where stationtype='{stationType}' and weather_id in ('{weather_ids}')\
  and date>='{minDate}' and date<='{maxDate}'"
@@ -497,7 +479,6 @@ please provide a column named weather_id with the identifier you want.  For site
                         else:
                             queryDel = f"DELETE FROM weather_data where stationtype='{stationType}' and weather_id in ('{weather_ids}')\
  and date>='{minDate}' and date<='{maxDate}'"
-                            #print(queryDel)
                             c.execute(queryDel)
                             conn.commit()
                     
@@ -514,8 +495,7 @@ please provide a column named weather_id with the identifier you want.  For site
         if self.weatherbutton.text().find("SaveAs") > -1:
             sttype = self.stationtypeedit.text()
             if (sttype == ""):
-                messageUser("Station Name is empty. Please, type a Station Name name.")
-                return False
+                return messageUser("Station Name is empty. Please, type a Station Name name.")
         msgBox = QMessageBox()
         msgBox.setText("Downloading data, please wait.  New message will show how many records were recorded in the database.")
         msgBox.setWindowTitle("Downloading ....")
@@ -527,16 +507,14 @@ please provide a column named weather_id with the identifier you want.  For site
         weathertuple = extract_sitedetails(site)     
         lat = str(weathertuple[1])
         lon = str(weathertuple[2])  
-        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv"
-        #print("url=",url)
-        #if(urllib.request.urlopen(url).getcode() != 200):
-        #    messageUser("Server is not responding, please try again later.")
-        #    return False
-        data = pd.read_csv(url,storage_options={'User-Agent':'Mozilla/5.0'})
+        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&start=2015-1-1&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv"
+        try:
+            data = pd.read_csv(url,storage_options={'User-Agent':'Mozilla/5.0'})
+        except:
+            return messageUser("Website has reported an error.  Please, try again later.")
 
         if data.empty:
-            messageUser("Data is not available at the moment, please try again later.")
-            return False
+            return messageUser("Data is not available at the moment, please try again later.")
 
         data['jday'] = pd.to_datetime(data['date']).dt.strftime('%j')
         data['hour'] = pd.to_datetime(data['date']).dt.strftime('%H')
@@ -596,16 +574,13 @@ please provide a column named weather_id with the identifier you want.  For site
         sttype = str(self.stationtypecombo.currentText())
         if self.weatherbutton.text() == "SaveAs":
             if str(self.sitecombo.currentText()) == "Select from list":
-                messageUser("Please, select a site.")
-                return False             
+                return messageUser("Please, select a site.")
             sttype = self.stationtypeedit.text()
             if (sttype == ""):
-                messageUser("Station Name is empty. Please, type a Station Name name.")
-                return False
+                return messageUser("Station Name is empty. Please, type a Station Name name.")
             matchedindex = self.stationtypecombo.findText(sttype) 
             if (matchedindex > 0):
-                messageUser("Station Name exist. Please use a different name")
-                return False
+                return messageUser("Station Name exist. Please use a different name")
 
         errMess = ""
         bsolar = 1000000

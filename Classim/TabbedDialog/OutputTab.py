@@ -1,6 +1,4 @@
-from math import factorial
-import sys
-import matplotlib
+from math import factorial, log10
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -8,25 +6,18 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import shutil
-import time
 from datetime import date, timedelta, datetime
 from time import mktime
-from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWebEngine, QtWidgets
-from PyQt5.QtWidgets import QWidget, QTabWidget, QProgressBar, QLabel, QHBoxLayout, QListWidget, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, \
-                            QPushButton, QSpacerItem, QSizePolicy, QHeaderView, QSlider, QPlainTextEdit, QRadioButton, QButtonGroup, QBoxLayout, QApplication, \
-                            QMainWindow, QFrame, QFormLayout, QFileDialog, QScrollArea
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import pyqtSlot, QUrl, QPropertyAnimation
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QWidget, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
+                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QFormLayout, QScrollArea, QCheckBox, QGridLayout, QGroupBox
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from CustomTool.genDictOutput import *
-from matplotlib import cm, ticker
-matplotlib.use('TkAgg') #backend
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from pandas.plotting import register_matplotlib_converters
 from shutil import copyfile
@@ -41,7 +32,7 @@ pd.options.mode.chained_assignment = None
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim_v3')
+app_dir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
 
@@ -116,8 +107,6 @@ class Output2_Widget(QWidget):
         self.status2.setReadOnly(True) 
         self.status2.setVisible(False)
         self.status2.setFrameShape(QtWidgets.QFrame.NoFrame)
-
-        script_dir = os.path.dirname(os.path.dirname(__file__)) # give parent path                
 
         self.tab_summary = QTextEdit("Choose simulation by checking from the list box. Simulation outputs are \
 categorized into 5 types and are displayed individually in bottom tabbed panel.")                
@@ -247,9 +236,6 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
                     if checkbox.text() == value:
                          checkedVar.append(key)
 
-        # Create dictionary to hold dataframes
-        df_collection = {}
-        #print("Debug: Outputtab:plantTab_plot1, self.simulationID=",self.simulationID)          
         t1 = extract_cropOutputData(self.g01Tablename,self.simulationID)
         tableID = self.g01Tablename + "_id"
         if self.cropname == "maize":
@@ -278,11 +264,12 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         
         i = 0
         maxY = 0
+        minY = 0
         for var in checkedVar:
             color = LINECOLORS[i]
             pen = pg.mkPen(color, width=3)
-            if max(t1_grouped[var]) > maxY:
-                maxY = max(t1_grouped[var])
+            maxY = max(t1_grouped[var]) if maxY < max(t1_grouped[var]) else maxY
+            minY = min(t1_grouped[var]) if minY > min(t1_grouped[var]) else minY
             self.plantGraphWidget.plot(x=tmstampArray,y=np.array(t1_grouped[var]), name=self.varDescUnitDict[var], pen=pen)
             if i < 6:
                 i = i + 1
@@ -290,8 +277,8 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
                 i = 0
 
         # set Y  and X range
-        self.plantGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(0,maxY*1.05),padding=0)
-        self.plantGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=0,yMax=maxY*1.05)
+        self.plantGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(minY*1.05,maxY*1.05),padding=0)
+        self.plantGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=minY*1.05,yMax=maxY*1.05)
          
 
     def on_click_soilCNTab(self):
@@ -304,8 +291,6 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
                          checkedVar.append(key)
 
        # Create dictionary to hold dataframes
-        df_collection = {}
-        #print("Debug: Outputtab:soilCNTab_plot1, self.simulationID=",self.simulationID)          
         t7 = extract_cropOutputData(self.g07Tablename,self.simulationID)
         new_df = t7['Date_Time'].str.split(' ', n=1, expand=True)
         # Get only date
@@ -365,19 +350,20 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         
         i = 0
         maxY = 0
+        minY = 0
         for var in checkedVar:
             color = LINECOLORS[i]
             pen = pg.mkPen(color, width=3)
-            if max(t7[var+'_mean_sum']) > maxY:
-                maxY = max(t7[var+'_mean_sum'])
+            maxY = max(t7[var+'_mean_sum']) if maxY < max(t7[var+'_mean_sum']) else maxY
+            minY = min(t7[var+'_mean_sum']) if minY > min(t7[var+'_mean_sum']) else minY
             self.soilCNWidget.plot(x=tmstampArray,y=np.array(t7[var+'_mean_sum']), name=self.varSoilCNDescUnitDict[var], pen=pen)
             if i < 6:
                 i = i + 1
             else:
                 i = 0
         # set Y  and X range
-        self.soilCNWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(0,maxY*1.05),padding=0)
-        self.soilCNWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=0,yMax=maxY*1.05)
+        self.soilCNWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(minY*1.05,maxY*1.05),padding=0)
+        self.soilCNWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=minY*1.05,yMax=maxY*1.05)
 
 
     def on_click_plotSoil2DTab(self):
@@ -404,13 +390,13 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         i = 1
         for var, desc in self.varSoilwhn2DDescUnitDict.items():
             title = desc
-            #title, unit = self.varSoilDict[var]
             new_df = df_collection.filter(['X','Y',var],axis=1)
             new_arr = new_df.values
             colorMap = "cool"
             if var == "hNew":
                 colorMap = "cool_r"
                 new_df[var] = new_df[var].abs()
+            new_df[var] = new_df[var].apply(np.log10)
             nx = new_df['X'].nunique()
             ny = new_df['Y'].nunique()
             x = new_arr[:,0].reshape(nx,ny)
@@ -422,7 +408,10 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.soilwhn2DTab.ax.invert_yaxis()
             levels = np.linspace(z.min(), z.max(),10)
             cf = self.soilwhn2DTab.ax.contourf(x, y, z, levels=levels, cmap=colorMap)   
-            cb = self.soilwhn2DTab.fig.colorbar(cf, ax=self.soilwhn2DTab.ax,  shrink=0.9)
+            if var == 'thNew' or var == 'Temp':
+                cb = self.soilwhn2DTab.fig.colorbar(cf, ax=self.soilwhn2DTab.ax,  shrink=0.9, format='%.2f')
+            else:
+                cb = self.soilwhn2DTab.fig.colorbar(cf, ax=self.soilwhn2DTab.ax,  shrink=0.9)
             if var == "hNew":
                 cb.ax.invert_yaxis()
             cb.ax.tick_params(labelsize=7)
@@ -477,8 +466,11 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.rootTab.ax = self.rootTab.fig.add_subplot(rows, columns, i)
             self.rootTab.ax.invert_yaxis()
             levels = np.linspace(z.min(), z.max(),10)
-            cf = self.rootTab.ax.contourf(x, y, z, levels=levels, cmap=colorMap)   
-            cb = self.rootTab.fig.colorbar(cf, ax=self.rootTab.ax,  shrink=0.9)
+            cf = self.rootTab.ax.contourf(x, y, z, levels=levels, cmap=colorMap)
+            if var == 'RDenT':
+                cb = self.rootTab.fig.colorbar(cf, ax=self.rootTab.ax,  shrink=0.9, format='%.2f')
+            else:
+                cb = self.rootTab.fig.colorbar(cf, ax=self.rootTab.ax,  shrink=0.9)
             cb.ax.tick_params(labelsize=7)
             self.rootTab.ax.set_title(title, size="medium")
             self.rootTab.ax.set_ylabel('Depth (cm)')
@@ -504,9 +496,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         plantDensity = getPlantDensity(tid)
 
        # Create dictionary to hold dataframes
-        df_collection = {}
         t5 = extract_cropOutputData(self.g05Tablename,self.simulationID)
-        tableID = self.g05Tablename + "_id"
 
         new_df = t5['Date_Time'].str.split(' ', n=1, expand=True)
         t5['Date'] = new_df[0]
@@ -525,20 +515,25 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         
         i = 0
         maxY = 0
+        minY = 0
         for var in checkedVar:
             color = LINECOLORS[i]
             pen = pg.mkPen(color, width=3)
-            t5_grouped[var] = (t5_grouped[var] * plantDensity)/1000
-            if max(t5_grouped[var]) > maxY:
-                maxY = max(t5_grouped[var])
+            # Converting from ugco2/plant to kg/ha
+            if var == 'CO2Flux':
+                t5_grouped[var] = t5_grouped[var]/10
+            elif var == 'O2Flux':
+                t5_grouped[var] = t5_grouped[var]/10
+            maxY = max(t5_grouped[var]) if maxY < max(t5_grouped[var]) else maxY
+            minY = min(t5_grouped[var]) if minY > min(t5_grouped[var]) else minY
             self.surfChaGraphWidget.plot(x=tmstampArray,y=np.array(t5_grouped[var]), name=self.varSurfChaDescUnitDict[var],pen=pen)
             if i < 6:
                 i = i + 1
             else:
                 i = 0
         # set Y  and X range
-        self.surfChaGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(0,maxY*1.05),padding=0)
-        self.surfChaGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=0,yMax=maxY*1.05)
+        self.surfChaGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(minY*1.05,maxY*1.05),padding=0)
+        self.surfChaGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=minY*1.05,yMax=maxY*1.05)
 
  
     def on_deletebuttonclick(self):
@@ -550,7 +545,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         if delete_flag:
             self.rowNumChecked = [self.table2.simGrp.buttons()[x].isChecked() for x in range(len(self.table2.simGrp.buttons()))].index(True)
             self.simulationID = self.table2.simGrp.buttons()[self.rowNumChecked].text()
-            self.cropname = self.table2.item(self.rowNumChecked,2).text().split('/')[0]   
+            self.cropname = self.table2.item(self.rowNumChecked,5).text().split('/')[0]   
 
             # First delete the directory that was creates with the simulation information
             sim_dir = os.path.join(run_dir,self.simulationID)
@@ -568,7 +563,6 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         '''
         global img, data, i, updateTime, fps
         regexp_num = QtCore.QRegExp('\d+(\.\d+)?')
-        validator_num = QtGui.QRegExpValidator(regexp_num)
 
         self.rowNumChecked = [self.table2.simGrp.buttons()[x].isChecked() for x in range(len(self.table2.simGrp.buttons()))].index(True)
         self.simulationID = self.table2.simGrp.buttons()[self.rowNumChecked].text()
@@ -641,6 +635,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         operationList = read_operationsDB_id(tid) #gets all the operations
         FertilizerDateList = []
         PGRDateList = []
+        totalNAppl = 0
 
         for ii,jj in enumerate(operationList):
             if jj[1] == 'Simulation Start':
@@ -660,6 +655,10 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
 
             if jj[1] in "Fertilizer":   
                 FertilizerDateList.append(jj[2])       
+                fertInfo = readOpDetails(jj[0],jj[1])
+                for j in range(len(fertInfo)):
+                    if fertInfo[j][5] == "Nitrogen (N)":
+                        totalNAppl = totalNAppl + fertInfo[j][6]
 
             if jj[1] in "Plant Growth Regulator":   
                 PGRDateList.append(jj[2])       
@@ -744,7 +743,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.simSummaryAgroDates = "<i>Simulation Agronomic Data at <br>" + HarvestDate + " (harvest date)</i>"
             self.simSummaryAgroDates += "<br><i>Yield: </i>" + '{:3.2f}'.format(agroDataTuple[0]*plantDensity*10) + " kg/ha"
             self.simSummaryAgroDates += "<br><i>Total biomass: </i>" +  '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
-            self.simSummaryAgroDates += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]*plantDensity/10) + " kg/ha"
+            self.simSummaryAgroDates += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]*plantDensity*10) + " kg/ha"
             self.simSummaryAgroDates += "<br><i>Transpiration: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity/1000) + " mm"
         elif self.cropname == "maize":
             if(MaturityDate != "N/A"):
@@ -761,7 +760,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.simSummaryAgroDates += "<br><i>Total biomass: </i>" + '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
             self.simSummaryAgroDates += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity*10) + " kg/ha"
         elif self.cropname == "cotton":
-            yieldDataTuple = getCottonYieldData(self.simulationID)
+            yieldDataTuple = getCottonAgronomicData(self.simulationID)
             yieldDate = dt.strptime(yieldDataTuple[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y %H:%M')
             FirstSquareDate = getCottonDevDate(self.simulationID,"1stSquare")
             FirstBloomDate = getCottonDevDate(self.simulationID,"1stBloom")
@@ -772,22 +771,27 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.simSummaryAgroDates += "<br><i>Date of first square: </i>" + FirstSquareDate
             self.simSummaryAgroDates += "<br><i>Date of first bloom: </i>" + FirstBloomDate
             self.simSummaryAgroDates += "<br><i>Date of first open boll: </i>" + FirstOpenBollDate
-            self.simSummaryAgroDates += "<br><i>Yield: </i>" + '{:3.2f}'.format(yieldDataTuple[1]*1.12) + " kg/ha"
+            self.simSummaryAgroDates += "<br><i>Yield: </i>" + '{:3.2f}'.format(yieldDataTuple[1]) + " kg/ha"
+            self.simSummaryAgroDates += "<br><i>Total biomass: </i>" + '{:3.2f}'.format(yieldDataTuple[2]*plantDensity*10) + " kg/ha"
+            self.simSummaryAgroDates += "<br><i>Nitrogen Uptake: </i>" + '{:3.2f}'.format(yieldDataTuple[3]*plantDensity*10) + " kg/ha"
         elif self.cropname == "fallow":
             envDataTuple = getEnvironmentalData(self.simulationID, "", self.cropname)
             self.envSummaryData = "<i>Simulation Environmental Data </i>"
+        self.simSummaryAgroDates += "<br><i>Total Nitrogen Applied: </i>" + '{:3.2f}'.format(totalNAppl) + " kg/ha"
         genInfoBoxAgroDatesLabel.setText(self.simSummaryAgroDates)
-        #print("env tuple=",envDataTuple)
  
-        self.envSummaryData += "<br><i>Total Potential Transpiration: </i>" + '{:3.2f}'.format(envDataTuple[0]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Actual Transpiration: </i>" + '{:3.2f}'.format(envDataTuple[1]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Potential Soil Evaporation: </i>" + '{:3.2f}'.format(envDataTuple[3]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Actual Soil Evaporation: </i>" + '{:3.2f}'.format(envDataTuple[2]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Drainage: </i>" + '{:5.2f}'.format(envDataTuple[7]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Water From Deep Soil: </i>" + '{:5.2f}'.format(envDataTuple[8]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Infiltration: </i>" + '{:3.2f}'.format(envDataTuple[4]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Runoff: </i>" + '{:3.2f}'.format(envDataTuple[5]*plantDensity/1000) + " mm"
-        self.envSummaryData += "<br><i>Total Rain: </i>" + '{:3.2f}'.format(envDataTuple[6]*plantDensity/1000) + " mm"
+        self.envSummaryData += "<br><i>Total Potential Transpiration: </i>" + '{:3.2f}'.format(envDataTuple[0]) + " mm"
+        self.envSummaryData += "<br><i>Total Actual Transpiration: </i>" + '{:3.2f}'.format(envDataTuple[1]) + " mm"
+        self.envSummaryData += "<br><i>Total Potential Soil Evaporation: </i>" + '{:3.2f}'.format(envDataTuple[3]) + " mm"
+        self.envSummaryData += "<br><i>Total Actual Soil Evaporation: </i>" + '{:3.2f}'.format(envDataTuple[2]) + " mm"
+        self.envSummaryData += "<br><i>Total Drainage: </i>" + '{:5.2f}'.format(envDataTuple[7]) + " mm"
+        self.envSummaryData += "<br><i>Total Water From Deep Soil: </i>" + '{:5.2f}'.format(envDataTuple[8]) + " mm"
+        self.envSummaryData += "<br><i>Total Infiltration: </i>" + '{:3.2f}'.format(envDataTuple[4]) + " mm"
+        self.envSummaryData += "<br><i>Total Runoff: </i>" + '{:3.2f}'.format(envDataTuple[5]) + " mm"
+        self.envSummaryData += "<br><i>Total Rain: </i>" + '{:3.2f}'.format(envDataTuple[6]) + " mm"
+        self.envSummaryData += "<br><i>CO2 Flux: </i>" + '{:3.2f}'.format(envDataTuple[9]/10) + " kg CO2/ha"
+        self.envSummaryData += "<br><i>O2 Flux: </i>" + '{:3.2f}'.format(envDataTuple[10]/10) + " kg O2/ha"
+        self.envSummaryData += "<br><i>Nitrogen Leach: </i>" + '{:3.2f}'.format(envDataTuple[11]/10) + " kg/ha"
         envInfoBoxDataLabel.setText(self.envSummaryData)
 
         if self.cropname == "potato":
@@ -884,11 +888,38 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
                 i = i + 1
             self.simulationSumTable.setHorizontalHeaderLabels(['Date','Water stress','Nitrogen stress','Carbon stress',
                                                                'Leaf Area Ratio'])
+        elif self.cropname == "cotton":
+            NitroWaterStressDatesTuple = getCottonPlantStressDates(self.simulationID)
+            self.simulationSumTable.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+            self.simulationSumTable.setFixedHeight(250)     
+            self.simulationSumTable.setFixedWidth(530)     
+            self.simulationSumTable.setRowCount(len(NitroWaterStressDatesTuple))
+            self.simulationSumTable.setColumnCount(6)
+            i = 0
+            for record in NitroWaterStressDatesTuple:
+                j = 0
+                for col in record:
+                    if j == 0:
+                        date = dt.strptime(col, '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y %H:%M')
+                        self.simulationSumTable.setItem(i,j,QTableWidgetItem(str(date)))
+                    else:
+                        colFormat = '{:3.3f}'.format(col) 
+                        if col <= 0.8:
+                            self.simulationSumTable.setItem(i,j,QTableWidgetItem(str(colFormat)))
+                            self.simulationSumTable.item(i,j).setForeground(QColor(255, 0, 0))
+                        else:
+                            self.simulationSumTable.setItem(i,j,QTableWidgetItem(str(colFormat)))
+                        self.simulationSumTable.item(i,j).setTextAlignment(Qt.AlignHCenter)
+                    j = j + 1
+                i = i + 1
+            self.simulationSumTable.setHorizontalHeaderLabels(['Date','Water stress','N stress (vegetative)','N Stress (fruit)', \
+                                                               'N stress (root)','C stress'])
             self.simulationSumTable.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
             self.simulationSumTable.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeToContents)
             self.simulationSumTable.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeToContents)
             self.simulationSumTable.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeToContents)
             self.simulationSumTable.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeToContents)
+            self.simulationSumTable.horizontalHeader().setSectionResizeMode(5,QHeaderView.ResizeToContents)
             self.simulationSumTable.verticalHeader().hide()       
             self.simulationSumTable.resizeColumnsToContents()  
 
@@ -899,7 +930,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         # Creates dictionaries based on crop type
         self.varDescDict, self.varDescUnitDict, self.varFuncDict = genDictOutput(cropArr,"plant",0)
         dateAxis = TimeAxisItem(orientation='bottom')
-        self.plantGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis,'unitPrefix':None})
+        self.plantGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis,'units':None,'unitPrefix':None})
         if self.cropname != "fallow":
             self.plantTab.groupBox = QGroupBox("Select parameter to plot")
             self.leftBoxLayout = QGridLayout()
@@ -1009,7 +1040,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.totWaterLayerPlot = self.SoilTSGraphWidget.addPlot(row=0,col=1,title="Total Water by Layer (mm)",axisItems = {'bottom':dateAxisTotWatLayer,'unitPrefix':None})
 
         dateAxisWaterContLayer = TimeAxisItem(orientation='bottom')
-        self.waterContentLayerPlot = self.SoilTSGraphWidget.addPlot(row=0,col=2,title="Water Conent by Layer (cm3/cm3)",axisItems = {'bottom':dateAxisWaterContLayer,'unitPrefix':None})
+        self.waterContentLayerPlot = self.SoilTSGraphWidget.addPlot(row=0,col=2,title="Water Content by Layer (cm3/cm3)",axisItems = {'bottom':dateAxisWaterContLayer,'unitPrefix':None})
 
         dateAxisNNO3ConcProf = TimeAxisItem(orientation='bottom')
         self.NNO3ConcProfilePlot = self.SoilTSGraphWidget.addPlot(row=1,col=0,title="Total NNO3 as Nitrogen for Entire Profile (kg/ha)",axisItems = {'bottom':dateAxisNNO3ConcProf,'unitPrefix':None})
@@ -1024,8 +1055,6 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.soilTSTab.mainlayout.addWidget(self.SoilTSGraphWidget)
         self.soilTSTab.setLayout(self.soilTSTab.mainlayout)
      
-       # Create dictionary to hold dataframes
-        df_collection = {}
         # Read geometry table for this simulation
         geo_df = readGeometrySimID(self.simulationID)
         # Read g03 table for this simulation
@@ -1055,7 +1084,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         # First, we need to group the data by day
         t3 = t3.groupby(['Date','X','Y'],as_index=False).mean()
 
-        t3 = t3.drop(columns=["X","Q","NH4N","GasCon","hNew","Area"])
+        t3 = t3.drop(columns=["X","Q","NH4N","hNew","Area"])
 
         LINECOLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'w']
 
@@ -1140,6 +1169,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         totWatLayMaxY = 0
         watContLayMaxY = 0
         NNO3ConcLayMaxY = 0
+        tempMinY = 0
         tempMaxY = 0
 
         for layer in layers:
@@ -1153,14 +1183,12 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             # total water by layer
             totWatLay = temp.groupby(['Date','Layer'],as_index=False)['thNewArea'].sum()
             totWatLay['totWatLay'] = totWatLay['thNewArea']/(self.eomult*self.rowSP)*10
-            if max(totWatLay['totWatLay']) > totWatLayMaxY:
-                totWatLayMaxY = max(totWatLay['totWatLay'])
+            totWatLayMaxY = max(totWatLay['totWatLay']) if totWatLayMaxY < max(totWatLay['totWatLay']) else totWatLayMaxY
             self.totWaterLayerPlot.plot(x=tmstampArray,y=np.array(totWatLay['totWatLay']), name="Layer "+str(depth)+" cm", pen=pen)
 
             # water content by layer
             watContLay = temp.groupby(['Date','Layer'],as_index=False)['thNew'].mean()
-            if max(watContLay['thNew']) > watContLayMaxY:
-                watContLayMaxY = max(watContLay['thNew'])
+            watContLayMaxY = max(watContLay['thNew']) if watContLayMaxY < max(watContLay['thNew']) else watContLayMaxY
             self.waterContentLayerPlot.plot(x=tmstampArray,y=np.array(watContLay['thNew']), name="Layer "+str(depth)+" cm", pen=pen)
 
             # NNO3 concentration by layer
@@ -1168,14 +1196,13 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             #N is ug/cm3 soil water. NNO3*10,000 cm2/m2 * 10,000 m2/ha * 1kg/1e9 ug/ (slab width) == kg/ha
             #NConcProf['NConcProf'] = NConcProf['thNewNO3N']*(14/64)*10000*10000/1000000000
             NConcLay['NConcLay'] = NConcLay['thNewNO3NArea']*(14/64)/10/(self.eomult*self.rowSP)
-            if max(NConcLay['NConcLay']) > NNO3ConcLayMaxY:
-                NNO3ConcLayMaxY = max(NConcLay['NConcLay'])
+            NNO3ConcLayMaxY = max(NConcLay['NConcLay']) if NNO3ConcLayMaxY < max(NConcLay['NConcLay']) else NNO3ConcLayMaxY
             self.NNO3ConcLayerPlot.plot(x=tmstampArray,y=np.array(NConcLay['NConcLay']), name="Layer "+str(depth)+" cm", pen=pen)
 
             # temperature by layer
             tempLay = temp.groupby(['Date','Layer'],as_index=False)['Temp'].mean()
-            if max(tempLay['Temp']) > tempMaxY:
-                tempMaxY = max(tempLay['Temp'])
+            tempMinY = min(tempLay['Temp']) if tempMinY > min(tempLay['Temp']) else tempMinY
+            tempMaxY = max(tempLay['Temp']) if tempMaxY < max(tempLay['Temp']) else tempMaxY
             self.tempPlot.plot(x=tmstampArray,y=np.array(tempLay['Temp']), name="Layer "+str(depth)+" cm", pen=pen)
 
             i = i + 1
@@ -1190,8 +1217,8 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.NNO3ConcLayerPlot.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(0,NNO3ConcLayMaxY*1.05),padding=0)
         self.NNO3ConcLayerPlot.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=0,yMax=NNO3ConcLayMaxY*1.05)
         # Set temperature by layer x-axis and y-axis
-        self.tempPlot.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(0,tempMaxY*1.05),padding=0)
-        self.tempPlot.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=0,yMax=tempMaxY*1.05)
+        self.tempPlot.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(tempMinY*1.05,tempMaxY*1.05),padding=0)
+        self.tempPlot.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=tempMinY*1.05,yMax=tempMaxY*1.05)
 
 
         ########## Root tab ##########
@@ -1265,19 +1292,17 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.display1.addTab(scrollbar,"Simulation Summary")
             if self.cropname != "fallow":
                 self.display1.addTab(self.plantTab,"Plant")
-            self.display1.addTab(self.soilCNTab,"Soil Carbon Nitrogen")            
-            self.display1.addTab(self.soilwhn2DTab,"2D Soil Water Heat Nitrogen")            
-            self.display1.addTab(self.soilTSTab,"Soil Time Series")            
+            self.display1.addTab(self.soilTSTab,"Soil Time Series")
+            self.display1.addTab(self.soilwhn2DTab,"2D Soil Water Heat Nitrogen")          
             if self.cropname != "fallow":
-                self.display1.addTab(self.rootTab,"Root Data")            
+                self.display1.addTab(self.rootTab,"2D Root")            
             self.display1.addTab(self.surfChaTab,"Surface Characteristics")
+            self.display1.addTab(self.soilCNTab,"Soil Carbon Storage") 
             self.display1.setVisible(True)
 
    
     def importfaq(self, thetabname=None):        
         faqlist = read_FaqDB(thetabname,'') 
-        faqcount=0
-        
         for item in faqlist:
             roottreeitem = QTreeWidgetItem(self.faqtree)
             roottreeitem.setText(0,item[2])

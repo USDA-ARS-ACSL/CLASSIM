@@ -1,6 +1,5 @@
-from PyQt5 import QtSql, QtCore
-from PyQt5.QtWidgets import QTreeWidgetItem, QTextEdit, QWidget, QLabel, QHBoxLayout, QListWidget, QTableWidget, QVBoxLayout, QSpacerItem, QSizePolicy
-from PyQt5.QtCore import pyqtSlot
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import QTreeWidgetItem, QTextEdit, QWidget, QHBoxLayout, QVBoxLayout, QSpacerItem, QSizePolicy, QGridLayout, QCheckBox
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
@@ -156,7 +155,6 @@ button to create copies of the treatment information so you do not need to fill 
 
     def importfaq(self, thetabname=None):        
         faqlist = read_FaqDB(thetabname,'') 
-        faqcount=0
         for item in faqlist:
             roottreeitem = QTreeWidgetItem(self.faqtree)
             roottreeitem.setText(0,item[2])

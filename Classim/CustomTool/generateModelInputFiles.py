@@ -1,14 +1,9 @@
+from platform import machine
 import subprocess
-#import threading
-import time
 import os
 import csv
 import numpy as np
 import pandas as pd
-import sys
-import math
-import re
-import ctypes as ct
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
@@ -16,8 +11,8 @@ from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from helper.Texture import *
 from subprocess import Popen
-from os import path
-from PyQt5.QtCore import pyqtSlot, QFile, QTextStream, pyqtSignal, QCoreApplication, QBasicTimer
+from PyQt5.QtCore import QFile, QTextStream, QIODevice
+
 
 global runpath1
 global app_dir
@@ -25,7 +20,7 @@ global repository_dir
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim_v3')
+app_dir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
 
@@ -97,13 +92,10 @@ def WriteIrrigationFile(field_name,field_path):
 
 def WriteCropVariety(crop,cultivar,field_name,field_path):
     hybridname = cultivar
-    #print("Debug: hybridname=",hybridname)
     hybridparameters = read_cultivar_DB_detailed(hybridname,crop)
     CODEC="UTF-8"
 
     filename = field_path+"\\"+hybridname+".var"
-    #print("filename=",filename)
-    #print("hybridparameters=",hybridparameters)
     fh = QFile(filename)
 
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -362,16 +354,14 @@ def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_p
     df_weatherdata = df_weatherdata.loc[mask]
     #Check if dataframe is empty
     if df_weatherdata.empty == True or (df_weatherdata.shape[0] + 1) < diffInDays:
-        messageUser("Weather data is available for the data range of " + firstDate.strftime("%m/%d/%Y") + " and " + lastDate.strftime("%m/%d/%Y"))
-        return False
+        return messageUser("Weather data is available for the data range of " + firstDate.strftime("%m/%d/%Y") + " and " + lastDate.strftime("%m/%d/%Y") + ". If this period covers \
+the date range of your simulation, there are data missing for this simulation period.")
 
     # Check if data is daily or hourly
     hourly_flag = 0
     weather_length = df_weatherdata['date'].max() - df_weatherdata['date'].min()
     num_records = len(df_weatherdata)
     df_weatherdata['date'] = pd.to_datetime(df_weatherdata['date'],format='%Y-%m-%d')
-    #print(ltreatmentname)
-    #print("weather_length=",weather_length.days," num_records=",num_records)
     if(num_records > (weather_length.days+1)):
         # header for hourly file
         df_weatherdata = df_weatherdata.drop(columns=['tmax','tmin'])
@@ -381,9 +371,7 @@ def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_p
         # Sensitivity analyses temperature variance
         if tempVar != 0:
             df_weatherdata['temperature'] = df_weatherdata['temperature'] + float(tempVar)
-        #print("Hourly")
     else:
-        #print("bd",df_weatherdata)
         # header for daily file
         df_weatherdata = df_weatherdata.drop(columns=['hour','temperature'])
         weather_col_names = ["JDay", "Date", "Radiation", "Tmax","Tmin", "rain", "Wind", "rh", "CO2"] 
@@ -392,8 +380,6 @@ def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_p
         if tempVar != 0:
             df_weatherdata['tmax'] = df_weatherdata['tmax'] + float(tempVar)
             df_weatherdata['tmin'] = df_weatherdata['tmin'] + float(tempVar)
-        #print("Daily")
-        #print("ad",df_weatherdata)
 
     df_weatherdata['date'] = df_weatherdata['date'].dt.strftime('%m/%d/%Y')
     df_weatherdata.columns = weather_col_names         
@@ -439,9 +425,7 @@ def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_p
     # Extracts weather information from the weather_meta table and write the text file.       
     weatherparameters = read_weatherlongDB(stationtype) #returns a tuple
     CODEC="UTF-8"
-    extension=".cli"
     filename = field_path+"\\"+stationtype+".cli"
-    hourlyWeather = 0
 
 #        print("Debug: weatherparameters=",weatherparameters)
 #        print("Debug: filename=",filename)
@@ -486,7 +470,7 @@ def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_p
     return hourly_flag, edate
 
 
-def WriteSoluteFile(soilname,field_name,field_path):
+def WriteSoluteFile(soilname,field_path):
 # Writes the SOLUTE FILE
     CODEC="UTF-8"
     filename = field_path+"\\NitrogenDefault.sol"        
@@ -531,6 +515,35 @@ def WriteSoluteFile(soilname,field_name,field_path):
     fh.close()
 
 
+def WriteGasFile(field_path):
+# Writes the SOLUTE FILE
+    CODEC="UTF-8"
+    filename = field_path+"\\GasID.gas"        
+    fh = QFile(filename)
+        
+    if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
+        print("Could not open file")
+    else:            
+        gas_list = read_gasDB() 
+        fout = QTextStream(fh)            
+        fout.setCodec(CODEC)
+            
+        fout<<"*** Gas Movement Parameters Information ***\n"
+        fout<<"Number of gases\n"
+        fout<<"%-14d" %(len(gas_list))<<"\n"
+        fout<<"Computational parameters\n"
+        fout<<"EPSI\n"
+        fout<<'%-14.6f' %(gas_list[0][1])<<"\n"
+        fout<<"Reduced tortousity rate change with water content (bTort)\n"
+        fout<<"for entire soil domain\n"
+        fout<<'%-14.6f' %(gas_list[0][2])<<"\n"
+        fout<<"Gas diffusion coefficients in air at standard conditions, cm2/day\n"
+        fout<<"Gas # 1 (CO2) Gas # 2 (Oxygen) Gas # 3 (Methane)\n"
+        fout<<'%-14.6f%-14.6f' %(gas_list[0][3],gas_list[1][3])<<"\n"
+        fout<<"\n"                
+    fh.close()
+
+
 def WriteTimeFileData(treatmentname,experimentname,cropname,stationtype,hourlyFlag,field_name,field_path,hourly_flag,soilModel_flag):
 #  Writes the Time information into *.tim FILE
 
@@ -553,7 +566,6 @@ def WriteTimeFileData(treatmentname,experimentname,cropname,stationtype,hourlyFl
         fout.setCodec(CODEC)            
         fout<<"*** SYNCHRONIZER INFORMATION *****************************"<<"\n"
         fout<<"Initial time       dt       dtMin     DMul1    DMul2    tFin"<<"\n"
-        #fout<<"'%-16s'%-14.4f%-14.4f%-14.4f%-14.4f%-16s" %(startdate,dt,dtMin,DMul1,DMul2,enddate)<<"\n"
         fout<<"'%-10s'  %-14.4f%-14.10f%-14.4f%-14.4f'%-10s'" %(startdate,dt,dtMin,DMul1,DMul2,enddate)<<"\n"
         fout<<"Output variables, 1 if true  Daily    Hourly"<<"\n"
         fout<<'%-16d%-14d' %(1-hourlyFlag,hourlyFlag)<<"\n"
@@ -602,7 +614,6 @@ def WriteSoiData(soilname,field_name,field_path):
 
     NCount = len(soil_hydrology_list)               
     CODEC="UTF-8"        
-    #field_path = os.path.join(runpath1,field_name)
     filename = field_path+'\\'+soilname + '.soi'        
     fh = QFile(filename)
 
@@ -624,7 +635,6 @@ def WriteSoiData(soilname,field_name,field_path):
 
     soil_OM_list = read_soilOMDB(soilname)     
     NCount = len(soil_OM_list)
-    #print("debug:soil texture",soil_OM_list,"\n")
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
         print("Could not open file")
     else:                  
@@ -633,9 +643,63 @@ def WriteSoiData(soilname,field_name,field_path):
         fout<<" Matnum      sand     silt    clay     bd     om   TH33       TH1500 \n"      
         for rrow in range(0,NCount):
             record_tuple=soil_OM_list[rrow]
-            #print("debug:soil texture",record_tuple,"\n")
-            fout<<'%-5d%-8.3f%-8.3f%-8.3f%-8.3f%-8.3f%-8.3f%-8.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],record_tuple[7])<<"\n"
+            fout<<'%-5d%-8.3f%-8.3f%-8.3f%record_tuple-8.3f%-8.3f%-8.3f%-8.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],record_tuple[7])<<"\n"
 
+    fh.close()
+
+
+def WriteMulchGeo(field_path,nutrient):
+#  Writes mulch file (.mul)
+
+    # Get mulch geo information
+    mulchGeoList = getMulchGeo(nutrient)   
+
+    # Get mulch decomp information
+    mulchDecompList = getMulchDecomp(nutrient)   
+
+    CODEC="UTF-8"        
+    #field_path = os.path.join(runpath1,field_name)
+    filename = field_path+'\\MulchGeo.mul'        
+    fh = QFile(filename)
+
+    if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
+        print("Could not open file")
+    else: 
+        fout = QTextStream(fh)            
+        fout.setCodec(CODEC)            
+        fout<<"*** Mulch Material information ****  based on g, m^3, J and oC\n"
+        fout<<"[Basic_Mulch_Configuration]\n"
+        fout<<"********The mulch grid configuration********\n"
+        fout<<"Minimal Grid Size for Horizontal Element\n"
+        fout<<'%-10.2f' %(mulchGeoList[0])<<"\n"
+        fout<<"********Simulation Specifications (1=Yes; 0=No)********\n"
+        fout<<"Only_Diffusive_Flux     Neglect_LongWave_Radiation      Include_Mulch_Decomputions\n"
+        fout<<'%-10.2f%-10.2f%-10.2f' %(mulchGeoList[1],mulchGeoList[2],mulchGeoList[3])<<"\n"
+        fout<<"[Mulch_Radiation]\n"
+        fout<<"********Mulch Radiation Properties********\n"
+        fout<<"DeltaRshort DeltaRlong  Omega   epsilon_mulch   alpha_mulch\n"
+        fout<<'%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f' %(mulchGeoList[4],mulchGeoList[5],mulchGeoList[6],mulchGeoList[7],mulchGeoList[8])<<"\n"
+        fout<<"[Numerical_Controls]\n"
+        fout<<"********Picard Iteration COntrol********\n"
+        fout<<"Max Iteration Step (before time step shrinkage) Tolerence for Convergence (%)\n"
+        fout<<'%-10.2f%-10.2f' %(mulchGeoList[9],mulchGeoList[10])<<"\n"
+        fout<<"[Mulch_Mass_Properties]\n"
+        fout<<"********Some Basic Information such as density, porosity and empirical parameters********\n"
+        fout<<"VRho_Mulch g/m3  Pore_Space  Max Held Ponding Depth\n"
+        fout<<'%-10.2f%-10.2f%-10.2f' %(mulchGeoList[11],mulchGeoList[12],mulchGeoList[13])<<"\n"
+        fout<<"[Mulch_Decomposition]\n"
+        fout<<"********Overall Factors********\n"
+        fout<<"Contacting_Fraction Feeding_Coef\n"
+        fout<<'%-10.4f%-10.4f' %(mulchDecompList[0],mulchDecompList[1])<<"\n"
+        fout<<"The Fraction of Three Carbon Formats (Initial Value)\n"
+        fout<<"Carbonhydrate(CARB)    Holo-Cellulose (CEL)   Lignin (LIG)\n"
+        fout<<'%-10.4f%-10.4f%-10.4f' %(mulchDecompList[2],mulchDecompList[3],mulchDecompList[4])<<"\n"
+        fout<<"The Fraction of N in Three Carbon Formats (Initial Value)\n"
+        fout<<" Carbonhydrate(CARB)    Holo-Cellulose (CEL)   Lignin (LIG)\n"
+        fout<<'%-10.4f%-10.4f%-10.4f' %(mulchDecompList[5],mulchDecompList[6],mulchDecompList[7])<<"\n"
+        fout<<"The Intrinsic Decomposition Speed of Three Carbon Formats (day^-1)\n"
+        fout<<" Carbonhydrate(CARB)    Holo-Cellulose (CEL)   Lignin (LIG)\n"
+        fout<<'%-10.4f%-10.4f%-10.4f' %(mulchDecompList[8],mulchDecompList[9],mulchDecompList[10])<<"\n"
     fh.close()
 
 
@@ -653,35 +717,39 @@ def WriteRunFile(cropname,soilname,field_name,cultivar,field_path,stationtype):
         fout.setCodec(CODEC)            
         fout<<field_path<<"\\"<<stationtype<<".wea\n"
         fout<<field_path<<"\\"<<field_name<<".tim\n"
-        fout<<field_path<<"\\"<<"BiologyDefault.bio\n"            
+        fout<<field_path<<"\\BiologyDefault.bio\n"            
         fout<<field_path<<"\\"<<stationtype<<".cli\n"
         fout<<field_path<<"\\"<<field_name<<".nit\n"
-        fout<<field_path<<"\\"<<"NitrogenDefault.sol\n"
+        fout<<field_path<<"\\NitrogenDefault.sol\n"
+        fout<<field_path<<"\\GasID.gas\n"
         fout<<field_path<<"\\"<<soilname<<".soi\n"
+        fout<<field_path<<"\\MulchGeo.mul\n"
         fout<<field_path<<"\\"<<field_name<<".man\n"
         fout<<field_path<<"\\"<<field_name<<".drp\n"
-        fout<<field_path<<"\\"<<"Water.DAT\n"
-        fout<<field_path<<"\\"<<"WatMovParam.dat\n"
+        fout<<field_path<<"\\Water.DAT\n"
+        fout<<field_path<<"\\WatMovParam.dat\n"
         fout<<field_path<<"\\"<<field_name<<".ini\n"
         fout<<field_path<<"\\"<<hybridname<<".var\n"
         fout<<field_path<<"\\"<<field_name<<".grd\n"
         fout<<field_path<<"\\"<<field_name<<".nod\n"
-        fout<<field_path<<"\\"<<"MassBI.dat\n"
+        fout<<field_path<<"\\MassBI.dat\n"
         fout<<field_path<<"\\"<<field_name<<".g01\n"
-        if cropname == "maize":
+        if cropname == "maize" or cropname == "soybean":
             fout<<field_path<<"\\"<<field_name<<".g02\n"
         else:
-            fout<<field_path<<"\\"<<"plantstress.crp\n"
+            fout<<field_path<<"\\plantstress.crp\n"
         fout<<field_path<<"\\"<<field_name<<".G03\n"
         fout<<field_path<<"\\"<<field_name<<".G04\n"
         fout<<field_path<<"\\"<<field_name<<".G05\n"
         fout<<field_path<<"\\"<<field_name<<".G06\n"
         fout<<field_path<<"\\"<<field_name<<".G07\n"
-        fout<<field_path<<"\\"<<"MassBI.out\n"
-        fout<<field_path<<"\\"<<"runoffmassbl.txt\n"
+        fout<<field_path<<"\\MassBI.out\n"
+        fout<<field_path<<"\\MassBlRunOff.out\n"
+        fout<<field_path<<"\\MassBlMulch.out\n"
+        fout<<field_path<<"\\runoffmassbl.txt\n"
         if cropname == "cotton":
-            fout<<field_path<<"\\"<<"Cotton.out\n"
-            fout<<field_path<<"\\"<<"Cotton.sum\n"
+            fout<<field_path<<"\\Cotton.out\n"
+            fout<<field_path<<"\\Cotton.sum\n"
         fh.close()
 
 
@@ -698,20 +766,27 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
     fDepth = []
     date = []
     ammtT = []
-    ammtC = []
-    ammtN = []
+    lammtC = []
+    lammtN = []
+    mammtC = []
+    mammtN = []
     PGRDate = []
     PGRChem =  []
     PGRAppMeth = []
     PGRBandwidth = []
     PGRAppRate = []
     PGRAppUnit = []
+    SurfResInfo = []
 
     exid = read_experimentDB_id(cropname,experiment)
     tid = read_treatmentDB_id(exid,treatmentname)
     operationList = read_operationsDB_id(tid)
     #print("op list=",operationList)
-    factor= (rowSpacing/2)/10000
+    factor = (rowSpacing/2)/10000
+    # Surface residue type is set to be Rye as a default, if we have Surface Residue operation
+    # then we will use that nutrient.  At this point Rye is the only option.  The much file will 
+    # be generated even if a run doen't use surface residue, that is why we need to set this variable.
+    surfResType = "Rye"
 
     for ii,jj in enumerate(operationList):
         if jj[1] == "Fertilizer":   
@@ -728,15 +803,28 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
                 # FertilizationClass = Fertilizer-N, the ammtT is the ammount of Nitrogen 
                 if fertInfo[j][3] == "Fertilizer-N":
                     ammtT.append(fertInfo[j][6]*factor*100)
-                    ammtC.append(0)
-                    ammtN.append(0)
-                else:
+                    lammtC.append(0)
+                    lammtN.append(0)
+                    mammtC.append(0)
+                    mammtN.append(0)
+                elif fertInfo[j][3] == "Manure":
                     if j == 0:
                         ammtT.append(0)
+                        lammtC.append(0)
+                        lammtN.append(0)
                     if fertInfo[j][5] == "Carbon (C)":
-                        ammtC.append(fertInfo[j][6]*factor*100)
+                        mammtC.append(fertInfo[j][6]*factor*100)
                     if fertInfo[j][5] == "Nitrogen (N)":
-                        ammtN.append(fertInfo[j][6]*factor*100)
+                        mammtN.append(fertInfo[j][6]*factor*100)
+                elif fertInfo[j][3] == "Litter":
+                    if j == 0:
+                        ammtT.append(0)
+                        mammtC.append(0)
+                        mammtN.append(0)
+                    if fertInfo[j][5] == "Carbon (C)":
+                        lammtC.append(fertInfo[j][6]*factor*100)
+                    if fertInfo[j][5] == "Nitrogen (N)":
+                        lammtN.append(fertInfo[j][6]*factor*100)
             fertCount=fertCount+1
         if jj[1] == "Plant Growth Regulator":
             PGRInfo = readOpDetails(jj[0],jj[1])
@@ -747,6 +835,17 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
             PGRAppRate.append(PGRInfo[0][6])
             PGRAppUnit.append(PGRInfo[0][9])
             PGRCount=PGRCount+1
+        if jj[1] == "Surface Residue":
+            SurfResInfo = readOpDetails(jj[0],jj[1])
+            surfResType = SurfResInfo[0][3]
+        if jj[1] == "Tillage":
+            TillageInfo = readOpDetails(jj[0],jj[1])
+            if TillageInfo[0][3] == "Moldboard plow":
+                tillDepth = 15
+            elif TillageInfo[0][3] == "Chisel plow":
+                tillDepth = 10
+            elif TillageInfo[0][3] == "Vertical tillage":
+                tillDepth = 5
 
     # Write *.MAN file
     CODEC="UTF-8"
@@ -759,12 +858,15 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
     else:
         fout = QTextStream(fh)            
         fout.setCodec(CODEC)
-        fout<<"****Script for chemical application module  *******mg/cm2= kg/ha* 0.01*rwsp*eomult*100"<<"\n"
-        fout<<"Number of Fertilizer applications (max=25) mappl is in total mg N applied to grid (1 kg/ha = 1 mg/m2/width of application) application divided by width of grid in cm is kg ha-1"<<"\n"                    
+        fout<<"*** Script for management practices fertilizer, residue and tillage\n"
+        fout<<"[N Fertilizer]\n"
+        fout<<"****Script for chemical application module  *******mg/cm2= kg/ha* 0.01*rwsp*eomult*100\n"
+        fout<<"Number of Fertilizer applications (max=25) mappl is in total mg N applied to grid (1 kg/ha = 1 mg/m2/width of application) application divided by width of grid in cm is kg ha-1\n"                    
         fout<<'%-14d' %(fertCount)<<"\n"
-        fout<<"tAppl(i)  AmtAppl(i)  depth(i)  mAppl_C(i)  mAppl_N(i)  (repeat these 3 lines for the number of fertilizer applications)"<<"\n"
+        fout<<"mAppl is manure, lAppl is litter. Apply as mg/cm2 of slab same units as N\n"
+        fout<<"tAppl(i)  AmtAppl(i) depth(i) lAppl_C(i) lAppl_N(i)  mAppl_C(i) mAppl_N(i)  (repeat these 3 lines for the number of fertilizer applications)\n"
         for j in range(len(date)):
-            fout<<"'"<<date[j]<<"' "'%-14.6f%-14.6f%-14.6f%-14.6f' %(ammtT[j],fDepth[j],ammtC[j],ammtN[j])<<"\n"
+            fout<<"'"<<date[j]<<"' "'%-14.6f%-14.6f%-14.6f%-14.6f%-14.6f%-14.6f' %(ammtT[j],fDepth[j],lammtC[j],lammtN[j],mammtC[j],mammtN[j])<<"\n"
         if cropname == "cotton":
             fout<<"[PGR]"<<"\n"
             fout<<"Number of PGR applications; 0: No PGR"<<"\n"
@@ -772,4 +874,28 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
             fout<<"pgrDate		Brand	Appl_Method	Band_Width Appl_Rate	Appl_Unit"<<"\n"
             for j in range(len(PGRDate)):
                 fout<<"'"<<PGRDate[j]<<"' '"<<PGRChem[j]<<"' "'%-14d%-14.6f%-14.6f%-14d' %(PGRAppMeth[j],PGRBandwidth[j],PGRAppRate[j],PGRAppUnit[j])<<"\n"
+        # Surface Residue
+        fout<<"[Residue]"<<"\n"
+        fout<<"****Script for residue/mulch application module"<<"\n"
+        fout<<"**** Residue amount can be thickness ('t') or mass ('m')   ***"<<"\n"
+        fout<<"application  1 or 0, 1(yes) 0(no)"<<"\n"
+        if not SurfResInfo:
+            fout<<"0\n"
+        else:
+            SurfResAmt = SurfResInfo[0][5] if SurfResInfo[0][4] != 'Mass (kg/ha)' else SurfResInfo[0][5]/1000
+            fout<<"1"<<"\n"
+            fout<<"tAppl_R (i)    't' or 'm'      Mass (gr/m2) or thickness (cm)    vertical layers"<<"\n"
+            fout<<"---either thickness  or Mass"<<"\n"
+            fout<<"'"<<SurfResInfo[0][2]<<"'  '"<<SurfResInfo[0][4][0].lower()<<"'  "'%-14.6f' %(SurfResAmt)<<"       3"<<"\n"
+        # Tillage
+        fout<<"[Tillage]"<<"\n"
+        fout<<"1: Tillage, 0: No till"<<"\n"
+        if TillageInfo[0][3] == "No tillage":
+            fout<<"0"<<"\n"
+        else:
+            fout<<"1"<<"\n"
+            fout<<"Till Date Till Depth (cm)"<<"\n"
+            fout<<"'"<<TillageInfo[0][2]<<"'  "'%-14.6f' %(tillDepth)<<"\n"
         fh.close()
+
+        return surfResType

@@ -1,14 +1,11 @@
 from doctest import set_unittest_reportflags
-import sqlite3
-import re
-from PyQt5 import QtSql,QtCore
-from PyQt5.QtWidgets import QWidget, QTableWidget, QComboBox, QFormLayout, QPushButton, QTableWidgetItem, QLineEdit, QCalendarWidget, QLabel, QMessageBox, QDateEdit
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QTableWidget, QComboBox, QPushButton, QTableWidgetItem, QLineEdit, QLabel, QDateEdit
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QDate
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
 from TabbedDialog.ManagementTab import *
-import time
 
 class Tabless_Widget(QTableWidget):
     """
@@ -72,7 +69,6 @@ class Tabless_Widget(QTableWidget):
 
     @pyqtSlot(int,str,str,str)
     def get_treatment(self,intval,str_experimentname,str_cropname,str_treatmentname):
-        #print("get_treatment works. val=",intval)
         if intval==2:
             self.showNewTreatmentDialog('New',str_experimentname,str_cropname)
             self.sitetable1.setVisible(True)                          
@@ -90,7 +86,6 @@ class Tabless_Widget(QTableWidget):
 
     @pyqtSlot(int,str)
     def informuser(self,intval,tree_str):
-        #print("informuser val & tree_str=",intval,tree_str)
         if intval==0:
             self.showUserInformationDialog('New Treatment Node addded',tree_str)  #  experimentname,cropname
         elif intval==1:             
@@ -99,7 +94,6 @@ class Tabless_Widget(QTableWidget):
 
     @pyqtSlot(int,str,str,str)
     def get_operation(self,intval,strval1,strval2,strval3):
-        #print("get_operation works. val=",intval)
         if intval==3:
             self.showNewOperationDialog('New',strval1,strval2,strval3) # treatmentname, experimentname,cropname
             self.sitetable1.setVisible(True)                          
@@ -109,7 +103,6 @@ class Tabless_Widget(QTableWidget):
 
     @pyqtSlot(int,str,str,str,str,QModelIndex)
     def get_existingoperation(self,intval,strval1,strval2,strval3,strval4,index):
-        #print("Debug: tableWithSignalSlot.get_existingoperation() val=",intval)
         if intval==4:
             # treatmentname, experimentname,cropname,operationname
             self.showExistingOperationDialog('New',strval1,strval2,strval3,strval4) 
@@ -161,7 +154,6 @@ check their operations dates and correct them if needed."
         self.experimentname = QLineEdit()        
         regexp_alphanum = QtCore.QRegExp('\w+')
         validator_alphanum = QtGui.QRegExpValidator(regexp_alphanum)
-        test1state = self.experimentname.setValidator(validator_alphanum)        
         self.savebutton1 = QPushButton("Save")
         
         self.summary1 = QTextEdit("EXPERIMENT Name represents broader hierarchical dataset name, for \
@@ -232,24 +224,23 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         if self.sitetable1.isHidden() == False:
             self.sitetable1.clear()
             self.sitetable1.reset()
-        #return true
 
 
     def on_savebutton_experiment_clicked(self,value):         
         if len(self.experimentname.text()) == 0:
-            messageUser("Empty string. Please, provide valid EXPERIMENT name. Hint: Alphanumeric ")
+            return messageUser("Empty string. Please, provide valid EXPERIMENT name. Hint: Alphanumeric ")
         else:
             #call database insert command
             status = check_and_update_experimentDB(self.experimentname.text(),self.cropname)
             if status:
-                messageUser(self.experimentname.text()+ " added in left panel, please add new treatment to it.")
+                messageUserInfo(self.experimentname.text()+ " added in left panel, please add new treatment to it.")
                 if self.sitetable1.isHidden() == False:
                     self.sitetable1.hide()
                 # goes to update3, insert data inot datatree instead of re-loading the datatree (causing crash, due 
                 # to improper handling)
                 self.sig2t.emit(4,self.experimentname.text(),self.cropname,"blank_treament","blank_operation")
             else:
-                messageUser("Experiment name exist. Use different name !!")
+                return messageUser("Experiment name exist. Use different name !!")
 
 
     def on_yesbutton_experiment_clicked(self,value):         
@@ -288,32 +279,30 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
     def on_copytobutton_treatment_clicked(self,value):                  
         if len(self.newtreatmentname.text()) == 0:
-            messageUser("Please, provide valid treatment name.")
+            return messageUserInfo("Please, provide valid treatment name.")
+        else:
             #call database insert command
             status = copy_treatmentDB(self.tname,self.ename,self.cname,self.newtreatmentname.text())
             if status:
                 if self.sitetable1.isHidden() == False:
                     self.sitetable1.hide()             
-                # faultline check self.informuser(0,'hello')
-                # will send it update(), deletes the current tree and re-load the datatree from database
                 self.sig2.emit(66)                
             else:
-                messageUser("Treatment name exist. Please, use different name!")
+                return messageUser("Treatment name exist. Please, use different name!")
 
 
     def on_savebutton_treatment_clicked(self,value):         
         if len(self.treatmentname.text()) == 0:
-            messageUser("Empty string. Please, provide valid TREATMENT name. Hint: Alphanumeric ")
-            #call database insert command
+            return messageUser("Empty string. Please, provide valid treatment name. Hint: Alphanumeric ")
+        else:
             status = check_and_update_treatmentDB(self.treatmentname.text(),self.strval1,self.strval2)
             if status:
                 if self.sitetable1.isHidden() == False:
                     self.sitetable1.hide()             
-                # faultline check self.informuser(0,'hello')
                 # will send it update(), deletes the current tree and re-load the datatree from database
                 self.sig2.emit(66)                
             else:
-                messageUser("Treatment name exist. Please, use different name!")
+                return messageUser("Treatment name exist. Please, use different name!")
                  
                  
     def showNewTreatmentDialog(self,value,strval1,strval2):
@@ -325,9 +314,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.strval1 = strval1
         self.strval2 = strval2
         self.treatmentname = QLineEdit()
-        regexp_alphanum = QtCore.QRegExp('\w+')
-        validator_alphanum = QtGui.QRegExpValidator(regexp_alphanum)
-        test1state = self.treatmentname.setValidator(validator_alphanum)
         self.savebutton1 = QPushButton("Save")
         self.sitetable1.clear()
         self.sitetable1.reset()
@@ -351,13 +337,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
     def getTreatmentSummary(ename,cname,tname):
         conn, c = openDB(dbDir + '\\crop.db')
         if c:
-            #Get treatment id
-            search_tuple = (tname,ename,cname)
-            c1=c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where name =? and crop = ?)",search_tuple)
-            tid = c1.fetchone()
+            # Get treatment id
+            tid = getTreatmentID(tname,ename,cname)
             operationSummary = "<b>Treatment Summary</b><br>"
-            if tid != None:
-                #print("tid=",tid)
+            if tid != "":
                 # Get all operations associated with this treatment
                 op = c.execute("SELECT name, odate, opID, DATE(year||'-'||month||'-'||day) as dt_frmtd FROM (SELECT *, CASE WHEN LENGTH(substr(odate, 1, \
                                 instr(odate,'/')-1)) = 2 THEN substr(odate, 1, instr(odate,'/')-1) ELSE '0'|| substr(odate, 1, instr(odate,'/')-1) \
@@ -366,9 +349,8 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                                 '0'|| substr(substr(odate, instr(odate,'/')+1), 1, instr(substr(odate, instr(odate,'/')+1),'/')-1) END AS day, CASE \
                                 WHEN LENGTH(substr(substr(odate, instr(odate,'/')+1), instr(substr(odate, instr(odate,'/')+1),'/')+1)) = 4 THEN \
                                 substr(substr(odate, instr(odate,'/')+1), instr(substr(odate, instr(odate,'/')+1),'/')+1) END AS year FROM operations) \
-                                where o_t_exid=? order by dt_frmtd",tid)
+                                where o_t_exid=? order by dt_frmtd",(tid,))
                 op_rows = op.fetchall()
-                #print(op_rows)
                 for op_row in op_rows:
                     if(op_row[0] == "Simulation Start"):
                         if cname == "fallow":
@@ -459,20 +441,15 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.treatmentname = strval1
         self.experimentname = strval2
         self.cropname = strval3
-        #print("treatment=",self.treatmentname)
-        #print("experiment=",self.experimentname)
-        #print("crop=",self.cropname)        
         
         self.datelabel = QLabel("Date")
         self.calendar = QDateEdit()
         firstoperation_date = getme_date_of_first_operationDB(self.treatmentname, self.experimentname ,self.cropname)
-        #print("firstoperation_date=",firstoperation_date)
         # first find out if this the new operation or there is a operation defined for this treatment. 
         # So we use the calendar date logic
         if len(firstoperation_date) > 0:
-            firstoperation_date_parts = firstoperation_date[0].split("/") # 10/20/2006
+            firstoperation_date_parts = firstoperation_date[0].split("/")
             self.calendar.setMinimumDate(QDate(int(firstoperation_date_parts[2]),int(firstoperation_date_parts[0]),int(firstoperation_date_parts[1])))
-            #print("debug:tabless_widget: first operation date=",firstoperation_date," ",firstoperation_date_parts[2]," ",firstoperation_date_parts[1])
         else:
             self.calendar.setMinimumDate(QDate(1900,1,1))
         self.calendar.setMaximumDate(QDate(2200,1,1))
@@ -521,7 +498,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         # Create tillageType combo
         self.comboTillageType = QComboBox()
         self.tillageTypeList  = read_tillageTypeDB()            
-        for record in sorted(self.tillageTypeList):
+        for record in self.tillageTypeList:
             self.comboTillageType.addItem(record)
 
         # At the moment fetilizer nutrients labels will be hard coded
@@ -537,14 +514,14 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.comboPGRChemical = QComboBox()
         self.PGRChemicalList = read_PGRChemicalDB()
         self.comboPGRChemical.addItem("Select Plant Growth Regulator Chemical")
-        for record in sorted(self.PGRChemicalList):
+        for record in self.PGRChemicalList:
             self.comboPGRChemical.addItem(record)
 
         self.PGRAppTypelabel = QLabel("PGR Application Type")
         # Create PGR Application Method combo
         self.comboPGRAppType = QComboBox()
         self.PGRAppTypeList = read_PGRAppTypeDB()
-        for record in sorted(self.PGRAppTypeList):
+        for record in self.PGRAppTypeList:
             self.comboPGRAppType.addItem(record)
 
         self.PGRBandwidthlabel = QLabel("PGR Application Bandwidth")
@@ -557,7 +534,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         # Create PGR Application unit combo
         self.comboPGRAppUnit = QComboBox()
         self.PGRAppUnitList = read_PGRAppUnitDB()
-        for record in sorted(self.PGRAppUnitList):
+        for record in self.PGRAppUnitList:
             self.comboPGRAppUnit.addItem(record)
 
         # Surface Residue is an optional operation
@@ -566,32 +543,17 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.comboSurfResType = QComboBox()
         self.surfResTypeList = read_SurfResTypeDB()
         self.comboSurfResType.addItem("Select Surface Residue Type")
-        for record in sorted(self.surfResTypeList):
+        for record in self.surfResTypeList:
             self.comboSurfResType.addItem(record)
 
         self.comboSurfResApplType = QComboBox()
         self.surfResApplTypeList = read_SurfResApplTypeDB()
         self.comboSurfResApplType.addItem("Select Surface Residue Application Type")
-        for record in sorted(self.surfResApplTypeList):
+        for record in self.surfResApplTypeList:
             self.comboSurfResApplType.addItem(record)
         self.surfResApplTypeValedit = QLineEdit("")
 
         self.savebutton1 = QPushButton("Save")
-
-        #checking USER input for NUMERIC values
-        regexp_num = QtCore.QRegExp('^\d*[.]?\d*$')
-        validator_num = QtGui.QRegExpValidator(regexp_num)
-        test1state = self.quantityClabeledit.setValidator(validator_num)
-        test1state = self.quantityNlabeledit.setValidator(validator_num)
-        test1state = self.poplabeledit.setValidator(validator_num)
-        test1state = self.yseedlabeledit.setValidator(validator_num)
-        test1state = self.rowspacinglabeledit.setValidator(validator_num)
-        test1state = self.fDepthlabeledit.setValidator(validator_num)
-        test1state = self.seedMasslabeledit.setValidator(validator_num)
-        test1state = self.PGRBandwidthedit.setValidator(validator_num)
-        test1state = self.PGRAppRateedit.setValidator(validator_num)
-        test1state = self.surfResApplTypeValedit.setValidator(validator_num)
-       
 
         self.sitetable1.clearContents()
         self.sitetable1.setRowCount(0)
@@ -674,7 +636,18 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.hideRow(15)
         self.sitetable1.hideRow(16)
         self.sitetable1.hideRow(17)
-        self.sitetable1.showRow(18)
+        # Surface Residue is an optional operation but each treatment can only have  one surface operation.
+        # If this treatment already have a surface operation then we hide rows 18 and 19
+        tid = getTreatmentID(self.treatmentname,self.experimentname,self.cropname)
+        operationList = read_operationsDB_id(tid)
+        surfResFlag = 0
+        for ii,jj in enumerate(operationList):
+            if jj[1] == 'Surface Residue':
+                surfResFlag = 1
+        if surfResFlag == 0:
+            self.sitetable1.showRow(18)
+        else:
+            self.sitetable1.hideRow(18)
         self.sitetable1.hideRow(19)
         self.sitetable1.hideRow(20)
         self.comboFertClass.currentIndexChanged.connect(self.oncomboactivated)
@@ -695,9 +668,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         # strval4 contains operation_id and operation_name concatenated with '_' character
         self.operationname = strval4.split('_')[1]
         self.op_id = strval4.split('_')[0]
-        #print("treat = ", self.treatmentname, " expir = ", self.experimentname, " crop nm = ", self.cropname, " op name = ", self.operationname, " op_id = ",self.op_id) 
         self.record = readOpDetails(self.op_id,self.operationname)
-        #print("debug: record=",self.record)
         self.datelabel = QLabel("Date")
         self.calendar = QDateEdit()
         self.calendar.setMinimumDate(QDate(1900,1,1))
@@ -839,10 +810,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.resizeColumnsToContents();
         self.sitetable1.resizeRowsToContents();
         self.sitetable1.setShowGrid(False)
-        #print("record=",self.record)
 
         # Calendar
-        if self.record[0][2] != '':
+        if self.record[0][2] != '' and self.record[0][2] is not None:
             self.sitetable1.showRow(1) 
             # recover the mm,dd,yyyy and set the calendar
             record_parts = self.record[0][2].split("/")
@@ -852,7 +822,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         if self.operationname == "Simulation Start" and self.cropname != "fallow":        
             self.sitetable1.hideRow(0)
             self.readcropvarietylist  = read_cultivar_DB(self.cropname)            
-            for record2 in sorted(self.readcropvarietylist):
+            for record2 in self.readcropvarietylist:
                 self.combocropvariety.addItem(record2)
             matchedindex = self.combocropvariety.findText(str(self.record[0][10])) 
             if matchedindex >= 0:
@@ -906,7 +876,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
         # Check if there is any fertilization operation on fertilizationOp table
         elif self.operationname == 'Fertilizer':
-            #print(self.record)
             self.sitetable1.showRow(0) 
             self.fertClass = read_fertilizationClass()        
             self.comboFertClass.clear()
@@ -964,7 +933,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(11)                    
             self.sitetable1.hideRow(12)                    
             self.tillageTypeList  = read_tillageTypeDB()            
-            for record in sorted(self.tillageTypeList):
+            for record in self.tillageTypeList:
                 self.comboTillageType.addItem(record)
             matchedindex = self.comboTillageType.findText(str(self.record[0][3]))
             self.comboTillageType.setCurrentIndex(matchedindex)
@@ -998,14 +967,14 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             # Create PGRChem combo
             self.PGRChemicalList = read_PGRChemicalDB()
             self.comboPGRChemical.addItem("Select Plant Growth Regulator Chemical")
-            for record in sorted(self.PGRChemicalList):
+            for record in self.PGRChemicalList:
                 self.comboPGRChemical.addItem(record)
             matchedindex = self.comboPGRChemical.findText(str(self.record[0][3]))
             self.comboPGRChemical.setCurrentIndex(matchedindex)      
             self.sitetable1.showRow(13)
             # Create PGR Application Method combo
             self.PGRAppTypeList = read_PGRAppTypeDB()
-            for record in sorted(self.PGRAppTypeList):
+            for record in self.PGRAppTypeList:
                 self.comboPGRAppType.addItem(record)
             matchedindex = self.comboPGRAppType.findText(str(self.record[0][4]))
             self.comboPGRAppType.setCurrentIndex(matchedindex)      
@@ -1016,7 +985,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.showRow(16)
             # Create PGR Application unit combo
             self.PGRAppUnitList = read_PGRAppUnitDB()
-            for record in sorted(self.PGRAppUnitList):
+            for record in self.PGRAppUnitList:
                 self.comboPGRAppUnit.addItem(record)
             matchedindex = self.comboPGRAppUnit.findText(str(self.record[0][7]))
             self.comboPGRAppUnit.setCurrentIndex(matchedindex)      
@@ -1044,7 +1013,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
             self.surfResTypeList = read_SurfResTypeDB()
             self.comboSurfResType.addItem("Select Surface Residue Type")
-            for record in sorted(self.surfResTypeList):
+            for record in self.surfResTypeList:
                 self.comboSurfResType.addItem(record)
             matchedindex = self.comboSurfResType.findText(str(self.record[0][3]))
             self.comboSurfResType.setCurrentIndex(matchedindex)      
@@ -1052,7 +1021,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
             self.surfResApplTypeList = read_SurfResApplTypeDB()
             self.comboSurfResApplType.addItem("Select Surface Residue Application Type")
-            for record in sorted(self.surfResApplTypeList):
+            for record in self.surfResApplTypeList:
                 self.comboSurfResApplType.addItem(record)
             matchedindex = self.comboSurfResApplType.findText(str(self.record[0][4]))
             self.comboSurfResApplType.setCurrentIndex(matchedindex)      
@@ -1091,8 +1060,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
     # This function is only activated when an Fertilization is added, therefore only
     # fertilization items should be activated
         self.operationname = "Fertilizer"
-        #print("text=",self.operationname)        
-
         self.sitetable1.showRow(0)
         self.sitetable1.showRow(1)
         self.sitetable1.hideRow(2)
@@ -1129,8 +1096,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
     # This function is only activated when a PGR operation is added, therefore only
     # PGR items should be activated
         self.operationname = "Plant Growth Regulator"
-        #print("text=",self.operationname)        
-
         self.sitetable1.hideRow(0)
         self.sitetable1.showRow(1)
         self.sitetable1.hideRow(2)
@@ -1164,8 +1129,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
     # This function is only activated when a Surface Residue operation is added, therefore only
     # Surface Residue items should be activated
         self.operationname = "Surface Residue"
-        #print("text=",self.operationname)        
-
         self.sitetable1.hideRow(0)
         self.sitetable1.showRow(1)
         self.sitetable1.hideRow(2)
@@ -1204,14 +1167,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         
         
     def on_savebutton_operation_clicked(self,value):
-        #print("Inside save operation")
-        #print("value=",value)
-        #print("treatment=", self.treatmentname)
-        #print("experiment=", self.experimentname)
-        #print("crop=", self.cropname)
-        #print("operation_id=",self.op_id)
-        #print("operation=",self.operationname)
-
         # All operations have a record on operations table
         new_record = []
         initCond_record = [6.5,0,0,5,0.65,0.5,75,"fallow",0]
@@ -1222,6 +1177,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         SR_record = []
         set_unittest_reportflags
 
+        tid = getTreatmentID(self.treatmentname,self.experimentname,self.cropname)
+        operationList = read_operationsDB_id(tid) #gets all the operations
+
         new_record.append(self.operationname)
         if self.operationname == "Tillage" and self.comboTillageType.currentText() == "No tillage":
             new_record.append("")
@@ -1231,7 +1189,6 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
         if self.operationname == "Simulation Start" and self.cropname != "fallow":
             initCond_record = []
-            print("cultivar= ",self.combocropvariety.currentText())
             initCond_record.append(float(self.poplabeledit.text()))
             if self.comboAutoIrrig.currentText() == "Yes":
                 initCond_record.append(1)
@@ -1255,26 +1212,26 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
             # Validate row spacing
             if(initCond_record[6] < 1 or initCond_record[6] > 200):
-                return messageUserInfo("Row spacing should be a value between 1 and 200 cm.")
+                return messageUser("Row spacing should be a value between 1 and 200 cm.")
 
             if self.cropname == "maize":
                 # Validate plant density
                 if(initCond_record[0] < 1 or initCond_record[0] > 20):
-                    return messageUserInfo("Plant density for maize should be a value between 1 and 20 number of plants/m2.")
+                    return messageUser("Plant density for maize should be a value between 1 and 20 number of plants/m2.")
                 # Validate seed depth
                 if(initCond_record[3] < 2 or initCond_record[3] > 7):
-                    return messageUserInfo("Seed depth for maize should be a value between 2 and 7 cm.")
+                    return messageUser("Seed depth for maize should be a value between 2 and 7 cm.")
 
             elif self.cropname == "potato":
                 # Validate plant density
                 if(initCond_record[0] < 1 or initCond_record[0] > 300):
-                    return messageUserInfo("Plant density for potato should be a value between 1 and 25 number of plants/m2.")
+                    return messageUser("Plant density for potato should be a value between 1 and 25 number of plants/m2.")
                 # Validate seed depth
                 if(initCond_record[3] < 1 or initCond_record[3] > 20):
-                    return messageUserInfo("Seed depth for potato should be a value between 1 and 20 cm.")
+                    return messageUser("Seed depth for potato should be a value between 1 and 20 cm.")
                 # Validate seedpiece mass
                 if(initCond_record[8] < 0 or initCond_record[8] > 50):
-                    return messageUserInfo("Seedpiece mass for potato should be a value between 0 and 50 g.")
+                    return messageUser("Seedpiece mass for potato should be a value between 0 and 50 g.")
 
             elif self.cropname == "soybean":
                 # Validate plant density
@@ -1282,6 +1239,11 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                     return messageUserInfo("Plant density for soybean should be a value equal or greater than 20 number of plants/m2, a smaller amount may lead to model errors..")
 
         elif self.operationname == "Tillage":
+            # You can't have tillage and surface residue at the same time. If we are adding tillage, we need to delete the surface residue operation and inform the user.
+            for ii,jj in enumerate(operationList):
+                if jj[1] == 'Surface Residue' and self.comboTillageType.currentText() != "No Tillage":
+                    status = check_and_delete_operationDB(jj[0],jj[1])
+                    messageUserInfo("Surface residue operation was deleted because tillage is not compatible with surface residue.")
             tillage_record.append(self.comboTillageType.currentText()) 
 
         elif self.operationname == "Fertilizer":
@@ -1290,35 +1252,44 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             if float(self.fDepthlabeledit.text()) >= 0:
                 fert_record.append(float(self.fDepthlabeledit.text()))
             else:
-                return messageUserInfo("Please enter Fertilizer Depth.")
+                return messageUser("Please enter Fertilizer Depth.")
 
             # Nitrogen
             if float(self.quantityNlabeledit.text()) <= 0:
-                return messageUserInfo("Nitrogen amount should be greater than 0.")
+                return messageUser("Nitrogen amount should be greater than 0.")
             if float(self.quantityNlabeledit.text()) > 6000:                  
-                return messageUserInfo("Check nitrogen amount, it is too high.")
+                return messageUser("Check nitrogen amount, it is too high.")
             fertNut_record.append(float(self.quantityNlabeledit.text()))
             fertNut_record.append("Nitrogen (N)")
 
             # Carbon
             if (self.comboFertClass.currentText() == "Manure" or self.comboFertClass.currentText() == "Litter"):
                 if float(self.quantityClabeledit.text()) <= 0:
-                    return messageUserInfo("Carbon amount should be greater than 0.")                  
+                    return messageUser("Carbon amount should be greater than 0.")                  
                 if float(self.quantityClabeledit.text()) > 10000:                  
-                    return messageUserInfo("Check carbon amount, it is too high.")
+                    return messageUser("Check carbon amount, it is too high.")
                 fertNut_record.append(float(self.quantityClabeledit.text()))
                 fertNut_record.append("Carbon (C)")
         elif self.operationname == "Plant Growth Regulator":
             PGR_record.append(self.comboPGRChemical.currentText())
             PGR_record.append(self.comboPGRAppType.currentText())
             if float(self.PGRBandwidthedit.text()) <= 0:
-                return messageUserInfo("PGR application bandwidth should be greater than 0.")
+                return messageUser("PGR application bandwidth should be greater than 0.")
             PGR_record.append(float(self.PGRBandwidthedit.text()))
             if float(self.PGRAppRateedit.text()) <= 0:
-                return messageUserInfo("PGR application rate should be greater than 0.")
+                return messageUser("PGR application rate should be greater than 0.")
             PGR_record.append(float(self.PGRAppRateedit.text()))
             PGR_record.append(self.comboPGRAppUnit.currentText())
         elif self.operationname == "Surface Residue":
+            # You can't have tillage and surface residue at the same time. If we are adding surface residue and need to set tillage 
+            # to "No Tillage" and inform the user. 
+            for ii,jj in enumerate(operationList):
+                if jj[1] == 'Tillage':
+                    tillage_record.append("No tillage") 
+                    temp_new_record = ["Tillage",""]
+                    status = check_and_update_operationDB(jj[0],self.treatmentname, self.experimentname, self.cropname, temp_new_record, \
+                                              initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record)
+                    messageUserInfo("Tillage operation was set to 'No Tillage' because tillage is not compatible with surface residue.")
             SR_record.append(self.comboSurfResType.currentText())
             self.surfResApplType = self.comboSurfResApplType.currentText()
             SR_record.append(self.surfResApplType)
@@ -1327,11 +1298,12 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             # Validate mass/thickness
             if self.surfResApplType == "Mass (kg/ha)":
                 if self.surfResApplTypeVal < 1000 or self.surfResApplTypeVal > 10000:
-                    return messageUserInfo("Surface residue mass should be greater than 1,000kg/ha and less than 10,000kg/ha.")
+                    return messageUser("Surface residue mass should be greater than 1,000kg/ha and less than 10,000kg/ha.")
             else:
                 if self.surfResApplTypeVal < 2 or self.surfResApplTypeVal > 10:
-                    return messageUserInfo("Surface residue thickness should be greater than 2cm and less than 10cm.")
+                    return messageUser("Surface residue thickness should be greater than 2cm and less than 10cm.")
 
+        print("before check and update operation_id=",self.op_id)
         status = check_and_update_operationDB(self.op_id, self.treatmentname, self.experimentname, self.cropname, new_record, \
                                               initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record)
 

@@ -1,18 +1,12 @@
 import subprocess
 import time
 import os
-import csv
-import numpy as np
 import pandas as pd
 import sys
-import math
 import re
-from PyQt5 import QtSql, QtWebEngineWidgets, QtWebEngine
-from PyQt5.QtWidgets import QWidget, QTabWidget, QDialog, QLabel, QHBoxLayout, QListWidget, QLabel, QTableView, QTableWidget, QTableWidgetItem, \
-                            QComboBox, QVBoxLayout, QFormLayout, QPushButton, QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, \
-                            QPlainTextEdit, QMenu
-from PyQt5.QtCore import pyqtSlot, QFile, QTextStream, pyqtSignal, QCoreApplication, QBasicTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
+                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QMenu, QCheckBox, QGridLayout, QGroupBox
+from PyQt5.QtCore import QFile, QTextStream, pyqtSignal, QCoreApplication
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from CustomTool.generateModelInputFiles import *
@@ -20,7 +14,6 @@ from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from subprocess import Popen
-from os import path
 
 global runpath1
 global app_dir
@@ -37,7 +30,7 @@ global repository_dir
 #----------------
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim_v3')
+app_dir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
 
@@ -61,7 +54,7 @@ glycimexe = app_dir+'\\2dglycim.exe'
 # Cotton model executable
 gossymexe = app_dir+'\\2dgossym.exe'
 
-# Flag to tell script id output files should be removed, the default is 1 so they are removed
+# Flag to tell script if output files should be removed, the default is 1 so they are removed
 remOutputFilesFlag = 0
 
 run_dir = os.path.join(app_dir,'run')
@@ -157,13 +150,13 @@ start your simulation.")
         soillists = read_soilDB()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(soillists):            
+        for key in soillists:            
             self.soilCombo.addItem(key)
         
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
                 
@@ -317,13 +310,13 @@ start your simulation.")
         soillists = read_soilDB()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(soillists):            
+        for key in soillists:            
             self.soilCombo.addItem(key)
         
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
                 
@@ -411,21 +404,22 @@ start your simulation.")
             self.soillists = read_soilDB()
             self.soilCombo = QComboBox()
             self.soilCombo.addItem("Select from list")
-            for key in sorted(self.soillists):            
+            for key in self.soillists:            
                 self.soilCombo.addItem(key)
         
             stationtypelists = read_weather_metaDB()
             self.stationTypeCombo = QComboBox()        
             self.stationTypeCombo.addItem("Select from list")
-            for key in sorted(stationtypelists):
+            for key in stationtypelists:
                 if stationtypelists[key] != "Add New Station Name":
                     self.stationTypeCombo.addItem(stationtypelists[key])
                 
             croplists = read_cropDB()
             self.cropCombo = QComboBox()          
             self.cropCombo.addItem("Select from list")
-            for val in sorted(croplists):
+            for val in croplists:
                 self.cropCombo.addItem(val)
+            self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
 
             # Create and populate waterStress combo
             self.comboWaterStress = QComboBox()          
@@ -490,20 +484,20 @@ start your simulation.")
         self.soillists = read_soilDB()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(self.soillists):            
+        for key in self.soillists:            
             self.soilCombo.addItem(key)
         
         stationtypelists = read_weather_metaDB()
         self.stationTypeCombo = QComboBox()        
         self.stationTypeCombo.addItem("Select from list")
-        for key in sorted(stationtypelists):
+        for key in stationtypelists:
             if stationtypelists[key] != "Add New Station Name":
                 self.stationTypeCombo.addItem(stationtypelists[key])
                 
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
 
@@ -560,7 +554,7 @@ start your simulation.")
         self.stationTypeCombo = QComboBox()        
         stationtypelists = read_weather_metaDBforsite(site)        
         self.stationTypeCombo.addItem("Select from list") 
-        for key in sorted(stationtypelists):
+        for key in stationtypelists:
             if stationtypelists[key] != "Add New Station Name":
                 self.stationTypeCombo.addItem(stationtypelists[key])
         self.stationTypeCombo.currentIndexChanged.connect(self.showweathercombo)
@@ -579,7 +573,7 @@ start your simulation.")
         weather_id_lists = read_weather_id_forstationtype(stationtype)
             
         self.weatherCombo.addItem("Select from list") 
-        for item in sorted(weather_id_lists):
+        for item in weather_id_lists:
             if item != "Add New Station Name":
                 self.weatherCombo.addItem(item)
 
@@ -597,7 +591,7 @@ start your simulation.")
         if crop != "Select from list":
             self.experimentlists = getExpTreatByCrop(crop)            
             self.expTreatCombo.addItem("Select from list") 
-            for val in sorted(self.experimentlists):
+            for val in self.experimentlists:
                 self.expTreatCombo.addItem(val)
         self.expTreatCombo.currentIndexChanged.connect(self.showtreatmentyear)
         self.tablebasket.setCellWidget(crow,5,self.expTreatCombo)
@@ -628,9 +622,7 @@ start your simulation.")
 
     def importfaq(self, thetabname=None):        
         cropname = ""
-        faqlist = read_FaqDB(thetabname,cropname) 
-        faqcount=0
-        
+        faqlist = read_FaqDB(thetabname,cropname)         
         self.faqtree.clear()
 
         for item in faqlist:
@@ -650,17 +642,10 @@ start your simulation.")
         
 
     def buttonrunclicked(self):        
-        rowcount = self.tablebasket.rowCount()
         self.saveQTextStream()
 
 
     def saveQTextStream(self):
-        MAGIC_NUMBER=0X3051E
-        FILE_VERSION=100
-        CODEC="UTF-8"
-        regexp_forwardslash = QtCore.QRegExp('[/]')       
-
-        # Extracting user values from the FUNNEL
         for irow in range(0,self.tablebasket.rowCount()):
             lsitename = self.tablebasket.cellWidget(irow,0).currentText()
             lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
@@ -685,39 +670,29 @@ start your simulation.")
                 lCO2Var = 0
 
             if lsitename == "Select from list":
-                messageUser("You need to select Site.")
-                return False
+                return messageUser("You need to select Site.")
 
             if lsoilname == "Select from list":
-                messageUser("You need to select Soilname.")
-                return False
+                return messageUser("You need to select Soilname.")
 
             if lstationtype == "Select from list":
-                messageUser("You need to select Station Name.")
-                return False
+                return messageUser("You need to select Station Name.")
 
             if lweather == "Select from list":
-                messageUser("You need to select Weather.")
-                return False
+                return messageUser("You need to select Weather.")
 
             if lcrop == "Select from list":
-                messageUser("You need to select Crop.")
-                return False
+                return messageUser("You need to select Crop.")
 
             if lexperiment == "Select from list":
-                messageUser("You need to select Experiment/Treatment.")
-                return False
+                return messageUser("You need to select Experiment/Treatment.")
 
             lstartyear = int(self.tablebasket.item(irow,6).text())
             lendyear = int(self.tablebasket.item(irow,7).text())
-            lcomment = self.tablebasket.item(irow,10).text()
 
             cropTreatment = lcrop + "/" + lexperiment
-            print("working on:",lsitename,cropTreatment,lstationtype,lweather,lsoilname,lstartyear,lendyear,waterStressFlag,nitroStressFlag)
-                
             simulation_name = update_pastrunsDB(0,lsitename,cropTreatment,lstationtype,lweather,lsoilname,str(lstartyear),str(lendyear),
                                                 str(waterStressFlag),str(nitroStressFlag),str(ltempVar),str(lrainVar),str(lCO2Var)) 
-            #print("Debug: simulation_name=",simulation_name)
 
             # this will execute the 2 exe's: uncomment it in final stage: 
             self.prepare_and_execute(simulation_name,irow,lstartyear)                
@@ -727,21 +702,17 @@ start your simulation.")
         """
         this will create input files, and execute both exe's
         """
-        regexp_forwardslash = QtCore.QRegExp('[/]')       
         field_path = os.path.join(runpath1,str(simulation_name[0]))
         if not os.path.exists(field_path):
             os.makedirs(field_path)
 
         field_name= self.tablebasket.cellWidget(irow,0).currentText()  
-        lsitename = self.tablebasket.cellWidget(irow,0).currentText()
         lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
         lstationtype = self.tablebasket.cellWidget(irow,2).currentText()
         lweather = self.tablebasket.cellWidget(irow,3).currentText()
         lcrop = self.tablebasket.cellWidget(irow,4).currentText()
         lexperiment = self.tablebasket.cellWidget(irow,5).currentText().split('/')[0]
         ltreatmentname = self.tablebasket.cellWidget(irow,5).currentText().split('/')[1]
-        lstartyear = int(self.tablebasket.item(irow,6).text())
-        lendyear = int(self.tablebasket.item(irow,7).text())
         lwaterstress = self.tablebasket.cellWidget(irow,8).currentText()
         if(lwaterstress == "Yes"):
             waterStressFlag = 0
@@ -766,17 +737,11 @@ start your simulation.")
         dest_file= field_path+'\\WatMovParam.dat'
         copyFile(src_file,dest_file)
 
-        #copy MassBI.out file from store to runpath1
-        src_file= repository_dir+'\\MassBl.out'
-        dest_file= field_path+'\\MassBl.out'
-        copyFile(src_file,dest_file)
-
         WriteBiologydefault(field_name,field_path)
 
         # Start
         #includes initial, management and fertilizer 
         rowSpacing, rootWeightPerSlab, cultivar = self.WriteIni(irow,field_name,field_path,theyear,theyear,waterStressFlag,nitroStressFlag) 
-        #print("rowSpacing=",rowSpacing)
         if cultivar != "fallow":
             WriteCropVariety(lcrop,cultivar,field_name,field_path)
         else:
@@ -785,34 +750,26 @@ start your simulation.")
             copyFile(src_file,dest_file)
         WriteIrrigationFile(field_name,field_path)
         hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_name,field_path,ltempVar,lrainVar,lCO2Var)
-        WriteSoluteFile(lsoilname,field_name,field_path)
+        WriteSoluteFile(lsoilname,field_path)
+        WriteGasFile(field_path)
         hourlyFlag = 1 if self.step_hourly.isChecked() else 0
         WriteTimeFileData(ltreatmentname,lexperiment,lcrop,lstationtype,hourlyFlag,field_name,field_path,hourly_flag,0)
         WriteNitData(lsoilname,field_name,field_path,rowSpacing)
-        self.WriteLayer(lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
+        self.WriteLayerGas(lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
         WriteSoiData(lsoilname,field_name,field_path)
-        WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+        surfResType = WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+        WriteMulchGeo(field_path,surfResType)
         WriteRunFile(lcrop,lsoilname,field_name,cultivar,field_path,lstationtype)            
         src_file= field_path+"\\"+field_name+".lyr"                    
         layerdest_file= field_path+"\\"+field_name+".lyr"
         createsoil_opfile= lsoilname
         grid_name = field_name
-        #print("Debug:soil name:",createsoil_opfile)
-        #print("Debug:createsoil, layerdest_file:",layerdest_file)
-        #print("Debug:createsoil, field_name:",field_name)
-        #print("Debug:createsoil, createsoilexe:",createsoilexe)
-        #print("Debug:cwd=app_dir:",app_dir)
-        #print("Debug:createsoil_opfile: ",createsoil_opfile)
-        #print("Debug:grid_name:",grid_name)
             
         pp = subprocess.Popen([createsoilexe,layerdest_file,"/GN",grid_name,"/SN",createsoil_opfile],cwd=field_path)
         while pp.poll() is None:
             time.sleep(1)
 
-        #print("Debug before subprocess 2dsoil")
         runname = field_path+"\\Run"+field_name+".dat"       
-        #print("Debug:subprocess, runname:",runname)
-        #sdate = sdate - timedelta(days=22)
         edate = edate + timedelta(days=22)
         self.simStatus.setText("")
         self.simStatus.repaint()
@@ -821,7 +778,7 @@ start your simulation.")
             QCoreApplication.processEvents()
             if(lcrop == "maize"):
                 p = subprocess.Popen([maizsimexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
-                file_ext = ["g01","g02","G03","G04","G05","G07"]
+                file_ext = ["g01","G03","G04","G05","G07"]
             elif(lcrop == "potato"):
                 p = subprocess.Popen([spudsimexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
                 file_ext = ["g01","G03","G04","G05","G07"]
@@ -851,7 +808,6 @@ start your simulation.")
             sys.exit("failed to execute twodsoil program, %s", str(e))
 
         missingRec = ""
-        spaceStr = " "
         # Check for NaN on output files
         for ext in file_ext:
             g_name2 = field_path+"\\\\"+field_name+"."+ext
@@ -911,7 +867,6 @@ start your simulation.")
         eomult=0.5
         pop=6.5
         rowSpacing = 75
-        BeginDate=0
         SowingDate=0
         HarvestDate=0
         EndDate=0
@@ -933,11 +888,10 @@ start your simulation.")
 
         for ii,jj in enumerate(operationList):
             if jj[1] == 'Simulation Start':
-                BeginDate=jj[2] #month/day/year
+                # Placeholder so model doesn't use the date
                 if cropname == "fallow":
                     SowingDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=370)).strftime('%m/%d/%Y')
                 initCond = readOpDetails(jj[0],jj[1])
-                print(initCond)
 
                 depth = initCond[0][6]
                 length = initCond[0][5]
@@ -963,6 +917,7 @@ start your simulation.")
 
             if jj[1] == 'Simulation End':                            
                 EndDate=jj[2] #month/day/year
+                # End date should be greater than sowing date
                 if cropname == "fallow":
                     EndDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=365)).strftime('%m/%d/%Y')
             
@@ -971,7 +926,6 @@ start your simulation.")
         tsite_tuple = extract_sitedetails(site)   
         #maximum profile depth     
         maxSoilDepth=read_soillongDB_maxdepth(soil)
-        #print("Debug: maxSoilDepth=",maxSoilDepth)
         RowSP = rowSpacing
 
 ############### Write INI file
@@ -995,7 +949,7 @@ start your simulation.")
             if cropname == "maize" or cropname == "fallow":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
-                fout<<"Sowing      end         timestep"<<"\n"
+                fout<<"Planting          Emergence           End           TimeStep(m)    sowing and end dates for fallow are setin the future so the soil model will not call a crop\n"
                 fout<<"'%-10s'  '%-10s'  %d" %(SowingDate,EndDate,60)<<"\n"
                 rootWeightPerSlab = 0
             elif cropname == "potato":
@@ -1030,7 +984,7 @@ start your simulation.")
         return RowSP, rootWeightPerSlab, cultivar
 
 
-    def WriteLayer(self,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
+    def WriteLayerGas(self,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
         '''
         Writes Layer file (*.lyr)
         '''
@@ -1041,14 +995,13 @@ start your simulation.")
         # read rowSpacing
         filename = field_path+"\\"+field_name+".lyr"             
         fh = QFile(filename)
-        #print("Debug: gridratio_list=",gridratio_list)
 
         if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
             print("Could not open file")
         else:                  
             fout = QTextStream(fh)            
             fout.setCodec(CODEC)  
-            fout<<"surface ratio    internal ratio: ratio of the distance between two neighboring nodes"<<"\n"
+            fout<<"surface ratio    internal ratio: ratio of the distance between two neighboring nodes\n"
             for rrow in range(0,NumObs):
                 record_tuple=gridratio_list[rrow]
                 fout<<'%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3])<<"\n"
@@ -1056,21 +1009,21 @@ start your simulation.")
             fout<<"RowSpacing"<<"\n"
             fout<<'%-6.1f' %(rowSpacing)
 
-            fout<<"\n"<<" Planting Depth	  X limit for roots	root weight per slab (seedpiece * plant_density  * 0.25 * row_spacing / 100 * 0.5 *0.01)"<<"\n"
+            fout<<"\n"<<" Planting Depth	  X limit for roots"<<"\n"
             for rrow in range(0,len(gridratio_list)):
                 record_tuple=gridratio_list[rrow]
                 fout<<'%-14.3f%-14.3f%-14.3f\n' %(record_tuple[4],record_tuple[5],rootWeightPerSlab)
 
-            fout<<" Boundary code for bottom layer (for all bottom nodes) 1 constant -2 seepage face \n"
+            fout<<"Surface water Boundary Code  surface and bottom Gas boundary codes(for all bottom nodes) 1 constant -2 seepage face, 7 drainage, 4 atmospheric\n"
+            fout<<"water boundary code for bottom layer, gas BC for the surface and bottom layers\n"
             for rrow in range(0,len(gridratio_list)):
                 record_tuple=gridratio_list[rrow]
-                fout<<'%-14d\n' %(record_tuple[6])
+                fout<<'%-14d%-14d%-14d\n' %(record_tuple[6],record_tuple[7],record_tuple[8])
 
-            fout<<"    cm           'w'/'m'   %/100    ppm         ppm        ppm         ppm         ppm         ppm       ppm    ppm    \
-                   cm       C      frac   frac     frac   g/cm3  cm3/cm3  cm3/cm3"<<"\n"
-            fout<<"Bottom depth    Init Type    OM    Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N    no3    NH4    \
-                   hNew    Tmpr    Sand    Silt    Clay    BD    TH33    TH1500    thr    ths    tha    th    Alfa    \
-                   n    Ks    Kk    thk"<<"\n"
+            fout<<" Bottom depth   Init Type  OM (%/100)   Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N  no3(ppm)  NH4  \
+                   hNew  Tmpr     CO2     O2    Sand     Silt    Clay     BD     TH33     TH1500  thr ths tha th  Alfa    n   Ks  Kk  thk\n"
+            fout<<" cm         w/m       Frac      ppm    ppm    ppm    ppm   ppm    ppm   ppm     ppm   cm     0C     ppm   ppm  ----  fraction---     \
+                   g/cm3    cm3/cm3   cm3/cm3\n"
             print("soilname=",soilname)
             soilgrid_list = read_soilshortDB(soilname)
             for rrow in range(0,len(soilgrid_list)):
@@ -1081,8 +1034,8 @@ start your simulation.")
                 else:
                     initType = "'w'"
                 fout<<'%-14d%-6s%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
-                       %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3], record_tuple[4],record_tuple[5],record_tuple[6],
-                       record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
+                       %-14.3f%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3], record_tuple[4],record_tuple[5],record_tuple[6],
+                       record_tuple[22],record_tuple[23],record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
                        record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],record_tuple[21])<<"\n"
         fout<<"\n"
         fh.close()
@@ -1107,7 +1060,7 @@ start your simulation.")
             lsoilname = self.tablebasket.cellWidget(irow,1).currentText()
             self.soilCombo = QComboBox()
             self.soilCombo.addItem("Select from list")
-            for key in sorted(self.soillists):            
+            for key in self.soillists:            
                 self.soilCombo.addItem(key)
             if(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString) >= 0):
                 self.soilCombo.setCurrentIndex(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString))
@@ -1119,7 +1072,7 @@ start your simulation.")
             lstationtype = self.tablebasket.cellWidget(irow,2).currentText()
             self.stationTypeCombo = QComboBox()        
             self.stationTypeCombo.addItem("Select from list")
-            for key in sorted(stationtypelists):
+            for key in stationtypelists:
                 if stationtypelists[key] != "Add New Station Name":
                     self.stationTypeCombo.addItem(stationtypelists[key])
                     if(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString) >= 0):
@@ -1133,7 +1086,7 @@ start your simulation.")
             lweather = self.tablebasket.cellWidget(irow,3).currentText()
             self.weatherCombo = QComboBox()        
             self.weatherCombo.addItem("Select from list")
-            for item in sorted(weather_id_lists):
+            for item in weather_id_lists:
                 if item != "Add New Station Name":
                     self.weatherCombo.addItem(item)
                     if(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString) >= 0):
@@ -1147,7 +1100,7 @@ start your simulation.")
             lexptreat = self.tablebasket.cellWidget(irow,5).currentText()
             self.expTreatCombo = QComboBox()          
             self.expTreatCombo.addItem("Select from list") 
-            for val in sorted(self.experimentlists):
+            for val in self.experimentlists:
                 self.expTreatCombo.addItem(val)
             if(self.expTreatCombo.findText(lexptreat, QtCore.Qt.MatchFixedString) >= 0):
                 self.expTreatCombo.setCurrentIndex(self.expTreatCombo.findText(lexptreat, QtCore.Qt.MatchFixedString))

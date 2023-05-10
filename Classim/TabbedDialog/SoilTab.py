@@ -1,6 +1,6 @@
-from PyQt5 import QtSql, QtCore, QtGui
-from PyQt5.QtWidgets import QWidget, QTabWidget, QDialog, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, \
-                            QPushButton, QSpacerItem, QSizePolicy, QMenu, QHeaderView
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, \
+                            QPushButton, QSpacerItem, QSizePolicy, QMenu, QHeaderView, QCheckBox, QGridLayout
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -9,7 +9,6 @@ from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from functools import partial
 from decimal import Decimal
-import json
 import xmltodict
 import pandas as pd
 import requests
@@ -25,10 +24,6 @@ Contains 2 classes.
     databases related task.
     Pretty generic and self explanotory methods. 
     Refer baseline classes at http://pyqt.sourceforge.net/Docs/PyQt5/QtWidgets.html#PyQt5-QtWidgets
-
-    Tab screen is divided into 2 main panels.
-    Left panel does the heavy lifting and interacts with user. 
-    Right panel is mainly for frequently asked questions (FAQ) stored in sqlite table "Faq".
 '''
 
 class ItemWordWrap(QtWidgets.QStyledItemDelegate):
@@ -39,7 +34,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         text = index.model().data(index) 
-        #print("text=", text)
         
         document = QtGui.QTextDocument() 
         document.setHtml(text) 
@@ -53,7 +47,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
         painter.restore() 
 
 
-#this is widget of type 1. It would be added to as a tab
 class Soil_Widget(QWidget):
     def __init__(self):
         super(Soil_Widget,self).__init__()
@@ -71,7 +64,7 @@ class Soil_Widget(QWidget):
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("soil")        
         self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree)) # Sush:Important for word wrap
+        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
         self.faqtree.setVisible(False)
         
         self.tab_summary = QTextEdit()        
@@ -153,7 +146,7 @@ UPDATE/SAVE button.")
 
         self.soilcombo.addItem("Select From List")
         self.soilcombo.addItem("Add New Soil")
-        for key in sorted(self.soillists):            
+        for key in self.soillists:            
             self.soilcombo.addItem(key)
 
         self.soilcombo.currentIndexChanged.connect(self.showsoildetailscombo,self.soilcombo.currentIndex())
@@ -188,7 +181,6 @@ UPDATE/SAVE button.")
     def loadSoilProfile(self,value):
         if self.soilcombo.itemText(self.soilcombo.currentIndex()) == "Add New Soil":
             # Get site lat lon
-            #site_tuple = extract_sitedetails(self.sitecombo.itemText(value))   
             site_tuple = extract_sitedetails(self.sitecombo.itemText(self.sitecombo.currentIndex()))   
             lat = site_tuple[1]
             lon = site_tuple[2]
@@ -279,7 +271,7 @@ UPDATE/SAVE button.")
                 soil_df_with_NaN = soil_df[soil_df.isnull().any(axis=1)]
                 depth = ", ".join(soil_df_with_NaN["depth"].astype(str))
                 if len(depth) > 0:
-                    messageUser("Layers with the following depth " + depth + " were deleted.")
+                    messageUserInfo("Layers with the following depth " + depth + " were deleted.")
                     soil_df = soil_df.dropna()
 
                 ### here add the logic for add soil layer
@@ -365,7 +357,7 @@ UPDATE/SAVE button.")
             self.sitelists = read_sitedetailsDB()
             self.sitecombo.clear()
             self.sitecombo.addItem("Select From List")
-            for key in sorted(self.sitelists):            
+            for key in self.sitelists:            
                 self.sitecombo.addItem(key)
 
             soilheader = ["Bottom depth (cm)","OM (%)","NO3 (ppm)","NH4 (ppm)","HNew","Unit Type","Tmpr (C)","Sand (%)","Silt (%)","Clay (%)",\
@@ -387,10 +379,6 @@ UPDATE/SAVE button.")
                 self.sitecombo.setEnabled(True)
                 self.sitecombo.setCurrentIndex(self.sitecombo.findText("Select From List"))
                 self.sitecombo.currentIndexChanged.connect(self.loadSoilProfile,self.sitecombo.currentIndex())
-
-                ### here add the logic for add soil layer
-                ## check if all the existing layer has valid data. If yes, then activate the "Add Soil Layer" 
-                #button else keep is grayed out
                 self.soiltable1.clear()
                 self.soiltable1.setRowCount(0)
                 self.soiltable1.setRowCount(1)
@@ -410,11 +398,8 @@ UPDATE/SAVE button.")
                 self.soilname2.setText(self.soilcombo.itemText(value))  
                 self.soilname2.setReadOnly(True)
 
-                #print("soilname=",self.soilcombo.itemText(value))
                 soillonglist = read_soillongDB(self.soilcombo.itemText(value)) 
-                #print("soillonglist",soillonglist)
                 sitename =  getSiteFromSoilname(self.soilcombo.itemText(value))
-                #print("sitename=",sitename[0])
                 self.sitecombo.setCurrentIndex(self.sitecombo.findText(sitename[0]))
                 self.sitecombo.setEnabled(False)
                 gridratio_list = read_soilgridratioDB(self.soilcombo.itemText(value))
@@ -436,7 +421,6 @@ UPDATE/SAVE button.")
                 self.soiltable1.setAlternatingRowColors(True)
                 self.soiltable1.setColumnCount(22)
                 self.soiltable1.setHorizontalHeaderLabels(soilheader)
-                #print(soillonglist)
             
                 for rrecord in soillonglist[0:21]:
                     ccurentrow = self.soiltable1.rowCount()
@@ -501,7 +485,6 @@ UPDATE/SAVE button.")
           
     def getsoilrowinfo(self,rownum):
         currentrow_data = []
-        #print("debug getsoilrowinfo: rownum, rowcount:",rownum,self.soiltable1.rowCount() )
         if rownum >=0 and rownum < self.soiltable1.rowCount():
             colnum = 0            
             for ccolumn in range(0,self.soiltable1.columnCount()):
@@ -524,11 +507,10 @@ UPDATE/SAVE button.")
         where2insertrow = self.soiltable1.currentRow()
         self.soiltable1.removeRow(where2insertrow)        
         howmanyrows = self.soiltable1.rowCount()
-        #print("after howmanyrows=",howmanyrows)
         if howmanyrows == 0:
             self.soiltable1.insertRow(howmanyrows)
             for rrecord in soillonglist:
-                colnum=0 #1
+                colnum=0
                 # Create and populate initType combo
                 self.comboInitType = QComboBox()          
                 self.comboInitType.addItem("m") # val = 1
@@ -569,7 +551,7 @@ UPDATE/SAVE button.")
         where2insertrow = self.soiltable1.currentRow()
 
         self.soiltable1.insertRow(where2insertrow)        
-        colnum=0 #1
+        colnum=0
         # Create and populate initType combo
         self.comboInitType = QComboBox()          
         self.comboInitType.addItem("m") # val = 1
@@ -652,8 +634,6 @@ UPDATE/SAVE button.")
         '''
         pop menu items will come here
         '''
-        #print("soiltableverticalheader_popup debuga",len(self.soiltable1.selectionModel().selectedRows()))
-        #print("soiltableverticalheader_popup debugb", len(self.soiltable1.selectedIndexes()))
         if (len(self.soiltable1.selectionModel().selectedRows()) !=1):
             return True
 
@@ -664,22 +644,17 @@ UPDATE/SAVE button.")
         action = menu.exec_(QtGui.QCursor.pos())
         
         if action == duplicaterowaboveaction:
-            #print("debug: duplicate above")
             self.duplicaterowabove()
 
         if action == duplicaterowbelowaction:
-            #print("debug: duplicate below")
             self.duplicaterowbelow()
 
         if action == deletethisrowaction:
-            #print("debug: duplicate below")
             self.deletethisrow()
 
 
     def importfaq(self, thetabname=None):        
-        faqlist = read_FaqDB(thetabname,'') 
-        faqcount=0
-        
+        faqlist = read_FaqDB(thetabname,'')         
         for item in faqlist:
             roottreeitem = QTreeWidgetItem(self.faqtree)
             roottreeitem.setText(0,item[2])
@@ -707,11 +682,6 @@ UPDATE/SAVE button.")
     def on_deletebuttonclick(self):
         '''
         aim: to delete the soil file, on display, from the database
-        Under process. Have to clean the entries from hgrid, gridratiotable, soil, soil_long etc. Refresh 
-        the soil tab screen
-        from table soil, retrieve the id (o_sid), o_gridratio_id.
-        from table soil_long, delete all records with o_sid == id
-        from table gridratio, delete record with gridratio_id = o_gridratio_id
         '''
         check_and_delete_soilDB(self.soilname2.text())
         self.reset_view()
@@ -722,14 +692,19 @@ UPDATE/SAVE button.")
         This will Block Signals, reset combobox entries. Unblock signals
         '''
         self.save_update_button.setText("Blank")
-        tmp_index = self.soilcombo.currentIndex()
         self.soilcombo.blockSignals(True)
         self.soilcombo.clear()
         self.soillists = read_soilDB()
         self.soilcombo.addItem("Select From List")
         self.soilcombo.addItem("Add New Soil")
-        for key in sorted(self.soillists):            
+        for key in self.soillists:            
             self.soilcombo.addItem(key)
+
+        self.sitelists = read_sitedetailsDB()
+        self.sitecombo.clear()
+        self.sitecombo.addItem("Select From List")
+        for key in self.sitelists:            
+            self.sitecombo.addItem(key)
 
         self.soilselectionlabel.setVisible(False)
         self.soiltable1.setVisible(False) 
@@ -758,7 +733,6 @@ UPDATE/SAVE button.")
             self.save_update_button.disconnect()
         except:
             pass
-        #print("debug: SoilTab::on_savebuttonclick(): savebutton_name=",self.save_update_button.text())
         bottomBC = self.bottomBCcombo.itemText(self.bottomBCcombo.currentIndex())
         if(bottomBC == "Water Table"):
             bottomBCval = 1
@@ -767,7 +741,7 @@ UPDATE/SAVE button.")
         else:
             bottomBCval = -7
 
-        soilgridratio_list =[1.2,0.5,2.1,3,10,23,bottomBCval]
+        soilgridratio_list =[1.2,0.5,2.1,3,10,23,bottomBCval,-4,1]
         next_gridratio_id =0
         self.system_msg.clear()
         #find is it update or save
@@ -775,8 +749,7 @@ UPDATE/SAVE button.")
             print("Debug soiltab:on_savebuttonclick: self.soilname2.text=",self.soilname2.text())
             soilname = str(self.soilname2.text())
             if (soilname == "" or soilname == "Provide soil name"):
-                messageUser("Please, provide soil name.")
-                return False
+                return messageUser("Please, provide soil name.")
             # Get site_id
             site_tuple = extract_sitedetails(self.sitecombo.itemText(self.sitecombo.currentIndex()))   
             site_id = str(site_tuple[0])
@@ -805,7 +778,6 @@ UPDATE/SAVE button.")
                     retrieved_datalist.append(int(val))
                 else:
                     retrieved_datalist.append(self.soiltable1.item(rrow,ccol).text())
-            #print("debug:soil_widget:on_savebutton_click(): working on layer#",rrow," ",retrieved_datalist)
             retrieved_datalist[1] = float(retrieved_datalist[1])/100
             lLev = self.soiltable1.item(rrow,0).text()
             hNew = Decimal(self.soiltable1.item(rrow,4).text())
@@ -822,8 +794,8 @@ UPDATE/SAVE button.")
         if errMess != "":
             if self.save_update_button.text() == "SaveAs":
                 delete_soilDB(self.soilname2.text())
-            messageUser(errMess)
             self.save_update_button.clicked.connect(lambda:self.on_savebuttonclick())
+            return messageUser(errMess)
         else:
             for rrow in range(rowNum):
                 retrieved_datalist = []
@@ -838,7 +810,6 @@ UPDATE/SAVE button.")
                         retrieved_datalist.append(int(val))
                     else:
                         retrieved_datalist.append(self.soiltable1.item(rrow,ccol).text())
-                #print("debug:soil_widget:on_savebutton_click(): working on layer#",rrow," ",retrieved_datalist)
                 retrieved_datalist[1] = float(retrieved_datalist[1])/100
                 insert_into_soillong(self.soilname2.text(), tuple(retrieved_datalist))
 

@@ -6,10 +6,12 @@ block_cipher = None
 options =[]
 added_files= [
    ('.\\images\\*.png','images'),
-   ('.\\images\\*.ico','images')
+   ('.\\images\\*.ico','images'),
+   (os.environ['Conda_prefix'] + '\\Lib\\site-packages\\pyqtlet','pyqtlet')
    ]
+
 a = Analysis(['classim.py'],
-             pathex=["/%userprofile%/AppData/Local/conda/conda/envs/Classim22/Library/bin"],
+             pathex=[os.environ['Conda_prefix'] + '\\Library\\bin'],
              binaries=[],
              datas=added_files,
              hiddenimports=[],

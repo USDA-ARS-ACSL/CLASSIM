@@ -1,7 +1,6 @@
-from PyQt5 import QtSql, QtCore, QtGui
-from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, \
-                            QComboBox, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QRadioButton, QButtonGroup, \
-                            QScrollArea
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import QTreeWidgetItem, QWidget, QLabel, QHBoxLayout, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, \
+                            QSizePolicy, QRadioButton, QButtonGroup, QScrollArea, QGridLayout, QCheckBox
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -95,9 +94,9 @@ class Cultivar_Widget(QWidget):
         self.croplistlabel = QLabel("Select Crop")        
         self.cropcombo = QComboBox()       
         self.croplistlabel.setBuddy(self.cropcombo)
-        self.croplists = sorted(read_cropDB())        
+        self.croplists = read_cropDB()        
         self.cropcombo.addItem("Select a crop") 
-        for key in sorted(self.croplists):    
+        for key in self.croplists:    
             if key != "fallow":        
                 self.cropcombo.addItem(key)
         self.cropcombo.currentIndexChanged.connect(self.showcultivarcombo)
@@ -662,9 +661,8 @@ class Cultivar_Widget(QWidget):
             self.cultivarcombo.clear()
             self.cultivarcombo.addItem("Select from list")    
             self.cultivarcombo.addItem("Add New Cultivar ("+cropname+")") 
-            for key in sorted(cultivarlists):
-                key_aux = cropname + ":" + str(key)
-                self.cultivarcombo.addItem(key_aux)   
+            for key in cultivarlists:
+                self.cultivarcombo.addItem(cropname + ":" + str(key))   
             self.cultivarcombo.currentIndexChanged.connect(self.showcultivardetailscombo)
         return True
 
@@ -986,17 +984,13 @@ class Cultivar_Widget(QWidget):
         elif self.cultivarbutton.text() == "SaveAs":
             ## check if new name is empty
             if len(self.cultivarnameedit.text()) <= 0:
-                self.cultivarbutton.blockSignals(True)
-                messageUser("Cultivar name is empty, please provide a name.")
                 self.cultivarbutton.blockSignals(False)
-                return False
+                return messageUser("Cultivar name is empty, please provide a name.")
             else:
                 matchedindex = self.cultivarcombo.findText(self.cropcombo.currentText()+":"+self.cultivarnameedit.text())                
                 if matchedindex > 0:
-                    self.cultivarbutton.blockSignals(True)
-                    messageUser("Cultivar name exist, please use a different name.")
                     self.cultivarbutton.blockSignals(False)
-                    return False
+                    return messageUser("Cultivar name exist, please use a different name.")
                 else:
                     self.cultivarbutton.blockSignals(True)
                     #save the table        
@@ -1061,7 +1055,7 @@ class Cultivar_Widget(QWidget):
         cultivarlists = read_cultivar_DB(self.cropcombo.currentText()) 
         self.cultivarcombo.addItem("Select Cultivar")    
         self.cultivarcombo.addItem("Add New Cultivar ("+crop+")")
-        for key in sorted(cultivarlists):            
+        for key in cultivarlists:            
             key_aux = crop + ":" + str(key)
             self.cultivarcombo.addItem(key_aux)   
         self.cultivarbutton.setText("")
@@ -1099,7 +1093,7 @@ class Cultivar_Widget(QWidget):
         cultivarlists = read_cultivar_DB(self.cropcombo.currentText()) 
         self.cultivarcombo.addItem("Select Cultivar")    
         self.cultivarcombo.addItem("Add New Cultivar ("+crop+")") 
-        for key in sorted(cultivarlists):            
+        for key in cultivarlists:            
             key_aux = crop + ":" + str(key)
             self.cultivarcombo.addItem(key_aux)   
         self.cultivarcombo.setVisible(False)
@@ -1125,13 +1119,7 @@ class Cultivar_Widget(QWidget):
 
     def importfaq(self, thetabname=None):        
         cropname = self.cropcombo.currentText()
-        faqlist = read_FaqDB(thetabname,cropname) 
-        faqcount=0
-        
-        #self.resortEnabled = True
-        #self.openItems = []
-        #self.framenr = 0
-
+        faqlist = read_FaqDB(thetabname,cropname)         
         self.faqtree.clear()
 
         for item in faqlist:

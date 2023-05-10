@@ -1,8 +1,6 @@
 import os
-import sys
-from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, \
-                            QVBoxLayout, QSpacerItem, QSizePolicy, QHeaderView
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QTreeWidgetItem, QTabWidget, QLabel, QHBoxLayout, QVBoxLayout
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -18,7 +16,7 @@ global repository_dir
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim_v3')
+app_dir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
 
@@ -55,7 +53,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         text = index.model().data(index) 
-        #print("text=", text)
                 
         document = QtGui.QTextDocument() 
         document.setHtml(text) 
@@ -106,7 +103,7 @@ class Welcome_Widget(QTabWidget):
 
         self.tab_label = QLabel("Welcome "+ gusername+ " !!")
         self.summary = '''
-<p>Crop, Land And Soil SIMulation (CLASSIM) was developed to facilitate the execution of crop models like MAIZSIM and SPUDSIM.  
+<p>Crop, Land And Soil SIMulation (CLASSIM) was developed to facilitate the execution of crop models like GLYCIM (soybean), GOSSYM (cotton), MAIZSIM (maize) and SPUDSIM (potato).  
 To run the simulation use the Seasonal Run tab or to build a rotation use the Rotation Builder tab.</p>
 <>Before you proceed with the simulation, verify if the necessary information is already on the system otherwise you can add it going to the following tabs</p>
 <ol>
@@ -148,7 +145,6 @@ To run the simulation use the Seasonal Run tab or to build a rotation use the Ro
 
     def importfaq(self, thetabname=None):        
         faqlist = read_FaqDB(thetabname,'') 
-        faqcount=0
         
         for item in faqlist:
             roottreeitem = QTreeWidgetItem(self.faqtree)

@@ -1,13 +1,8 @@
 from asyncio.windows_events import NULL
 import os
 import sys
-import io
-import math
-from DatabaseSys.Databasesupport import extract_sitedetails
-from PyQt5.QtWidgets import QWidget, QDialog, QLabel, QHBoxLayout, QTableWidgetItem, QComboBox, QVBoxLayout, \
-                            QPushButton, QSpacerItem, QSizePolicy, QHeaderView, QApplication
-from PyQt5.QtCore import pyqtSlot, QUrl
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QCheckBox, QGridLayout
+from PyQt5.QtCore import pyqtSlot
 from pyqtlet import L, MapWidget
 from DatabaseSys.Databasesupport import *
 from TabbedDialog.tableWithSignalSlot import *
@@ -92,11 +87,11 @@ class SiteWidget(QWidget):
         self.sitelabel = QLabel("Site")
         self.sitecombo = QComboBox()
         self.sitelabel.setBuddy(self.sitecombo)
-        self.sitelists = sorted(read_sitedetailsDB())
+        self.sitelists = read_sitedetailsDB()
         # this way we don't need this entry in database and it is always on the top of the combo
         self.sitecombo.addItem("Select from list") 
         self.sitecombo.addItem("Add New Site") 
-        for item in sorted(self.sitelists): 
+        for item in self.sitelists: 
             if item != "Generic Site":
                 self.sitecombo.addItem(item)
         self.sitecombo.currentIndexChanged.connect(self.showsitedetails)
@@ -105,8 +100,8 @@ class SiteWidget(QWidget):
         self.MapWidget = MapWidget()
 
         # Setting the map with pyqtlet
-        self.marker = NULL
         self.map = L.map(self.MapWidget)
+        self.marker = NULL
         self.map.setView([39.8283,-103.8233],5)
         L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png').addTo(self.map)
         self.map.clicked.connect(lambda x:self.updateMap(x))
@@ -233,22 +228,18 @@ class SiteWidget(QWidget):
         newSitename = str(self.sitenameedit.text())
         if self.savebutton.text() == "SaveAs":
             if(newSitename == ""):
-                messageUser("Site Name is empty, please provide a name.")
-                return False
+                return messageUser("Site Name is empty, please provide a name.")
         
             site_tuple = extract_sitedetails(newSitename)   
             if site_tuple != 0:
-                messageUser("Failed: Site exists. Change SITE name.") 
-                return False 
+                return messageUser("Failed: Site exists. Change SITE name.") 
 
         altitude = self.altedit.text()
         if altitude == "":
-            messageUser("Altitude is empty, please provide information.")
-            return False
+            return messageUser("Altitude is empty, please provide information.")
 
         if float(altitude) < 0:
-            messageUser("Altitude should be greater or equal to 0.")
-            return False
+            return messageUser("Altitude should be greater or equal to 0.")
 
         record_tuple=(newSitename,float(self.rlatedit.text()),float(self.rlonedit.text()),float(self.altedit.text()))
         self.savebutton.disconnect()
@@ -259,7 +250,7 @@ class SiteWidget(QWidget):
             self.sitelists = read_sitedetailsDB() 
             self.sitecombo.addItem("Select from list") 
             self.sitecombo.addItem("Add New Site") 
-            for item in sorted(self.sitelists):            
+            for item in self.sitelists:            
                 self.sitecombo.addItem(item)
 
 
@@ -291,7 +282,7 @@ class SiteWidget(QWidget):
                 # this way we don't need this entry in database and it is always on the top of the combo                
                 self.sitecombo.addItem("Select from list") 
                 self.sitecombo.addItem("Add New Site") 
-                for item in sorted(self.sitelists):            
+                for item in self.sitelists:            
                     if item != "Generic Site":
                         self.sitecombo.addItem(item)
             return True

@@ -1,19 +1,12 @@
 import subprocess
-#import threading
 import time
 import os
-import csv
-import numpy as np
 import pandas as pd
 import sys
-import math
 import re
-from PyQt5 import QtSql, QtWebEngineWidgets, QtWebEngine
-from PyQt5.QtWidgets import QWidget, QTabWidget, QDialog, QLabel, QHBoxLayout, QListWidget, QLabel, QTableView, QTableWidget, QTableWidgetItem, \
-                            QComboBox, QVBoxLayout, QFormLayout, QPushButton, QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, \
-                            QPlainTextEdit, QMenu
-from PyQt5.QtCore import pyqtSlot, QFile, QTextStream, pyqtSignal, QCoreApplication, QBasicTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, \
+                            QHeaderView, QRadioButton, QButtonGroup, QMenu, QCheckBox, QGridLayout, QGroupBox
+from PyQt5.QtCore import QFile, QTextStream, pyqtSignal, QCoreApplication
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from CustomTool.generateModelInputFiles import *
@@ -21,7 +14,6 @@ from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from subprocess import Popen
-from os import path
 
 global runpath1
 global app_dir
@@ -38,7 +30,7 @@ global repository_dir
 #----------------
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim_v3')
+app_dir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(app_dir):
     os.makedirs(app_dir)
 
@@ -60,7 +52,7 @@ glycimexe = app_dir+'\\2dglycim.exe'
 # Cotton model executable
 gossymexe = app_dir+'\\2dgossym.exe'
 
-# Flag to tell script id output files should be removed, the default is 1 so they are removed
+# Flag to tell script if output files should be removed, the default is 1 so they are removed
 remOutputFilesFlag = 0
 
 run_dir = os.path.join(app_dir,'run')
@@ -82,7 +74,6 @@ class ItemWordWrap(QtWidgets.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         text = index.model().data(index) 
-        #print("text=", text)
                 
         document = QtGui.QTextDocument() 
         document.setHtml(text) 
@@ -161,7 +152,7 @@ make sure to press the Execute Rotation button.")
         soillists = read_soilDB()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(soillists):            
+        for key in soillists:            
             self.soilCombo.addItem(key)
         
         self.stationTypelabel = QLabel("Station Name")
@@ -170,7 +161,7 @@ make sure to press the Execute Rotation button.")
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
                 
@@ -319,13 +310,13 @@ make sure to press the Execute Rotation button.")
         self.soilCombo = QComboBox()
         soillists = read_soilDB()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(soillists):            
+        for key in soillists:            
             self.soilCombo.addItem(key)
         
         self.cropCombo = QComboBox()          
         croplists = read_cropDB()
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
  
@@ -387,7 +378,7 @@ make sure to press the Execute Rotation button.")
         self.simStatus.repaint()
 
 
-    def tableverticalheader_popup(self, pos):
+    def tableverticalheader_popup(self):
         '''
         pop menu items will come here
         '''
@@ -421,8 +412,9 @@ make sure to press the Execute Rotation button.")
             croplists = read_cropDB()
             self.cropCombo = QComboBox()          
             self.cropCombo.addItem("Select from list")
-            for val in sorted(croplists):
+            for val in croplists:
                 self.cropCombo.addItem(val)
+            self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
 
             # Create and populate waterStress combo
             self.comboWaterStress = QComboBox()          
@@ -478,7 +470,7 @@ make sure to press the Execute Rotation button.")
         croplists = read_cropDB()
         self.cropCombo = QComboBox()          
         self.cropCombo.addItem("Select from list")
-        for val in sorted(croplists):
+        for val in croplists:
             self.cropCombo.addItem(val)
         self.cropCombo.currentIndexChanged.connect(self.showexperimentcombo)
 
@@ -528,9 +520,8 @@ make sure to press the Execute Rotation button.")
         self.stationTypeCombo = QComboBox()        
         stationtypelists = read_weather_metaDBforsite(site)        
         self.stationTypeCombo.addItem("Select from list") 
-        for key in sorted(stationtypelists):
-            if stationtypelists[key] != "Add New Station Name":
-                self.stationTypeCombo.addItem(stationtypelists[key])
+        for key in stationtypelists:
+            self.stationTypeCombo.addItem(stationtypelists[key])
         self.stationTypeCombo.currentIndexChanged.connect(self.showweathercombo)
 
         self.subgrid1.addWidget(self.stationTypeCombo,1,1,1,1)
@@ -544,7 +535,7 @@ make sure to press the Execute Rotation button.")
         weather_id_lists = read_weather_id_forstationtype(stationtype)
             
         self.weatherCombo.addItem("Select from list") 
-        for item in sorted(weather_id_lists):
+        for item in weather_id_lists:
             if item != "Add New Station Name":
                 self.weatherCombo.addItem(item)
 
@@ -560,20 +551,18 @@ make sure to press the Execute Rotation button.")
 
         stationtype = self.stationTypeCombo.currentText()
         if stationtype == "" or stationtype == "Select from list":
-            messageUserInfo("You need to select 'Station Name' first!")
             self.cropCombo.setCurrentIndex(self.cropCombo.findText("Select from list"))
-            return False
+            return messageUser("You need to select 'Station Name' first!")
         weatherID = self.weatherCombo.currentText()
         if weatherID == "" or weatherID == "Select from list":
-            messageUserInfo("You need to select 'Weather' first!")
             self.cropCombo.setCurrentIndex(self.cropCombo.findText("Select from list"))
-            return False
+            return messageUser("You need to select 'Weather' first!")
         
         self.expTreatCombo = QComboBox()          
         if crop != "Select from list":
             self.experimentlists = getExpTreatByCropWeatherDate(crop,stationtype,weatherID)            
             self.expTreatCombo.addItem("Select from list") 
-            for val in sorted(self.experimentlists):
+            for val in self.experimentlists:
                 self.expTreatCombo.addItem(val)
 
         self.expTreatCombo.currentIndexChanged.connect(self.showtreatmentyear)
@@ -594,7 +583,6 @@ make sure to press the Execute Rotation button.")
             self.tablebasket.setItem(crow,3,QTableWidgetItem(""))
         else:
             cropExperimentTreatment = crop + "/" +  experiment
-            #print("cropExperimentTreatment=",cropExperimentTreatment)
             # get weather years
             weatherdate_list = read_weatherdate_fromtreatment(cropExperimentTreatment)
             sdate = weatherdate_list[0].strftime("%m/%d/%Y")
@@ -628,16 +616,10 @@ make sure to press the Execute Rotation button.")
         
 
     def buttonrunclicked(self):        
-        rowcount = self.tablebasket.rowCount()
         self.saveQTextStream()
 
 
     def saveQTextStream(self):
-        MAGIC_NUMBER=0X3051E
-        FILE_VERSION=100
-        CODEC="UTF-8"
-        regexp_forwardslash = QtCore.QRegExp('[/]')       
-
         # Extracting user values from the FUNNEL
         lsitename = self.siteCombo.currentText()
         lsoilname = self.soilCombo.currentText()
@@ -646,41 +628,34 @@ make sure to press the Execute Rotation button.")
 
         # enter the record and get its ID
         if lsitename == "Select from list":
-            messageUser("You need to select Site.")
-            return False
+            return messageUser("You need to select Site.")
 
         if lsoilname == "Select from list":
-            messageUser("You need to select Soilname.")
-            return False
+            return messageUser("You need to select Soilname.")
 
         if lstationtype == "Select from list":
-            messageUser("You need to select Station Name.")
-            return False
+            return messageUser("You need to select Station Name.")
 
         if lweather == "Select from list":
-            messageUser("You need to select Weather.")
-            return False
+            return messageUser("You need to select Weather.")
 
         # Need to validate if there is any gap among the treatment dates
         for irow in range(0,self.tablebasket.rowCount()-1):
             prevRunEndDate = datetime.strptime(self.tablebasket.item(irow,3).text(),'%m/%d/%Y')
             nextRunStartDate = datetime.strptime(self.tablebasket.item(irow+1,2).text(),'%m/%d/%Y')
             if (prevRunEndDate + timedelta(days=1)) != nextRunStartDate:
-                messageUser("There is a date gap or overlap between runs " + str(irow+1) + " and " + str(irow+2) + ".")
-                return False
+                return messageUser("There is a date gap or overlap between runs " + str(irow+1) + " and " + str(irow+2) + ".")
 
         rotationID = getNextRotationID()
  
         for irow in range(0,self.tablebasket.rowCount()):
             lcrop = self.tablebasket.cellWidget(irow,0).currentText()
             if lcrop == "Select from list":
-                messageUser("You need to select Crop.")
-                return False
+                return messageUser("You need to select Crop.")
 
             lexperiment = self.tablebasket.cellWidget(irow,1).currentText()
             if lexperiment == "Select from list":
-                messageUser("You need to select Experiment/Treatment.")
-                return False
+                return messageUser("You need to select Experiment/Treatment.")
 
             lwaterstress = self.tablebasket.cellWidget(irow,4).currentText()
             if(lwaterstress == "Yes"):
@@ -706,12 +681,9 @@ make sure to press the Execute Rotation button.")
             if lCO2Var == "None":
                 lCO2Var = 0
 
-            cropTreatment = lcrop + "/" + lexperiment
-            #print("working on:",lsitename,cropTreatment,lstationtype,lweather,lsoilname,lstartyear,lendyear,waterStressFlag,nitroStressFlag)
-                
+            cropTreatment = lcrop + "/" + lexperiment    
             simulation_name = update_pastrunsDB(rotationID,lsitename,cropTreatment,lstationtype,lweather,lsoilname,str(lstartyear),\
                                                 str(lendyear),str(waterStressFlag),str(nitroStressFlag),str(ltempVar),str(lrainVar),str(lCO2Var)) 
-            #print("simulation_name=",simulation_name[0])
 
             # this will execute the 2 exe's: uncomment it in final stage: 
             self.prepare_and_execute(simulation_name[0],rotationID,irow,lstartyear)                
@@ -721,22 +693,18 @@ make sure to press the Execute Rotation button.")
         """
         this will create input files, and execute both exe's
         """
-        regexp_forwardslash = QtCore.QRegExp('[/]')
         self.simulation_name = str(simulation_name)
         field_path = os.path.join(runpath1,self.simulation_name)
         if not os.path.exists(field_path):
             os.makedirs(field_path)
 
         field_name = self.siteCombo.currentText()  
-        lsitename = self.siteCombo.currentText()
         lsoilname = self.soilCombo.currentText()
         lstationtype = self.stationTypeCombo.currentText()
         lweather = self.weatherCombo.currentText()
         lcrop = self.tablebasket.cellWidget(irow,0).currentText()
         lexperiment = self.tablebasket.cellWidget(irow,1).currentText().split('/')[0]
         ltreatmentname = self.tablebasket.cellWidget(irow,1).currentText().split('/')[1]
-        lstartyear = int(self.tablebasket.item(irow,2).text().split('/')[2])
-        lendyear = int(self.tablebasket.item(irow,3).text().split('/')[2])
         lwaterstress = self.tablebasket.cellWidget(irow,4).currentText()
         if(lwaterstress == "Yes"):
             waterStressFlag = 0
@@ -761,17 +729,11 @@ make sure to press the Execute Rotation button.")
         dest_file= field_path+'\\WatMovParam.dat'
         copyFile(src_file,dest_file)
 
-        #copy MassBI.out file from store to runpath1
-        src_file= repository_dir+'\\MassBl.out'
-        dest_file= field_path+'\\MassBl.out'
-        copyFile(src_file,dest_file)
-
         WriteBiologydefault(field_name,field_path)
 
         # Start
         #includes initial, management and fertilizer 
-        rowSpacing, rootWeightPerSlab, cultivar = self.WriteIni(irow,field_name,field_path,theyear,theyear,waterStressFlag,nitroStressFlag) 
-        #print("rowSpacing=",rowSpacing)
+        rowSpacing, rootWeightPerSlab, cultivar = self.WriteIni(irow,field_name,field_path,waterStressFlag,nitroStressFlag) 
         if cultivar != "fallow":
             WriteCropVariety(lcrop,cultivar,field_name,field_path)
         else:
@@ -780,36 +742,27 @@ make sure to press the Execute Rotation button.")
             copyFile(src_file,dest_file)
         WriteIrrigationFile(field_name,field_path)
         hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_name,field_path,ltempVar,lrainVar,lCO2Var)
-        WriteSoluteFile(lsoilname,field_name,field_path)
+        WriteSoluteFile(lsoilname,field_path)
+        WriteGasFile(field_path)
         hourlyFlag = 1 if self.step_hourly.isChecked() else 0
         WriteTimeFileData(ltreatmentname,lexperiment,lcrop,lstationtype,hourlyFlag,field_name,field_path,hourly_flag,1)
         WriteNitData(lsoilname,field_name,field_path,rowSpacing)
-        self.WriteLayer(irow,lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
+        self.WriteLayerGas(irow,lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
         WriteSoiData(lsoilname,field_name,field_path)
-        WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+        surfResType = WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+        WriteMulchGeo(field_path,surfResType)
         WriteRunFile(lcrop,lsoilname,field_name,cultivar,field_path,lstationtype)            
         src_file= field_path+"\\"+field_name+".lyr"                    
         layerdest_file= field_path+"\\"+field_name+".lyr"
         createsoil_opfile= lsoilname
         grid_name = field_name
-        #print("Debug:soil name:",createsoil_opfile)
-        #print("Debug:createsoil, layerdest_file:",layerdest_file)
-        #print("Debug:createsoil, field_name:",field_name)
-        #print("Debug:createsoil, createsoilexe:",createsoilexe)
-        #print("Debug:cwd=app_dir:",app_dir)
-        #print("Debug:createsoil_opfile: ",createsoil_opfile)
-        #print("Debug:grid_name:",grid_name)
             
         pp = subprocess.Popen([createsoilexe,layerdest_file,"/GN",grid_name,"/SN",createsoil_opfile],cwd=field_path)
         while pp.poll() is None:
             time.sleep(1)
-        print("Process ended, ret code:", pp.returncode)
 
-        #print("Debug before subprocess 2dsoil")
         runname = field_path+"\\Run"+field_name+".dat"       
-        #print("Debug:subprocess, runname:",runname)
         #endOpDate
-        #sdate = sdate - timedelta(days=22)
         edate = edate + timedelta(days=22)
         self.simStatus.setText("")
         self.simStatus.repaint()
@@ -818,7 +771,7 @@ make sure to press the Execute Rotation button.")
             QCoreApplication.processEvents()
             if(lcrop == "maize"):
                 p = subprocess.Popen([maizsimexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
-                file_ext = ["g01","g02","G03","G04","G05","G07"]
+                file_ext = ["g01","G03","G04","G05","G07"]
             elif(lcrop == "potato"):
                 p = subprocess.Popen([spudsimexe, runname],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
                 file_ext = ["g01","G03","G04","G05","G07"]
@@ -848,7 +801,6 @@ make sure to press the Execute Rotation button.")
             sys.exit("failed to execute twodsoil program, %s", str(e))
 
         missingRec = ""
-        spaceStr = " "
         # Check for NaN on output files
         for ext in file_ext:
             g_name2 = field_path+"\\\\"+field_name+"."+ext
@@ -875,11 +827,9 @@ make sure to press the Execute Rotation button.")
                 if ext == 'G03' or ext == 'g03':
                     ingestGeometryFile(field_path+"\\\\"+field_name+".grd",g_name2,self.simulation_name)
                     os.remove(field_path+"\\"+field_name+".grd")
-                #print("Working on = ",table_name)
                 ingestOutputFile(table_name,g_name2,self.simulation_name)
                 if remOutputFilesFlag:
                     os.remove(g_name)
-                #print("Work done")
 
             if lcrop != "fallow":
                 ingestOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp",self.simulation_name)
@@ -897,7 +847,7 @@ make sure to press the Execute Rotation button.")
         #end of prepare_and_execute
 
 
-    def WriteIni(self,irow,field_name,field_path,lstartyear,lendyear,waterStressFlag,nitroStressFlag):
+    def WriteIni(self,irow,field_name,field_path,waterStressFlag,nitroStressFlag):
         '''
         Get data from operation, soil_long
         '''
@@ -909,7 +859,6 @@ make sure to press the Execute Rotation button.")
         eomult=0.5
         pop=6.5
         rowSpacing = 75
-        BeginDate=0
         SowingDate=0
         HarvestDate=0
         EndDate=0
@@ -930,10 +879,9 @@ make sure to press the Execute Rotation button.")
         operationList = read_operationsDB_id(tid) #gets all the operations
 
         for ii,jj in enumerate(operationList):
-            print(jj[0])
             if jj[1] == 'Simulation Start':
-                BeginDate=jj[2] #month/day/year
                 if cropname == "fallow":
+                # Placeholder so model doesn't use the date
                     SowingDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=370)).strftime('%m/%d/%Y')
                 initCond = readOpDetails(jj[0],jj[1])
 
@@ -961,6 +909,7 @@ make sure to press the Execute Rotation button.")
 
             if jj[1] == 'Simulation End':                            
                 EndDate=jj[2] #month/day/year
+                # End date should be greater than sowing date
                 if cropname == "fallow":
                     EndDate = (pd.to_datetime(jj[2]) + pd.DateOffset(days=365)).strftime('%m/%d/%Y')
             
@@ -969,7 +918,6 @@ make sure to press the Execute Rotation button.")
         tsite_tuple = extract_sitedetails(site)   
         #maximum profile depth     
         maxSoilDepth=read_soillongDB_maxdepth(soil)
-        #print("Debug: maxSoilDepth=",maxSoilDepth)
         RowSP = rowSpacing
 
 ############### Write INI file
@@ -993,13 +941,13 @@ make sure to press the Execute Rotation button.")
             if cropname == "maize" or cropname == "fallow":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
-                fout<<"Sowing      end         timestep"<<"\n"
+                fout<<"Planting          Emergence           End           TimeStep(m)    sowing and end dates for fallow are setin the future so the soil model will not call a crop\n"
                 fout<<"'%-10s'  '%-10s'  %d" %(SowingDate,EndDate,60)<<"\n"
                 rootWeightPerSlab = 0
             elif cropname == "potato":
                 fout<<"Seed  Depth  Length  Bigleaf"<<"\n"
                 fout<<"%-14.6f%-14.6f%-14.6f%d" %(seedpieceMass,depth,length,1)<<"\n"
-                fout<<"Planting          Emergence          End	TimeStep(m)"<<"\n"
+                fout<<"Planting          Emergence          End	TimeStep(m)\n"
                 fout<<"'%-10s'  '%-10s'  '%-10s'  %d" %(SowingDate,EmergenceDate, EndDate,60)<<"\n"
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
@@ -1021,14 +969,12 @@ make sure to press the Execute Rotation button.")
                 rootWeightPerSlab = 0.0275
             fout<<"output soils data (g03, g04, g05 and g06 files) 1 if true"<<"\n"
             fout<<"no soil files        output soil files"<<"\n"
-            fout<<"    0                     1  "<<"\n"
-                
+            fout<<"    0                     1  "<<"\n"         
         fh.close()
-
         return RowSP, rootWeightPerSlab, cultivar
 
 
-    def WriteLayer(self,irow,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
+    def WriteLayerGas(self,irow,soilname,field_name,field_path,rowSpacing,rootWeightPerSlab):
         '''
         Writes Layer file (*.lyr)
         If irow > 0, we will read information from previous run from cropOutput database to get part 
@@ -1048,7 +994,7 @@ make sure to press the Execute Rotation button.")
         else:                  
             fout = QTextStream(fh)            
             fout.setCodec(CODEC)  
-            fout<<"surface ratio    internal ratio: ratio of the distance between two neighboring nodes"<<"\n"
+            fout<<"surface ratio    internal ratio: ratio of the distance between two neighboring nodes\n"
             for rrow in range(0,NumObs):
                 record_tuple = gridratio_list[rrow]
                 fout<<'%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3])<<"\n"
@@ -1056,23 +1002,21 @@ make sure to press the Execute Rotation button.")
             fout<<"RowSpacing"<<"\n"
             fout<<'%-6.1f' %(rowSpacing)
 
-            fout<<"\n"<<" Planting Depth	  X limit for roots	root weight per slab (seedpiece * plant_density  * 0.25 * row_spacing / 100 * 0.5 *0.01)"<<"\n"
+            fout<<"\n"<<" Planting Depth	  X limit for roots\n"
             for rrow in range(0,len(gridratio_list)):
                 record_tuple=gridratio_list[rrow]
                 fout<<'%-14.3f%-14.3f%-14.3f\n' %(record_tuple[4],record_tuple[5],rootWeightPerSlab)
 
-            fout<<" Boundary code for bottom layer (for all bottom nodes) 1 constant -2 seepage face \n"
+            fout<<"Surface water Boundary Code  surface and bottom Gas boundary codes(for all bottom nodes) 1 constant -2 seepage face, 7 drainage, 4 atmospheric\n"
+            fout<<"water boundary code for bottom layer, gas BC for the surface and bottom layers\n"
             for rrow in range(0,len(gridratio_list)):
                 record_tuple=gridratio_list[rrow]
-                fout<<'%-14d\n' %(record_tuple[6])
+                fout<<'%-14d%-14d%-14d\n' %(record_tuple[6],record_tuple[7],record_tuple[8])
 
-            fout<<"    cm           'w'/'m'   %/100    ppm         ppm        ppm         ppm         ppm         ppm       ppm    ppm    \
-                   cm       C      frac   frac     frac   g/cm3  cm3/cm3  cm3/cm3"<<"\n"
-            fout<<"Bottom_depth    Init_Type    OM    Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N    no3    NH4    \
-                   hNew    Tmpr    Sand    Silt    Clay    BD    TH33    TH1500    thr    ths    tha    th    Alfa    \
-                   n    Ks    Kk    thk"<<"\n"
-            #print("soilname=",soilname)
-            print("simID=",self.simulation_name)
+            fout<<" Bottom depth   Init Type  OM (%/100)   Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N  no3(ppm)  NH4  \
+                   hNew  Tmpr     CO2     O2    Sand     Silt    Clay     BD     TH33     TH1500  thr ths tha th  Alfa    n   Ks  Kk  thk\n"
+            fout<<" cm         w/m       Frac      ppm    ppm    ppm    ppm   ppm    ppm   ppm     ppm   cm     0C     ppm   ppm  ----  fraction---     \
+                   g/cm3    cm3/cm3   cm3/cm3\n"
             soilgrid_list = read_soilshortDB(soilname)
 
             # irow > 0, it means that this is not the first simulation on the rotetion, so to build the layer file we read information from geometry,
@@ -1081,7 +1025,6 @@ make sure to press the Execute Rotation button.")
                 # Previous run mumber
                 runID = str(int(self.simulation_name) - 1)
                 lcrop = self.tablebasket.cellWidget(irow-1,0).currentText()
-                #print("runID=",runID)
 
                 # Read geometry table for this simulation
                 geo_df = readGeometrySimID(runID)
@@ -1089,7 +1032,6 @@ make sure to press the Execute Rotation button.")
                 tableName = "g03_" + lcrop
                 updtSoilgridInfo = readSoilInfoCropOutputDB(lcrop,tableName,runID)
                 new_df = updtSoilgridInfo['Date_Time'].str.split(' ',expand=True)
-                #print("new_df=",new_df)
                 updtSoilgridInfo['Date'] = new_df[0]
                 maxDate = max(updtSoilgridInfo['Date'])
                 updtSoilgridInfo = updtSoilgridInfo.loc[(updtSoilgridInfo['Date']==maxDate)]
@@ -1105,15 +1047,12 @@ make sure to press the Execute Rotation button.")
                 
                 updtSoilgrid['thNew'] = updtSoilgrid['thNew'].astype(float)
                 updtSoilgrid['Temp'] = updtSoilgrid['Temp'].astype(float)
-                # mult=hNew/abs(hNew)
                 updtSoilgrid['mult'] = updtSoilgrid['mult'].astype(float)
                 updtSoilgrid['NO3N'] = updtSoilgrid['NO3N'].astype(float)
                 updtSoilgrid['NH4N'] = updtSoilgrid['NH4N'].astype(float)
                 # Values in the g03 file are ug/cm3 of *soil water* => need to convert  NO3 grams NO3 per 1 million grams of SOIL for *lyr file
                 # ug/cm3(water) * (cm3(water)/cm3(soil)) => ug/cm3(soil) 
                 updtSoilgrid['NO3N_theta']= updtSoilgrid['NO3N'] * updtSoilgrid['thNew']
-                # delete this line we don't need it  NH4 is not dissolved in water
-                #updtSoilgrid['NH4N_theta']= updtSoilgrid['NH4N'] * updtSoilgrid['thNew'] 
 
                 # Constants used to calculate OM
                 # Carbon proportion in OM
@@ -1194,11 +1133,8 @@ make sure to press the Execute Rotation button.")
                     dfG03 = dfG03.groupby(['Layer'],as_index=False).agg({'thNew':['mean'],'NO3N_theta_w':['sum'],'NH4N_w':['sum'],
                                                                          'soilMass':['sum'],'Temp':['mean'],'mult':['mean']})
                     dfG03.columns = ["_".join(x) for x in dfG03.columns.ravel()]
-                    #print("dfG03=",dfG03)
-                    #print("dfG07=",dfG07)
  
                     initType = "'w'"
-
                     # Calculate OM and Matric potential
                     Humus_C_layer = dfG07['Humus_C_w_sum']/dfG03['soilMass_sum']  #units are ug/g or ppm
                     Humus_N_layer = dfG07['Humus_N_w_sum']/dfG03['soilMass_sum']
@@ -1209,27 +1145,25 @@ make sure to press the Execute Rotation button.")
                     Root_C_layer = dfG07['Root_C_w_sum']/dfG03['soilMass_sum']
                     Root_N_layer = dfG07['Root_N_w_sum']/dfG03['soilMass_sum']
 
-                   
                     OM_layer =  (Humus_C_layer+Root_C_layer)/percentC+Humus_N_layer+Root_N_layer   # total ug of soil OM components
                     # 1% OM is .01 g OM/g soil = 10 mg OM/g= 10,000 ug/g
                     # in 2dsoil OM is input as a fraction or %100 
                     dfG07['OM']=OM_layer/10000.0/100
-        
         
                     # Convert "ug/cm3(soil)" to "ug/g (soil)" same as ppm, by dividing by Bulk density (g/cm3)
                     #DT  NO3 is now total ug in the grams in the layer. NO3 in the layer file is mg/gram
                     NO3_layer = dfG03['NO3N_theta_w_sum']/dfG03['soilMass_sum']  #result is mg NO3/g soil
                     NH4_layer = dfG03['NH4N_w_sum']/dfG03['soilMass_sum']   # result is mg NH4/g soil
 
-                    fout<<'%-14d%-6s%-14.5f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-20.1f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
-                           %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,dfG07['OM'],Humus_C_layer,Humus_N_layer,Litter_C_layer,Litter_N_layer,Manure_C_layer,Manure_N_layer,
-                           NO3_layer,NH4_layer,dfG03['thNew_mean'],dfG03['Temp_mean'],record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],
+                    fout<<'%-14d%-6s%-14.5f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
+                           %-14.3f%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,dfG07['OM'],Humus_C_layer,Humus_N_layer,Litter_C_layer,Litter_N_layer,Manure_C_layer,Manure_N_layer,
+                           NO3_layer,NH4_layer,dfG03['thNew_mean'],dfG03['Temp_mean'],record_tuple[22],record_tuple[23],record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],
                            record_tuple[12],record_tuple[13],record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],
                            record_tuple[21])<<"\n"
                 else:
-                    fout<<'%-14d%-6s%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-20.1f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
-                           %-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],
-                           record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
+                    fout<<'%-14d%-6s%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f%-14.3f\
+                           %-14.3f%-14.3f%-14.3f%-14.3f%-14.3f' %(record_tuple[0],initType,record_tuple[2],-1,-1,0,0,0,0,record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],
+                           record_tuple[22],record_tuple[23],record_tuple[7]/100,record_tuple[8]/100,record_tuple[9]/100,record_tuple[10],record_tuple[11],record_tuple[12],record_tuple[13],
                            record_tuple[14],record_tuple[15],record_tuple[16],record_tuple[17],record_tuple[18],record_tuple[19],record_tuple[20],record_tuple[21])<<"\n"
                 layer = layer + 1
         fout<<"\n"
@@ -1254,7 +1188,7 @@ make sure to press the Execute Rotation button.")
         lsoilname = self.soilCombo.currentText()
         self.soilCombo = QComboBox()
         self.soilCombo.addItem("Select from list")
-        for key in sorted(self.soillists):            
+        for key in self.soillists:            
             self.soilCombo.addItem(key)
         if(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString) >= 0):
             self.soilCombo.setCurrentIndex(self.soilCombo.findText(lsoilname, QtCore.Qt.MatchFixedString))
@@ -1266,7 +1200,7 @@ make sure to press the Execute Rotation button.")
         lstationtype = self.stationTypeCombo.currentText()
         self.stationTypeCombo = QComboBox()        
         self.stationTypeCombo.addItem("Select from list")
-        for key in sorted(stationtypelists):
+        for key in stationtypelists:
             if stationtypelists[key] != "Add New Station Name":
                 self.stationTypeCombo.addItem(stationtypelists[key])
                 if(self.stationTypeCombo.findText(lstationtype, QtCore.Qt.MatchFixedString) >= 0):
@@ -1280,7 +1214,7 @@ make sure to press the Execute Rotation button.")
         lweather = self.weatherCombo.currentText()
         self.weatherCombo = QComboBox()        
         self.weatherCombo.addItem("Select from list")
-        for item in sorted(weather_id_lists):
+        for item in weather_id_lists:
             if item != "Add New Station Name":
                 self.weatherCombo.addItem(item)
                 if(self.weatherCombo.findText(lweather, QtCore.Qt.MatchFixedString) >= 0):
@@ -1295,7 +1229,7 @@ make sure to press the Execute Rotation button.")
             lexptreat = self.tablebasket.cellWidget(irow,1).currentText()
             self.expTreatCombo = QComboBox()          
             self.expTreatCombo.addItem("Select from list") 
-            for val in sorted(self.experimentlists):
+            for val in self.experimentlists:
                 self.expTreatCombo.addItem(val)
             if(self.expTreatCombo.findText(lexptreat, QtCore.Qt.MatchFixedString) >= 0):
                 self.expTreatCombo.setCurrentIndex(self.expTreatCombo.findText(lexptreat, QtCore.Qt.MatchFixedString))

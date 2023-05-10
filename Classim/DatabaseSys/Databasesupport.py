@@ -4,15 +4,14 @@ import os
 import pandas as pd
 import shutil
 
-from PyQt5 import QtSql, QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox
 from datetime import datetime as dt
 from datetime import datetime, timedelta
 from CustomTool.UI import *
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'classim_v3')
+# dbDir is the same as run_dir
+dbDir = os.path.join(gparent_dir,'classim')
 if not os.path.exists(dbDir):
     os.makedirs(dbDir)
 
@@ -45,9 +44,9 @@ def insert_update_sitedetails(record_tuple,buttontext):
     if c:
         record_tuple4= record_tuple[1:] + (record_tuple[0],)
         if buttontext == 'SaveAs':
-            qstatus = c.execute("insert into sitedetails(sitename, rlat, rlon, altitude) values (?,?,?,?)",record_tuple)             
+            c.execute("insert into sitedetails(sitename, rlat, rlon, altitude) values (?,?,?,?)",record_tuple)             
         else: 
-            qstatus = c.execute("update sitedetails set rlat=?, rlon=?, altitude=? where sitename=?",record_tuple4)       
+            c.execute("update sitedetails set rlat=?, rlon=?, altitude=? where sitename=?",record_tuple4)       
         conn.commit() 
         conn.close()
         return True
@@ -87,7 +86,6 @@ def extract_sitedetails(site_string):
     result1 =0
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        #print("site_string=",site_string)
         c1 = c.execute("select id,rlat,rlon,altitude from sitedetails where sitename = '%s';"%(site_string)) 
         c1_row = c1.fetchall()
         if c1_row != None:
@@ -104,11 +102,11 @@ def read_cropDB():
   Output: 
     Tuple with crop name
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("SELECT id, cropname FROM crops order by cropname")  
+        c1 = c.execute("SELECT id, cropname FROM crops order by lower(cropname)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -129,19 +127,19 @@ def read_cultivar_DB(cropname):
   Output:
     tuple with hybridname list for specific crop
     '''
-    rlist =[] # list   
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #print("cropname=",cropname)
         if len(cropname) > 0:     
             if cropname=="maize":   
-                c1=c.execute("SELECT hybridname FROM cultivar_maize order by hybridname")   
+                c1=c.execute("SELECT hybridname FROM cultivar_maize order by lower(hybridname)")   
             elif cropname=="potato":     
-                c1=c.execute("SELECT hybridname FROM cultivar_potato order by hybridname")
+                c1=c.execute("SELECT hybridname FROM cultivar_potato order by lower(hybridname)")
             elif cropname=="soybean":     
-                c1=c.execute("SELECT hybridname FROM cultivar_soybean order by hybridname")
+                c1=c.execute("SELECT hybridname FROM cultivar_soybean order by lower(hybridname)")
             elif cropname=="cotton":     
-                c1=c.execute("SELECT hybridname FROM cultivar_cotton order by hybridname")
+                c1=c.execute("SELECT hybridname FROM cultivar_cotton order by lower(hybridname)")
 
             c1_rows = c1.fetchall()
             for c1_row in c1_rows:        
@@ -157,11 +155,11 @@ def read_tillageTypeDB():
   Output: 
     Tuple with tillage types name
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("SELECT id, tillage FROM tillageType order by tillage")  
+        c1 = c.execute("SELECT id, tillage FROM tillageType order by lower(tillage)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -179,11 +177,11 @@ def read_PGRChemicalDB():
   Output: 
     Tuple with PGR chemical types name
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("SELECT id, PGRChemical FROM PGRChemical order by PGRChemical")  
+        c1 = c.execute("SELECT id, PGRChemical FROM PGRChemical order by lower(PGRChemical)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -201,11 +199,11 @@ def read_PGRAppTypeDB():
   Output: 
     Tuple with PGR application types name
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("SELECT id, applicationType FROM PGRApplType order by applicationType")  
+        c1 = c.execute("SELECT id, applicationType FROM PGRApplType order by lower(applicationType)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -223,11 +221,11 @@ def read_PGRAppUnitDB():
   Output: 
     Tuple with PGR application units
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("SELECT id, PGRUnit FROM PGRUnit order by PGRUnit")  
+        c1 = c.execute("SELECT id, PGRUnit FROM PGRUnit order by lower(PGRUnit)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -245,11 +243,11 @@ def read_SurfResTypeDB():
   Output: 
     Tuple with surface residue type
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("select residueType from surfResType")  
+        c1 = c.execute("select residueType from surfResType order by lower(residueType)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -266,11 +264,11 @@ def read_SurfResApplTypeDB():
   Output: 
     Tuple with surface residue application type
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("select applicationType from surfResApplType")  
+        c1 = c.execute("select applicationType from surfResApplType order by lower(applicationType)")  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -327,7 +325,7 @@ def read_experimentDB():
   Output:
     tuple with experiment names
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
@@ -350,11 +348,11 @@ def getExpTreatByCrop(cropname):
   Output:
     tuple with experiment names
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         #need auto increment ID, nonnull
-        c1 = c.execute("select e.name || '/' || t.name as expTreat from experiment e, treatment t where t_exid=exid and e.crop = ? order by e.name, t.name",[cropname])  
+        c1 = c.execute("select e.name || '/' || t.name as expTreat from experiment e, treatment t where t_exid=exid and e.crop = ? order by lower(e.name), lower(t.name)",[cropname])  
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:
@@ -373,7 +371,7 @@ def getExpTreatByCropWeatherDate(cropname,stationtype,weatherID):
   Output:
     tuple with experiment names
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         # Find the date range for the weatherID data
@@ -383,17 +381,14 @@ def getExpTreatByCropWeatherDate(cropname,stationtype,weatherID):
         if c_row != None:
             minDate = datetime.strptime(c_row[0],'%Y-%m-%d')
             maxDate = datetime.strptime(c_row[1],'%Y-%m-%d')
-            #print("min=",minDate)
-            #print("max=",maxDate)
 
         query = "select e.name || '/' || t.name as expTreat, odate from experiment e, treatment t, operations o where \
-                 t_exid=exid and e.crop='" + cropname + "' and t.tid=o.o_t_exid AND odate!='' order by e.name, t.name"
+                 t_exid=exid and e.crop='" + cropname + "' and t.tid=o.o_t_exid AND odate!='' order by lower(e.name), lower(t.name)"
         df = pd.read_sql_query(query,conn)
         df['odate'] = pd.to_datetime(df['odate'])
         mask = (df['odate'] >= minDate) & (df['odate'] <= maxDate)
         df = df.loc[mask]
         expTreatList = df['expTreat'].unique()
-        #print(expTreatList)
 
     conn.close()
     return expTreatList
@@ -408,7 +403,7 @@ def read_experimentDB_id(cropname, experimentname):
   Output:
     experiment id
     '''
-    rlist =None # list   
+    rlist =None  
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         record_tuple =(cropname,experimentname)
@@ -430,11 +425,10 @@ def read_operationsDB_id(o_t_exid):
   Output:
     tuple listing all operations with full detail.
     '''
-    rlist =[] # list   
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if isinstance(o_t_exid,int):
-            #print("Debug: o_t_exid=",o_t_exid)
             c2 = c.execute("SELECT opID, name, odate FROM operations where o_t_exid = ?", (o_t_exid,))
             c2_row = c2.fetchall()
             if c2_row != None:
@@ -457,7 +451,6 @@ def getPlantDensity(o_t_exid):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if isinstance(o_t_exid,int):
-            #print("Debug: o_t_exid=",o_t_exid)
             c2 = c.execute("SELECT pop FROM initCondOp where opID = (select opID from operations where \
                             name = 'Simulation Start' and o_t_exid = ?)", (o_t_exid,))
             c2_row = c2.fetchone()
@@ -477,7 +470,7 @@ def read_treatmentDB_id(exid,treatmentname):
   Output:
     tid = treatment id
     '''
-    rlist =None # list   
+    rlist =None
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         treatmentname2 = treatmentname+'%'
@@ -500,12 +493,12 @@ def check_and_update_experimentDB(item,cropname):
     cropname
   Output:
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if len(item) > 0:
             c1 = c.execute("SELECT exid, name FROM experiment where name = '%s' and crop = '%s';" %(''.join(item),''.join(cropname)))  
-            c1_row = c1.fetchone() #c1.fetchall()
+            c1_row = c1.fetchone()
             if c1_row == None:
                 c2 = c.execute("insert into experiment (name,crop) values ('%s','%s');" %(''.join(item),''.join(cropname)))
                 conn.commit()
@@ -533,7 +526,6 @@ def check_and_delete_soilDB(soilname):
         if id > 0:
             delete_flag = messageUserDelete("Are you sure you want to delete this record?")
             if delete_flag:
-                #print("delete soil",soilname)
                 c.execute("DELETE FROM gridratio where gridratio_id = ?",(gridratio_id,))
                 c.execute("DELETE FROM soil_long where o_sid = ?",(id,))
                 c.execute("DELETE FROM soil where soilname =?",[soilname])
@@ -558,7 +550,6 @@ def delete_soilDB(soilname):
             gridratio_id = int(op["o_gridratio_id"])
 
         if id > 0:
-            #print("delete soil",soilname)
             c.execute("DELETE FROM gridratio where gridratio_id = ?",(gridratio_id,))
             c.execute("DELETE FROM soil_long where o_sid = ?",(id,))
             c.execute("DELETE FROM soil where soilname =?",[soilname])
@@ -575,15 +566,13 @@ def check_and_delete_experimentDB(experimentname,cropname):
     cropname
   Output:
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        #print("experiment=",experimentname)
-        #print("crop=",cropname)
         record_tuple = (experimentname,cropname)     
         if len(experimentname) > 0:
             c1 = c.execute("SELECT exid, name FROM experiment where name = '%s' and crop = '%s';" %(''.join(experimentname),''.join(cropname)))  
-            c1_row = c1.fetchone() #c1.fetchall()
+            c1_row = c1.fetchone()
             if c1_row != None:
                 # get treatments defined under this experiment
                 rtuple = (c1_row[0],)
@@ -608,14 +597,12 @@ def check_and_delete_treatmentDB(treatmentname, experimentname ,cropname):
     cropname
   Output:
     '''
-    rlist =[] # list
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         c1 = c.execute("SELECT exid, name FROM experiment where name = '%s' and crop = '%s';" %(''.join(experimentname),''.join(cropname)))  
-        c1_row = c1.fetchone() #c1.fetchall()
+        c1_row = c1.fetchone()
         if c1_row != None:
             # get treatments defined under this experiment
-            rtuple = (c1_row[0],)
             rtuple_str = str(c1_row[0])
             g_tid = c.execute("SELECT tid, name FROM treatment where t_exid= '%s' and name ='%s';" %(''.join(rtuple_str),''.join(treatmentname)))  # getting treatment ids
             g_tid_row = g_tid.fetchone()
@@ -625,8 +612,8 @@ def check_and_delete_treatmentDB(treatmentname, experimentname ,cropname):
             origOp_rows = origOp.fetchall()
             # Delete each operation
             for origOp_row in origOp_rows:
-                qstatus = check_and_delete_operationDB(origOp_row[0],origOp_row[1])
-            g_oid = c.execute("DELETE FROM treatment where tid=?",rtuple3)          
+                check_and_delete_operationDB(origOp_row[0],origOp_row[1])
+            c.execute("DELETE FROM treatment where tid=?",rtuple3)          
             conn.commit()
 
         conn.close() 
@@ -641,7 +628,6 @@ def isSiteOnPastruns(site):
   Output:
     true/false
     '''
-    rlist = []
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         c1row = c.execute("select count(id) from pastruns where site = ?",(site,))    
@@ -681,8 +667,8 @@ def update_pastrunsDB(rotationID,site,managementname,weather,stationtype,soilnam
 
         record_tuple = (rotationID,site,managementname,weather,soilname,stationtype,startyear,endyear,odate,waterstress,nitrostress,tempVar,rainVar,CO2Var)
 
-        qstatus = c.execute("insert into pastruns (rotationID, site, treatment, weather, soil, stationtype, startyear, endyear, odate, waterstress, nitrostress, tempVar, \
-                             rainVar, CO2Var) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", record_tuple) 
+        c.execute("insert into pastruns (rotationID, site, treatment, weather, soil, stationtype, startyear, endyear, odate, waterstress, nitrostress, tempVar, \
+                   rainVar, CO2Var) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", record_tuple) 
         conn.commit()
         # retrieve the ID
         c1row = c.execute("select id from pastruns where rotationID = ? AND site = ? AND treatment = ? AND weather = ? AND soil = ? AND stationtype = ? AND startyear = ? \
@@ -705,12 +691,12 @@ def delete_pastrunsDB(id,cropname):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         query = "delete from pastruns where id=" + id
-        qstatus = c.execute(query)    
+        c.execute(query)    
         conn.commit()
         conn.close()
 
         # Delete the directory that was created with the simulation information
-        sim_dir = os.path.join(run_dir,id)
+        sim_dir = os.path.join(dbDir,id)
         shutil.rmtree(sim_dir, ignore_errors=True)
 
         # Delete simulations on the cropOutput database tables
@@ -735,7 +721,6 @@ def delete_pastrunsDB_rotationID(rotationID,run_dir,cropname):
 
         for c1_row in c1_rows:
             simulationID = str(c1_row[0])
-            #print("simulationID=",simulationID)
 
             # Delete simulation from pastruns
             delete_pastrunsDB(simulationID,cropname)
@@ -788,6 +773,28 @@ def getNextRotationID():
         return rotationID
 
 
+def getTreatmentID(treatmentname, experimentname, cropname):
+    '''
+  Get treatmentID based on treatment name, experiment name and crop name.
+  Input:
+    treatmentname
+    experimentname
+    cropname
+  Output:
+    treatmentID
+    '''
+    conn, c = openDB(dbDir + '\\crop.db')
+    if c:
+        #print("cropname=",cropname)
+        record_tuple =(treatmentname,experimentname,cropname)
+        c1=c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where name =? and crop = ?)",record_tuple)
+        c1_row = c1.fetchone()
+        treatmentID = ""
+        if c1_row != None:
+            treatmentID = c1_row[0]
+        return treatmentID
+            
+
 def check_and_update_treatmentDB(treatmentname, experimentname, cropname):
     '''
   Check if treatment already exist in the database and if it is new insert the new treatment and create the default operations
@@ -799,36 +806,35 @@ def check_and_update_treatmentDB(treatmentname, experimentname, cropname):
   Output:
     '''
     conn, c = openDB(dbDir + '\\crop.db')
+    record_tuple =(treatmentname,experimentname,cropname)
     if c:
         #print("cropname=",cropname)
         record_tuple =(treatmentname,experimentname,cropname)
-        if len(experimentname) > 0:        
-            c1=c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where name =? and crop = ?)",record_tuple)
-            c1_row = c1.fetchone()
-            if c1_row == None:
+        if len(experimentname) > 0:
+            treatmentID = getTreatmentID(treatmentname,experimentname,cropname)
+            if treatmentID == "":
                 c2 = c.execute("SELECT exid, name FROM experiment where name = ? and crop = ?",record_tuple[1:])
                 c2_row = c2.fetchone()
                 if c2_row !=None:
                     t_exid = c2_row[0] #str(query2.value(0))
                     #insert
                     record_tuple = (t_exid,treatmentname)
-                    qstatus = c.execute("insert into treatment (t_exid, name) values (?,?)",record_tuple) # auto increment of tid
+                    c.execute("insert into treatment (t_exid, name) values (?,?)",record_tuple) # auto increment of tid
                     conn.commit()
                     # here we insert default operations of (Simulation Start and sowing). Read these 3 operations from 
                     # default_operation table and insert them.
                     # Populate Simulation Start and Sowing with today date
                     now = datetime.now()
-                    today_date = now.strftime("%m/%d/%Y")
                     yesterday_date = (now - timedelta(1)).strftime('%m/%d/%Y')
                     in5days_date = (now + timedelta(5)).strftime('%m/%d/%Y')
                     in7days_date = (now + timedelta(7)).strftime('%m/%d/%Y')
                     in60days_date = (now + timedelta(60)).strftime('%m/%d/%Y')
                     in65days_date = (now + timedelta(65)).strftime('%m/%d/%Y')
 
-                    if(cropname != "fallow"):
-                        initCond_record = [6.5,0,0,5,0.65,0.5,75,"",0]
-                    else:
+                    if(cropname == "fallow"):
                         initCond_record = [6.5,0,0,5,0.65,0.5,75,"fallow",0]
+                    else:
+                        initCond_record = [6.5,0,0,5,0.65,0.5,75,"",0]
                     tillage_record = ["No tillage"]
                     fert_record = []
                     fertNut_record = []
@@ -836,7 +842,6 @@ def check_and_update_treatmentDB(treatmentname, experimentname, cropname):
                     SR_record = []
 
                     op_id = -10 # This indicates that the record is new
-                    # This flag indicates that record is new
                     new_record = ['Simulation Start',yesterday_date]
                     check_and_update_operationDB(op_id, treatmentname, experimentname, cropname, new_record, \
                                                  initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record)
@@ -884,37 +889,29 @@ def copy_treatmentDB(treatmentname, experimentname, cropname, newtreatmentname):
     '''
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        record_tuple = (newtreatmentname,experimentname,cropname)
-        c1 = c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where name =? \
-                        and crop = ?)",record_tuple)
-        c1_row = c1.fetchone()
+        treatmentID = getTreatmentID(newtreatmentname,experimentname,cropname)
         # Treatment with this name does not exist, so we can insert it 
-        if c1_row == None:
-            record_tuple = (treatmentname,experimentname,cropname)
-            c1 = c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where \
-                            name =? and crop = ?)",record_tuple)
-            c1_row = c1.fetchone()
-            t_id = c1_row[0]
-            c2 = c.execute("SELECT exid, name FROM experiment where name = ? and crop = ?",record_tuple[1:])
+        if treatmentID == "":
+            t_id = getTreatmentID(treatmentname,experimentname,cropname)
+            record_tuple = (experimentname,cropname)
+            c2 = c.execute("SELECT exid, name FROM experiment where name = ? and crop = ?",record_tuple)
             c2_row = c2.fetchone()
             t_exid = c2_row[0]
             # insert new treatment
             record_tuple = (t_exid,newtreatmentname)
-            qstatus = c.execute("insert into treatment (t_exid, name) values (?,?)",record_tuple)
+            c.execute("insert into treatment (t_exid, name) values (?,?)",record_tuple)
             conn.commit()
             # Get new treatment id
             c1 = c.execute("SELECT tid FROM treatment where t_exid = ? and name = ?",record_tuple)
             c1_row = c1.fetchone()
             new_t_id = c1_row[0]
             # Copy the operations from current treatment to new treatment 
-            insert_record_tuple = (new_t_id, t_id)
             # First need to get all operations related with original treatment
             origOp = c.execute("select opID, name, odate from operations where o_t_exid=?",(t_id,))
             origOp_rows = origOp.fetchall()
             # Insert each operation
             for origOp_row in origOp_rows:
-                qstatus = c.execute("insert into operations (o_t_exid,name,odate) values (?,?,?)",(new_t_id,origOp_row[1],\
-                                     origOp_row[2],))
+                c.execute("insert into operations (o_t_exid,name,odate) values (?,?,?)",(new_t_id,origOp_row[1],origOp_row[2],))
                 # Find new opID
                 nOpID = c.execute("select opID from operations where o_t_exid=? and name=? and odate=?",(new_t_id,\
                                    origOp_row[1],origOp_row[2],))
@@ -922,28 +919,24 @@ def copy_treatmentDB(treatmentname, experimentname, cropname, newtreatmentname):
                 newOpID = nOpID_row[0]
             
                 if(origOp_row[1] == "Simulation Start"):
-                    initCond = c.execute("insert into initCondOp (opID,pop,autoirrigation,xseed,yseed,cec,eomult,rowSpacing,cultivar,\
-                                          seedpieceMass) select ?, pop, autoirrigation, xseed, yseed, cec, eomult, rowSpacing, cultivar, \
-                                          seedpieceMass from initCondOp where opID=?",(newOpID, origOp_row[0],))
+                    c.execute("insert into initCondOp (opID,pop,autoirrigation,xseed,yseed,cec,eomult,rowSpacing,cultivar,seedpieceMass) \
+                               select ?, pop, autoirrigation, xseed, yseed, cec, eomult, rowSpacing, cultivar, seedpieceMass from \
+                               initCondOp where opID=?",(newOpID, origOp_row[0],))
                 elif(origOp_row[1] == "Tillage"):
-                    tillage = c.execute("insert into tillageOp (opID,tillage) select ?, tillage from tillageOp where opID=?",\
-                                        (newOpID, origOp_row[0],))                 
+                    c.execute("insert into tillageOp (opID,tillage) select ?, tillage from tillageOp where opID=?",(newOpID, origOp_row[0],))                 
                 elif(origOp_row[1] == "Fertilizer"):
-                    fert = c.execute("insert into fertilizationOp (opID,fertilizationClass,depth) select ?, fertilizationClass, \
-                                      depth from fertilizationOp where opID=?",(newOpID, origOp_row[0],))
+                    c.execute("insert into fertilizationOp (opID,fertilizationClass,depth) select ?, fertilizationClass, depth from \
+                               fertilizationOp where opID=?",(newOpID, origOp_row[0],))
                     fertNut = c.execute("select nutrient, nutrientQuantity from fertNutOp where opID=?",(origOp_row[0],))
                     fertNut_rows = fertNut.fetchall()
                     for fertNut_row in fertNut_rows:
-                        fertNutIns = c.execute("insert into fertNutOp (opID,nutrient,nutrientQuantity) values (?,?,?)",\
-                                               (newOpID,fertNut_row[0],fertNut_row[1],))
+                        c.execute("insert into fertNutOp (opID,nutrient,nutrientQuantity) values (?,?,?)",(newOpID,fertNut_row[0],fertNut_row[1],))
                 elif(origOp_row[1] == "Plant Growth Regulator"):
-                    pgr = c.execute("insert into PGROp (opID,PGRChemical,applicationType,bandwidth,applicationRate,PGRUnit) \
-                                     select ?,PGRChemical,applicationType,bandwidth,applicationRate,PGRUnit from PGROp where opID=?",\
-                                     (newOpID, origOp_row[0],))                 
+                    c.execute("insert into PGROp (opID,PGRChemical,applicationType,bandwidth,applicationRate,PGRUnit) select ?,PGRChemical,\
+                               applicationType,bandwidth,applicationRate,PGRUnit from PGROp where opID=?",(newOpID, origOp_row[0],))                 
                 elif(origOp_row[1] == "Surface Residue"):
-                    pgr = c.execute("insert into surfResOp (opID,residueType,applicationType,applicationTypeValue) \
-                                     select ?,residueType,applicationType,applicationTypeValue from surfResOp where opID=?",\
-                                     (newOpID, origOp_row[0],))                 
+                    c.execute("insert into surfResOp (opID,residueType,applicationType,applicationTypeValue) select ?,residueType,applicationType,\
+                               applicationTypeValue from surfResOp where opID=?",(newOpID, origOp_row[0],))                 
             conn.commit()
             conn.close()
             return True
@@ -961,18 +954,18 @@ def check_and_delete_operationDB(op_id,op_name):
     '''   
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        qstatus = c.execute("delete from operations where opID=?",(op_id,))
+        c.execute("delete from operations where opID=?",(op_id,))
         if(op_name == "Simulation Start"):
-            initCond = c.execute("delete from initCondOp where opID=?",(op_id,))
+            c.execute("delete from initCondOp where opID=?",(op_id,))
         elif(op_name == "Tillage"):
-            tillage = c.execute("delete from tillageOp where opID=?",(op_id,))                 
+            c.execute("delete from tillageOp where opID=?",(op_id,))                 
         elif(op_name == "Fertilizer"):
-            fert = c.execute("delete from fertilizationOp where opID=?",(op_id,))
-            fertNut = c.execute("delete from fertNutOp where opID=?",(op_id,))
+            c.execute("delete from fertilizationOp where opID=?",(op_id,))
+            c.execute("delete from fertNutOp where opID=?",(op_id,))
         elif(op_name == "Plant Growth Regulator"):
-            pgr = c.execute("delete from PGROp where opID=?",(op_id,))
+            c.execute("delete from PGROp where opID=?",(op_id,))
         elif(op_name == "Surface Residue"):
-            sr = c.execute("delete from surfResOp where opID=?",(op_id,))
+            c.execute("delete from surfResOp where opID=?",(op_id,))
         conn.commit()
         conn.close()
         return True
@@ -1009,52 +1002,42 @@ def check_and_update_operationDB(op_id,treatmentname, experimentname, cropname, 
         op_id = int(op_id)
         # If op_id=-10, it means it is a new operation record so we need to find treatment id and experiment id
         
-        record_tuple = (treatmentname,experimentname,cropname)
-        c1 = c.execute("SELECT tid FROM treatment where name = ? and t_exid = (select exid from experiment where name =? and crop = ?)",record_tuple)
-        c1_row = c1.fetchone()
+        o_t_exid = getTreatmentID(treatmentname,experimentname,cropname)
         # tables experiment & treatment are expected to have some value for tid and t_exid.
-        if c1_row !=None:
-            o_t_exid = c1_row[0]
-
         record_tuple = (o_t_exid,) + tuple(operation_record)
         # Need to do date validation before inserting or updating a operation for "Tillage", "Fertilizer" and "Simulation End"
         if((operation_record[0] == "Simulation End" and op_id != -10) or (operation_record[0] == "Fertilizer") \
            or (operation_record[0] == "Plant Growth Regulator") or (operation_record[0] == "Tillage" and tillage_record[0] != "No tillage")):
-            #print(operation_record[0])
-            #print(operation_record[1])
             validate_date(o_t_exid,operation_record[0],operation_record[1])
 
-        #print("op_id = ", op_id)
         if(op_id != -10):
             record_tuple2 = record_tuple + (op_id,)
-            #print("record tuple=",record_tuple2)
-            qstatus = c.execute("update operations set o_t_exid =?, name=?, odate=? where opID = ? ",record_tuple2)
+            c.execute("update operations set o_t_exid =?, name=?, odate=? where opID = ? ",record_tuple2)
             conn.commit()
             # We need to update the related table to the operation like "Simulation Start" -> initCondOp table, "Tillage"
             # -> tillageOp table and "Fertilizer" -> fertilizerOp and fertNutOp tables.
             if operation_record[0] == "Simulation Start":
                 initCond_record = tuple(initCond_record) + (op_id,)
-                qstatus = c.execute("update initCondOp set pop=?, autoirrigation=?, xseed=?, yseed=?, cec=?, eomult=?, \
-                                     rowSpacing=?, cultivar=?, seedpieceMass=? where opID=?", initCond_record)
+                c.execute("update initCondOp set pop=?, autoirrigation=?, xseed=?, yseed=?, cec=?, eomult=?, rowSpacing=?, cultivar=?, \
+                           seedpieceMass=? where opID=?", initCond_record)
             elif operation_record[0] == "Tillage":
                 tillage_record = tuple(tillage_record) + (op_id,)
-                qstatus = c.execute("update tillageOp set tillage=? where opID=?", tillage_record)
+                c.execute("update tillageOp set tillage=? where opID=?", tillage_record)
             elif operation_record[0] == "Fertilizer":
                 fert_record = tuple(fert_record) + (op_id,)
-                qstatus = c.execute("update fertilizationOp set fertilizationClass=?, depth=? where opID =?", fert_record)
+                c.execute("update fertilizationOp set fertilizationClass=?, depth=? where opID =?", fert_record)
                 for i in range(0,len(fertNut_record),2):
                     fertNut =  (fertNut_record[i],fertNut_record[i+1],op_id,)
-                    qstatus = c.execute("update fertNutOp set nutrientQuantity=? where nutrient=? and opID=?", fertNut)
+                    c.execute("update fertNutOp set nutrientQuantity=? where nutrient=? and opID=?", fertNut)
             elif operation_record[0] == "Plant Growth Regulator":
                 PGR_record = tuple(PGR_record) + (op_id,)
-                qstatus = c.execute("update PGROp set PGRChemical=?, applicationType=?, bandwidth=?, applicationRate=?, \
-                                     PGRUnit=? where opID=?", PGR_record)
+                c.execute("update PGROp set PGRChemical=?, applicationType=?, bandwidth=?, applicationRate=?, PGRUnit=? where opID=?", PGR_record)
             elif operation_record[0] == "Surface Residue":
                 SR_record = tuple(SR_record) + (op_id,)
-                qstatus = c.execute("update surfResOp set residueType=?, applicationType=?, applicationTypeValue=? where opID=?", SR_record)
+                c.execute("update surfResOp set residueType=?, applicationType=?, applicationTypeValue=? where opID=?", SR_record)
             conn.commit()
         else:
-            qstatus = c.execute("insert into operations (o_t_exid, name, odate) values (?,?,?)",record_tuple)
+            c.execute("insert into operations (o_t_exid, name, odate) values (?,?,?)",record_tuple)
             conn.commit()
             # Need to find the id for this operation
             c1 = c.execute("select opID from operations where o_t_exid=? and name=? and odate=?",record_tuple)
@@ -1065,25 +1048,23 @@ def check_and_update_operationDB(op_id,treatmentname, experimentname, cropname, 
             # "Tillage" -> tillageOp table and "Fertilizer" -> fertilizerOp and fertNutOp tables.
             if operation_record[0] == "Simulation Start":
                 initCond_record = (op_id,) + tuple(initCond_record)
-                qstatus = c.execute("insert into initCondOp (opID, pop, autoirrigation, xseed, yseed, cec, eomult, \
-                                     rowSpacing, cultivar, seedpieceMass) values (?,?,?,?,?,?,?,?,?,?)", initCond_record)
+                c.execute("insert into initCondOp (opID, pop, autoirrigation, xseed, yseed, cec, eomult, rowSpacing, cultivar, \
+                           seedpieceMass) values (?,?,?,?,?,?,?,?,?,?)", initCond_record)
             elif operation_record[0] == "Tillage":
                 tillage_record = (op_id,) + tuple(tillage_record)
-                qstatus = c.execute("insert into tillageOp (opID, tillage) values (?,?)", tillage_record)
+                c.execute("insert into tillageOp (opID, tillage) values (?,?)", tillage_record)
             elif operation_record[0] == "Fertilizer":
                 fert_record = (op_id,) + tuple(fert_record)
-                qstatus = c.execute("insert into fertilizationOp (opID, fertilizationClass, depth) values (?,?,?)", fert_record)
+                c.execute("insert into fertilizationOp (opID, fertilizationClass, depth) values (?,?,?)", fert_record)
                 for i in range(0,len(fertNut_record),2):
                     fertNut =  (op_id,fertNut_record[i],fertNut_record[i+1],)
-                    qstatus = c.execute("insert into fertNutOp (opID, nutrientQuantity, nutrient) values (?,?,?)", fertNut)
+                    c.execute("insert into fertNutOp (opID, nutrientQuantity, nutrient) values (?,?,?)", fertNut)
             elif operation_record[0] == "Plant Growth Regulator":
                 PGR_record = (op_id,) + tuple(PGR_record)
-                qstatus = c.execute("insert into PGROp (opID,PGRChemical,applicationType,bandwidth,applicationRate,PGRUnit) \
-                                     values (?,?,?,?,?,?)", PGR_record)
+                c.execute("insert into PGROp (opID,PGRChemical,applicationType,bandwidth,applicationRate,PGRUnit) values (?,?,?,?,?,?)", PGR_record)
             elif operation_record[0] == "Surface Residue":
                 SR_record = (op_id,) + tuple(SR_record)
-                qstatus = c.execute("insert into surfResOp (opID,residueType,applicationType,applicationTypeValue) \
-                                     values (?,?,?,?)", SR_record)
+                c.execute("insert into surfResOp (opID,residueType,applicationType,applicationTypeValue) values (?,?,?,?)", SR_record)
             conn.commit()
 
         conn.close()
@@ -1104,7 +1085,6 @@ def validate_date(o_t_exid,op_name,date):
     if c:
         err_string = ""
         date = dt.strptime(date,"%m/%d/%Y")
-        #print("Date: ",date)
     
         # Check if there is any operation with valid date
         search_operation = (o_t_exid,)
@@ -1117,32 +1097,33 @@ def validate_date(o_t_exid,op_name,date):
                    substr(substr(odate, instr(odate,'/')+1), instr(substr(odate, instr(odate,'/')+1),'/')+1) END AS year FROM operations) where \
                    o_t_exid=?", search_operation)
 
-        for op in c:
-            if(op["odate"] != ""):
-                op_date = dt.strptime(op["odate"],"%m/%d/%Y")
-                op_date_string = op_date.strftime("%b %d, %Y")
-                #print("Op Date: ",op_date)
-                if(op["name"] == "Simulation Start"):
-                    if(date <= op_date):
-                        err_string = "Date should be greater then Simulation Start date (%s)." % str(op_date_string)
-                elif(op["name"] == "Sowing"):
-                    if(op_name == "Harvest" or op_name == "Simulation End"):
+        c_row = c.fetchall()
+        if c_row != None:
+            for record in c_row:
+                if(record[1] != ""):
+                    op_date = dt.strptime(record[1],"%m/%d/%Y")
+                    op_date_string = op_date.strftime("%b %d, %Y")
+                    if(record[0] == "Simulation Start"):
                         if(date <= op_date):
-                            err_string += "Date should be greater then sowing date (%s)." % str(op_date_string)
-                    if(op_name == "Tillage"):
-                        if(date > op_date):
-                            err_string += "Date should be lower then sowing date (%s)." % str(op_date_string)
-                elif(op["name"] == "Harvest"):
-                    if(op_name == "Simulation End"):
-                        if(date <= op_date):
-                            err_string += "Date should be greater then harvest date (%s)." % str(op_date_string)
-                elif(op["name"] == "Simulation End"):
-                    if(op_name != "Simulation End"):
-                        if(date >= op_date):
-                            err_string += "Date should be less then Simulation End date (%s)." % str(op_date_string)
+                            err_string = "Date should be greater then Simulation Start date (%s)." % str(op_date_string)
+                    elif(record[0] == "Sowing"):
+                        if(op_name == "Harvest" or op_name == "Simulation End"):
+                            if(date <= op_date):
+                                err_string += "Date should be greater then sowing date (%s)." % str(op_date_string)
+                        if(op_name == "Tillage"):
+                            if(date > op_date):
+                                err_string += "Date should be lower then sowing date (%s)." % str(op_date_string)
+                    elif(record[0] == "Harvest"):
+                        if(op_name == "Simulation End"):
+                            if(date <= op_date):
+                                err_string += "Date should be greater then harvest date (%s)." % str(op_date_string)
+                    elif(record[0] == "Simulation End"):
+                        if(op_name != "Simulation End"):
+                            if(date >= op_date):
+                                err_string += "Date should be less then Simulation End date (%s)." % str(op_date_string)
         conn.close()
         if(err_string != ""):
-            messageUser(err_string)
+            return messageUser(err_string)
         return True
 
 
@@ -1155,7 +1136,7 @@ def getme_date_of_first_operationDB(treatmentname, experimentname ,cropname):
     cropname
   Output:
     '''
-    rlist =[] # list
+    rlist =[]
    
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
@@ -1277,7 +1258,7 @@ def read_treatmentDB(crop,experiment):
   Output:
     return treatment name
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         record_tuple = (experiment, crop)
@@ -1378,7 +1359,7 @@ def read_sitedetailsDB():
     rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        c1= c.execute("SELECT id, sitename FROM sitedetails order by sitename")            
+        c1= c.execute("SELECT id, sitename FROM sitedetails order by lower(sitename)")            
         c1_row = c1.fetchall()
         if c1_row != None:
             for c1_row_record in c1_row:                
@@ -1405,7 +1386,6 @@ def read_soilOMDB(soilname):
             if c1row != None:
                 for c1rowrecord in c1row:
                     rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
         conn.close()
         return rlist
 
@@ -1428,7 +1408,6 @@ def read_soilhydroDB(soilname):
             if c1row != None:
                 for c1rowrecord in c1row:
                     rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
         conn.close()
         return rlist
 
@@ -1467,7 +1446,6 @@ def read_soillongDB(soilname):
     rlist = []
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        #print("Debug: soilname='",soilname,"'")
         if len(soilname) > 0:
             c1= c.execute("Select Bottom_depth,OM_pct,NO3,NH4,HnNew,initType,Tmpr,Sand,Silt,Clay,BD,TH33,TH1500,thr,ths,tha,th,Alfa,n,Ks,\
                            Kk,thk,kh,kL,km,kn,kd,fe,fh,r0,rL,rm,fa,nq,cs FROM soil_long where o_sid = (SELECT id FROM \
@@ -1476,7 +1454,6 @@ def read_soillongDB(soilname):
             if c1row != None:
                 for c1rowrecord in c1row:
                     rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
         conn.close()
         return rlist
 
@@ -1491,7 +1468,6 @@ def getSiteFromSoilname(soilname):
     rlist = []
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        #print("Debug getSiteFromSoilname: soilname='",soilname,"'")
         if len(soilname) > 0:
             c1= c.execute("select sitename from soil so, sitedetails si where so.site_id = si.id and soilname=?",[soilname])
             c1_row = c1.fetchone()
@@ -1514,13 +1490,12 @@ def read_soilshortDB(soilname):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if len(soilname) > 0:
-            c1= c.execute("Select Bottom_depth,initType,OM_pct,NO3,NH4,HnNew,Tmpr,Sand,Silt,Clay,BD,TH33,TH1500,thr,ths,tha,th,Alfa,n,Ks,Kk,thk FROM soil_long \
+            c1= c.execute("Select Bottom_depth,initType,OM_pct,NO3,NH4,HnNew,Tmpr,Sand,Silt,Clay,BD,TH33,TH1500,thr,ths,tha,th,Alfa,n,Ks,Kk,thk,CO2,O2 FROM soil_long \
                            where o_sid = (SELECT id FROM soil where soilname = ? )",[soilname])      
             c1row = c1.fetchall()
             if c1row != None:
                 for c1rowrecord in c1row:
                     rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
         conn.close()
         return rlist
 
@@ -1543,7 +1518,25 @@ def read_soiltextureDB(soilname):
             if c1row != None:
                 for c1rowrecord in c1row:
                     rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
+        conn.close()
+        return rlist
+
+
+def read_gasDB(): 
+    '''
+  Returns gas information
+  Input:
+  Output:
+    Tuple with gas information
+    '''
+    rlist = []
+    conn, c = openDB(dbDir + '\\crop.db')
+    if c:
+        c1= c.execute("Select name,EPSI,bTort,Diffusion_Coeff FROM gas order by id")
+        c1row = c1.fetchall()
+        if c1row != None:
+            for c1rowrecord in c1row:
+                rlist.append(c1rowrecord)
         conn.close()
         return rlist
 
@@ -1625,11 +1618,9 @@ def read_soillongDB_maxdepth(soilname):
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select max(Bottom_depth) FROM soil_long where o_sid = (SELECT id FROM soil where soilname = ? )",[soilname])
-            c1row = c1.fetchone() #all()
+            c1row = c1.fetchone()
             if c1row != None:
                 rlist = c1row[0]
-                #for c1rowrecord in c1row:
-                #    rlist.append(c1rowrecord)
         conn.close()
         return rlist 
 
@@ -1647,7 +1638,7 @@ def delete_soillong(soilname):
         c1row = c1.fetchall()  
         for c1rowitem in c1row: 
             temp_tuple = (c1rowitem[0],c1rowitem[1])       
-            c2 = c.execute("delete from soil_long where o_sid=? and id=? ",temp_tuple)
+            c.execute("delete from soil_long where o_sid=? and id=? ",temp_tuple)
         conn.commit()            
         conn.close()
         return True 
@@ -1671,7 +1662,7 @@ def insert_soilgridratioDB(soilgrid_tuple):
             next_gridratio_id = c1row[0] +1
     
         new_tuple = (next_gridratio_id,)+ soilgrid_tuple    
-        qstatus = c.execute("insert into gridratio (gridratio_id,SR1,SR2,IR1,IR2,PlantingDepth,XLimitRoot,BottomBC) values (?,?,?,?,?,?,?,?)",new_tuple)    
+        c.execute("insert into gridratio (gridratio_id,SR1,SR2,IR1,IR2,PlantingDepth,XLimitRoot,BottomBC,GasBCTop,GasBCBottom) values (?,?,?,?,?,?,?,?,?,?)",new_tuple)    
         conn.commit()     
         conn.close()
         return next_gridratio_id 
@@ -1692,7 +1683,7 @@ def updateBottomBC(soilname,bottomBCVal):
         if c1_row != []: #if c1_row != None:
             gridratio_id = ''.join(str(c1_row[0]))
             query = "update gridratio set BottomBC=" + str(bottomBCVal) + " where gridratio_id=" + str(gridratio_id)
-            qstatus = c.execute(query)
+            c.execute(query)
             conn.commit()
         conn.close()
         return True
@@ -1741,8 +1732,7 @@ def check_and_insert_soilDB(soilname,site_id,gridratio_id):
             conn.close()
             return True
         else:
-            messageUser("This soilname exist, please use a different name.")
-            return False
+            return messageUser("This soilname exist, please use a different name.")
 
 
 def read_soilDB():    
@@ -1755,7 +1745,7 @@ def read_soilDB():
     rlist = [] #list
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        c1 = c.execute("SELECT id, soilname FROM soil order by soilname")      
+        c1 = c.execute("SELECT id, soilname FROM soil order by lower(soilname)")      
         c1_row = c1.fetchall()
         if c1_row != None:
             for c1_row_record in c1_row:
@@ -1777,14 +1767,12 @@ def read_soilgridratioDB(soilname):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if len(soilname) > 0:
-            c1= c.execute("Select SR1,SR2,IR1,IR2,PlantingDepth,XLimitRoot,BottomBC FROM gridratio where gridratio_id = (SELECT \
+            c1= c.execute("Select SR1,SR2,IR1,IR2,PlantingDepth,XLimitRoot,BottomBC,GasBCTop,GasBCBottom FROM gridratio where gridratio_id = (SELECT \
                            o_gridratio_id FROM soil where soilname = ? )",[soilname])
             c1row = c1.fetchall()
             if c1row != None:
                 for c1rowrecord in c1row:
-                    rlist.append(c1rowrecord)
-                    #print("debug: c1rowrecord:", c1rowrecord)
-            
+                    rlist.append(c1rowrecord)            
         conn.close()
         return rlist
 
@@ -1796,7 +1784,7 @@ def read_biologydefault():
   Output:
     Tuple with biologydefault information
     '''
-    rlist =[] # list    
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         c1 = c.execute("SELECT dthH, dthL, es, Th_m, tb, QT, dThD, Th_d FROM biologydefault")          
@@ -1816,7 +1804,7 @@ def read_experiment(item):
   Output:
     Tuple with experiment name and id list
     '''
-    rlist =[] # list
+    rlist =[]
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         search_str = item     
@@ -1831,6 +1819,50 @@ def read_experiment(item):
         return rlist
 
 
+def getMulchGeo(nutrient):  
+    '''
+  Returns tuple with mulch geo information for a particular nutrient
+  Input:
+    nutrient
+  Output:
+    Tuple with mulch geo information
+    '''
+    rlist =() 
+    conn, c = openDB(dbDir + '\\crop.db')
+    if c:
+        c1 = c.execute("select minHoriSize,diffusionRestriction,longWaveRadiationCtrl,decompositionCtrl,deltaRShort,deltaRLong, \
+                        omega,epsilonMulch,alphaMulch,maxStepInPicardIteration,toleranceHead,rhoMulch,poreSpace,maxPondingDepth \
+                        from mulchGeo where nutrient=?",[nutrient])
+        c1row = c1.fetchone()
+        if c1row != None:
+            rlist = c1row
+
+        conn.close()
+        return rlist
+
+
+def getMulchDecomp(nutrient):  
+    '''
+  Returns tuple with mulch decomp information for a particular nutrient
+  Input:
+    nutrient
+  Output:
+    Tuple with mulch decomp information
+    '''
+    rlist =() 
+    conn, c = openDB(dbDir + '\\crop.db')
+    if c:
+        c1 = c.execute("select contactFraction,alphaFeeding,carbMass,cellMass,lignMass,carbNMass, \
+                        cellNMass,lignNMass,carbDecomp,cellDecomp,lignDecomp from mulchDecomp where \
+                        nutrient=?",[nutrient])
+        c1row = c1.fetchone()
+        if c1row != None:
+            rlist = c1row
+
+        conn.close()
+        return rlist
+
+
 def read_weather_id_forstationtype(stationtype):  
     '''
   Returns weather id list for a specific site name.
@@ -1842,7 +1874,7 @@ def read_weather_id_forstationtype(stationtype):
     rlist = []
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        c1 = c.execute("SELECT distinct weather_id FROM weather_data where stationtype = ?",(stationtype,))
+        c1 = c.execute("SELECT distinct weather_id FROM weather_data where stationtype = ? order by lower(weather_id)",(stationtype,))
         c1_row = c1.fetchall()
         if c1_row != None:
             for c1_row_record in c1_row:
@@ -1870,7 +1902,6 @@ def read_weatheryears_fromtreatment(treatment):
         c1 = c.execute("SELECT distinct odate from operations o, treatment t, experiment e where t.tid = o.o_t_exid \
                         and e.exid=t.t_exid and e.name=? and t.name = ? order by odate",clause) 
         for op in c1:
-            #print("op=",op["odate"]) 
             if(op[0] != "" and op[0] is not None):
                 dd,mon,yy = op[0].split("/")
                 rlist.append(int(yy))
@@ -1886,7 +1917,7 @@ def read_weatherdate_fromtreatment(treatment):
   Output:
     Tuple with operation date list
     '''
-    rlist = [] # list {} # dictionary
+    rlist = [] 
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         crop_name = treatment.split('/')[0]
@@ -1917,7 +1948,7 @@ def read_weather_metaDBforsite(site):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if len(site) > 0: 
-            c1 = c.execute("SELECT id, stationtype FROM weather_meta where site=?",[site])  
+            c1 = c.execute("SELECT id, stationtype FROM weather_meta where site=? order by lower(stationtype)",[site])  
             c1_row = c1.fetchall()
             if c1_row != None:
                 for c1_row_record in c1_row:
@@ -1934,10 +1965,10 @@ def read_weather_metaDB():
   Output:
     Tuple with id and stationtype list
     '''
-    rlist ={} # dictionary
+    rlist ={}
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
-        c1 = c.execute("SELECT id, stationtype FROM weather_meta order by stationtype")  
+        c1 = c.execute("SELECT id, stationtype FROM weather_meta order by lower(stationtype)")  
         c1_row = c1.fetchall()
         if c1_row != None:
             for c1_row_record in c1_row:
@@ -1980,12 +2011,9 @@ def insert_update_weather(record_tuple,buttontext):
     conn, c = openDB(dbDir + '\\crop.db')
     if c:
         if buttontext.find('SaveAs')==0:
-            qstatus = c.execute("insert into weather_meta (Bsolar,Btemp,Atemp,BWInd,BIR,AvgWind,AvgRainRate,ChemCOnc,AvgCO2,site,stationtype) values \
-                                 (?,?,?,?,?,?,?,?,?,?,?)",record_tuple) 
+            c.execute("insert into weather_meta (Bsolar,Btemp,Atemp,BWInd,BIR,AvgWind,AvgRainRate,ChemCOnc,AvgCO2,site,stationtype) values (?,?,?,?,?,?,?,?,?,?,?)",record_tuple) 
         else:
-            #do update
-            qstatus = c.execute("update weather_meta SET Bsolar=?, Btemp=?, Atemp=?, BWInd=?, BIR=?, AvgWind=?, AvgRainRate=?, ChemCOnc=?, AvgCO2=?, site=? \
-                                 where stationtype= ? ",record_tuple) 
+            c.execute("update weather_meta SET Bsolar=?, Btemp=?, Atemp=?, BWInd=?, BIR=?, AvgWind=?, AvgRainRate=?, ChemCOnc=?, AvgCO2=?, site=? where stationtype= ? ",record_tuple) 
     
         conn.commit()
         conn.close()
@@ -2180,7 +2208,7 @@ def delete_cropOutputSim(id,crop):
     if c:
         #print("crop=",crop)
         if crop == "maize":
-            file_ext = ["g01","g02","g03","g04","g05","g07","plantStress"]
+            file_ext = ["g01","g03","g04","g05","g07","plantStress"]
         elif crop == "potato" or crop == "soybean":
             file_ext = ["g01","g03","g04","g05","g07","nitrogen","plantStress"]
         elif crop == "fallow":
@@ -2245,7 +2273,6 @@ def checkNaNInOutputFile(table_name,g_name):
   Output:
     columnList = list with columns with NaN values
     '''
-    #print(g_name)
     columnList = []
     spaceStr = ", "
     message = ""
@@ -2257,7 +2284,7 @@ def checkNaNInOutputFile(table_name,g_name):
         if g_df[col].isnull().values.any():
             if len(dates)  == 0:
                 dates = list(g_df.loc[pd.isna(g_df[col]),:].index)
-                if(table_name == "g01_maize" or table_name == "g02_maize" or table_name == "g01_potato" or \
+                if(table_name == "g01_maize" or table_name == "g01_potato" or \
                    table_name == "nitrogen_potato" or table_name == "plantStress_potato" or \
                    table_name == "g01_soybean" or table_name == "nitrogen_soybean" or \
                    table_name == "plantStress_soybean"):
@@ -2292,7 +2319,6 @@ def ingestOutputFile(table_name,g_name,simulationname):
     simulationname
   Output:
     '''
-    #print("filename=",g_name)
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
         id = table_name + "_id"
@@ -2302,7 +2328,7 @@ def ingestOutputFile(table_name,g_name,simulationname):
             g_df.rename(columns={col:col.strip()},inplace=True)
         g_df[id] = int(simulationname)
 
-        if(table_name == "g01_maize" or table_name == "g02_maize" or table_name == "g01_potato" or table_name == "nitrogen_potato" \
+        if(table_name == "g01_maize" or table_name == "g01_potato" or table_name == "nitrogen_potato" \
            or table_name == "plantStress_potato" or table_name == "plantStress_maize" or table_name == "g01_soybean" or \
            table_name == "nitrogen_soybean" or table_name == "plantStress_soybean" or table_name == "g01_cotton" or \
            table_name == "plantStress_cotton"):
@@ -2328,14 +2354,11 @@ def ingestOutputFile(table_name,g_name,simulationname):
             # Change date format
             # 2dsoil start counting the days starting on 12/30/1899.
             g_df['DateInit'] = pd.Timestamp('1899-12-30')
-            #print(g_df['Date_time'])
             g_df['Date_Time'] = g_df['DateInit'] + pd.to_timedelta(g_df['Date_time'], unit='D').dt.round('h')
-            if(table_name == "g03_maize" or table_name == "g03_potato" or table_name == "g04_potato" or \
-               table_name == "g03_soybean" or table_name == "g04_soybean" or table_name == "g03_fallow" or \
-               table_name == "g03_cotton"):
-                g_df = g_df.drop(columns=['DateInit','Date','Date_time','Area'])
-            else:
-                g_df = g_df.drop(columns=['DateInit','Date','Date_time'])
+            g_df = g_df.drop(columns=['DateInit','Date','Date_time'])
+            if(table_name == "g03_maize" or table_name == "g03_cotton" or table_name == 'g03_soybean' or \
+               table_name == "g03_potato" or table_name == "g03_fallow"):
+                g_df = g_df.drop(columns=['Area','Vx','Vy'])
 
         g_df.to_sql(table_name,conn,if_exists="append",index=False)
         conn.close()
@@ -2373,7 +2396,7 @@ def ingestGeometryFile(grdFile,g03File,simulation):
         # strip leading and trailing spaces from column names
         for col in g_df.columns: 
             g_df.rename(columns={col:col.strip()},inplace=True)
-        g_df = g_df.drop(columns=['Date_time','Date','hNew','thNew','Q','NO3N','NH4N','Temp','GasCon'])
+        g_df = g_df.drop(columns=['Date_time','Date','hNew','thNew','Vx','Vy','Q','NO3N','NH4N','Temp','CO2Conc','O2Conc'])
         # Get unique value for each row
         g_df = g_df.drop_duplicates(keep="first")
 
@@ -2442,10 +2465,8 @@ def getMaxDateG01BySimID(crop, sim_id):
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
         query = "select max(Date_Time) from g01_" + crop + " where g01_" + crop + "_id=" + sim_id
-        #print("query=",query)
         c2 = c.execute(query)
         c2_row = c2.fetchone()
-        #print(c2_row[0])
         date_time_obj = dt.strptime(c2_row[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y')
         rlist = date_time_obj
         conn.close()   
@@ -2468,7 +2489,6 @@ def getTuberInitDate(sim_id):
         c2 = c.execute("select min(Date_Time) from g01_potato where (tuberDM > 0 or Stage > 2.01) and g01_potato_id=?",[sim_id])
         c2_row = c2.fetchone()
         if c2_row[0] != None:  
-            #print(c2_row[0])
             date_time_obj = dt.strptime(c2_row[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y')
             rlist = date_time_obj
         else:
@@ -2531,14 +2551,14 @@ def getPotatoAgronomicData(sim_id, date):
 
 def getMaizeAgronomicData(sim_id, date):
     '''
-  Returns agronomical date.
+  Returns maize agronomical date.
   Input:
     sim_id = simulation id
     date = maturity date
   Output:
-    tuberDM = yield
-    totalDM = total biomass
-    Tr-Act = transpiration
+    earDM = yield
+    shootDM = total biomass
+    Nitr
     '''
     rlist = None # list   
 
@@ -2556,14 +2576,16 @@ def getMaizeAgronomicData(sim_id, date):
         return rlist
 
 
-def getCottonYieldData(sim_id):
+def getCottonAgronomicData(sim_id):
     '''
-  Returns cotton yield information.
+  Returns cotton agronomic data.
   Input:
     sim_id = simulation id
   Output:
     date
     yield
+    PlantDM (total biomass)
+    N_uptake
     '''
     rlist = None # list   
 
@@ -2571,7 +2593,7 @@ def getCottonYieldData(sim_id):
     if c:
         querytuple = (sim_id,)
 
-        c1 = c.execute("select max(Date_time), Yield from g01_cotton where g01_cotton_id=?",querytuple)
+        c1 = c.execute("select max(Date_time), Yield, PlantDM, N_uptake from g01_cotton where g01_cotton_id=?",querytuple)
         c1row = c1.fetchone()
         if c1row != None:
             rlist = c1row
@@ -2598,7 +2620,6 @@ def getCottonDevDate(sim_id, stage):
         c1 = c.execute(query)
         c1_row = c1.fetchone()
         if c1_row[0] != None:  
-            #print(c1_row[0])
             date_time_obj = dt.strptime(c1_row[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y')
             rlist = date_time_obj
         else:
@@ -2626,7 +2647,6 @@ def getSoybeanDevDate(sim_id, rstage):
         c1 = c.execute("select min(Date_Time) from g01_soybean where RSTAGE >= ? and g01_soybean_id=?",querytuple)
         c1_row = c1.fetchone()
         if c1_row[0] != None:  
-            #print(c1_row[0])
             date_time_obj = dt.strptime(c1_row[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y')
             rlist = date_time_obj
         else:
@@ -2638,7 +2658,7 @@ def getSoybeanDevDate(sim_id, rstage):
 
 def getSoybeanAgronomicData(sim_id, date):
     '''
-  Returns agronomical date.
+  Returns soybean agronomical date.
   Input:
     sim_id = simulation id
     date = maturity date
@@ -2647,7 +2667,7 @@ def getSoybeanAgronomicData(sim_id, date):
     totalDM = total biomass
     Tr_act = transpiration
     '''
-    rlist = None # list   
+    rlist = None
 
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
@@ -2665,30 +2685,40 @@ def getSoybeanAgronomicData(sim_id, date):
 
 def getEnvironmentalData(sim_id, date, crop):
     '''
-  Returns agronomical data.
+  Returns environmental data.
   Input:
     sim_id = simulation id
     date = maturity date
     crop
   Output:
-    tuberDM = yield
-    totalDM = total biomass
-    Tr-Act = transpiration
+    SeasPTran
+    SeasATran 
+    SeasASoEv
+    SeasPSoEv
+    SeasInfil
+    Runoff
+    SeasRain
+    Drainage
+    WaterFromDeepSoil
+    CO2Flux
+    O2Flux
+    N_Leach
     '''
-    rlist = None # list   
+    rlist = None 
 
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
-        if crop != "cotton" and crop != "fallow":
-            maturityDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
-            query = "select max(SeasPTran), max(SeasATran), max(SeasASoEv), max(SeasPSoEv), max(SeasInfil), sum(Runoff_02), \
-                     max(SeasRain), sum(case when Drainage>=0 then Drainage else 0 end) as Drainage, \
-                     sum(case when Drainage<0 then abs(Drainage) else 0 end) as WaterFromDeepSoil \
-                     from g05_" + crop + " where g05_" + crop + "_id=" + sim_id + " and Date_Time <= '" + maturityDate + "%'"
-        else:
-            query = "select max(SeasPTran), max(SeasATran), max(SeasASoEv), max(SeasPSoEv), max(SeasInfil), sum(Runoff_02), \
-                     max(SeasRain), sum(case when Drainage>=0 then Drainage else 0 end) as Drainage, \
-                     sum(case when Drainage<0 then abs(Drainage) else 0 end) as WaterFromDeepSoil from g05_" + crop + " where g05_" + crop + "_id=" + sim_id
+        if crop == "maize" or crop == "soybean" or crop == "potato":
+             maturityDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
+             query = "select max(SeasPTran), max(SeasATran), max(SeasASoEv), max(SeasPSoEv), max(SeasInfil), sum(Runoff), \
+                     max(SeasRain), sum(case when Drainage<=0 then Drainage else 0 end) as Drainage, \
+                     sum(case when Drainage>0 then abs(Drainage) else 0 end) as WaterFromDeepSoil, sum(CO2Flux), sum(O2Flux), \
+                     sum(N_Leach) from g05_" + crop + " where g05_" + crop + "_id=" + sim_id + " and Date_Time <= '" + maturityDate + "%'"
+        elif crop == "cotton" or crop == "fallow":
+             query = "select max(SeasPTran), max(SeasATran), max(SeasASoEv), max(SeasPSoEv), max(SeasInfil), sum(Runoff), \
+                      max(SeasRain), sum(case when Drainage<=0 then Drainage else 0 end) as Drainage, \
+                      sum(case when Drainage>0 then abs(Drainage) else 0 end) as WaterFromDeepSoil , sum(CO2Flux), sum(O2Flux), \
+                      sum(N_Leach) from g05_" + crop + " where g05_" + crop + "_id=" + sim_id
         c1 = c.execute(query)
         c1row = c1.fetchone()
         if c1row != None:
@@ -2700,7 +2730,7 @@ def getEnvironmentalData(sim_id, date, crop):
 
 def getNitrogenUptake(sim_id, date, crop):
     '''
-  Returns agronomical date.
+  Returns nitrogen uptake.
   Input:
     sim_id = simulation id
     date = maturity date
@@ -2708,7 +2738,7 @@ def getNitrogenUptake(sim_id, date, crop):
   Output:
     N_uptake = nitrogen uptake
     '''
-    rlist = None # list   
+    rlist = None  
 
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
@@ -2770,7 +2800,7 @@ def getMaizePlantStressDates(sim_id):
 	PotentialArea = Potential Area
     '''
 
-    rlist = [] # list   
+    rlist = []
 
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
@@ -2800,7 +2830,7 @@ def getSoybeanPlantStressDates(sim_id):
 	Limit = predominant factor limiting growth
     '''
 
-    rlist = [] # list   
+    rlist = [] 
 
     conn, c = openDB(dbDir + '\\cropOutput.db')
     if c:
@@ -2808,6 +2838,36 @@ def getSoybeanPlantStressDates(sim_id):
                         g01_soybean g1 where (ps.wstress <= 0.75 or ps.Nstress <= 0.75 or ps.Cstress <= 0.75) and \
                         ps.plantStress_soybean_id=?  and ps.plantStress_soybean_id=g1.g01_soybean_id  and ps.Date_Time=g1.Date_Time \
                         order by ps.Date_Time",[sim_id])
+        c1row = c1.fetchall()
+        if c1row != None:
+            for c1rowrecord in c1row:
+                rlist.append(c1rowrecord)
+
+        conn.close()
+        return rlist
+
+
+def getCottonPlantStressDates(sim_id):
+    '''
+  Returns dates where nitrogen, carbon  and water (<=0.75) stress were present.
+  Input:
+    sim_id = simulation id
+  Output:
+    Tuple containing
+    Date_Time = date
+	W_stress = Water Stress
+	N_Veg_Str = N Stress (vegetative)
+	N_Fru_Str = N Stress (fruit)
+	N_Rt_Str = N Stress (root)
+	C_Stress = C Stress
+    '''
+    rlist = []
+
+    conn, c = openDB(dbDir + '\\cropOutput.db')
+    if c:
+        c1 = c.execute("select distinct Date_Time, W_stress, N_Veg_Str, N_Fru_Str, N_Rt_Str, C_Stress from plantStress_cotton where \
+                        (W_stress<0.8 or N_Veg_Str<0.8 or N_Fru_Str<0.8 or N_Rt_Str<0.8 or C_Stress<0.8) and \
+                        plantStress_cotton_id=? order by Date_Time",[sim_id])
         c1row = c1.fetchall()
         if c1row != None:
             for c1rowrecord in c1row:

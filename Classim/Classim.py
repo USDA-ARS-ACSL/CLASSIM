@@ -2,8 +2,8 @@ import sys
 import os
 from TabbedDialog.Tabs import Tabs_Widget
 from DatabaseSys.Databasesupport import *
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFrame
-from PyQt5.Qt import QHBoxLayout
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtWidgets import QApplication
 
 '''
 Starting point for the application. It calls tabs.py (to calls all the other tabs of Welcome, Site, Soil, Cultivar, Weather, 

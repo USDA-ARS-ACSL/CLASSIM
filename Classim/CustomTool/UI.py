@@ -1,7 +1,3 @@
-import re
-import os
-
-from PyQt5 import QtSql, QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMessageBox
 
 def messageUser(errMessage):
@@ -10,13 +6,14 @@ def messageUser(errMessage):
   Input:
     errMessage = message that explains error message to user
   Output:
+    returns False
     '''
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText(errMessage)
     msg.setWindowTitle("Error")
     msg.exec_()
-    return True
+    return False
 
 
 def messageUserInfo(errMessage):
@@ -25,6 +22,7 @@ def messageUserInfo(errMessage):
   Input:
     errMessage = message that explains error message to user
   Output:
+    returns True
     '''
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Information)

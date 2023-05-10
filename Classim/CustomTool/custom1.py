@@ -4,9 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from contextlib import contextmanager
 from TabbedDialog import *
 from DatabaseSys.Databasesupport import *
-from PyQt5.QtCore import Qt, QModelIndex, QVariant, QAbstractItemModel, QIODevice
-from PyQt5.QtWidgets import QComboBox, QGridLayout, QGroupBox, QLabel, QWidget, QListWidget, QListWidgetItem, QTableWidget, \
-                            QTableWidgetItem, QPushButton, QRadioButton, QCheckBox
+from PyQt5.QtCore import Qt, QModelIndex, QVariant, QAbstractItemModel
 
 # add all the custom listbox, signal and slot cases here
 username=os.environ['username']
@@ -173,7 +171,6 @@ class LeafNode(object):
         """
         Removes the child object from the children list 
         """
-        #print("Remove node")
         if row <0 or row >= len(self.fields):
             return False
         child = self.fields.pop(row)        
@@ -205,7 +202,6 @@ class TreeOfTableModel(QAbstractItemModel):
          Probably here we can further fine tune to do just the nodes with leaves.
         """
         defaultFlags = QAbstractItemModel.flags(self,index)
-        #print("tree flags entered",index.isValid())
         
         if not index.isValid():
             # works return QtCore.Qt.ItemIsEnabled | defaultFlags
@@ -277,7 +273,6 @@ class TreeOfTableModel(QAbstractItemModel):
            
         if generation_count ==3:
             temp_str =temp_str2     
-        #print("temp_str=", temp_str)
         mimeData = QtCore.QMimeData()
         mimeData.setText(temp_str)
         return mimeData
@@ -294,13 +289,10 @@ class TreeOfTableModel(QAbstractItemModel):
         
 
     def insertRows(self,row,count, parentIndex):
-        #print("Insert Rows")
-        #print("parents.len=",len(parentIndex.internalPointer()))
         self.beginInsertRows(parentIndex,row,(row +(count-1)))
         parentItem = parentIndex.internalPointer().insertChildAtIndex(row)
         # should we add something like parentItem.insertChild()
         self.endInsertRows()
-        #print("parents.len=",len(parentIndex.internalPointer()))
         return True
     
             
@@ -308,14 +300,12 @@ class TreeOfTableModel(QAbstractItemModel):
         parentNode = parentIndex
         if not parentIndex.isValid():
             #parent can be invalid when it is a root node (root parent returns an empty QModelIndex)
-            #print("Debug: parentIndex not valid.")
             parentNode = self.root
         self.removeRows(row,1,parentNode)
         return True
 
 
     def load2(self,databasename,tablename,nesting,separator,loader=2):
-        #print("inside TreeOfTabelModel, load")
         assert nesting >0        
         self.nesting = nesting
         self.root = BranchNode("")
@@ -390,26 +380,22 @@ class TreeOfTableModel(QAbstractItemModel):
         for i in range(len(therlist)):            
             key = thecropname
             root = self.root
-            oldroot =root
             branch = None
             branch = root.childWithKey(key)
             if branch is not None:
                 root = branch
                 branch = BranchNode(therlist[i])
                 root.insertChild(branch)
-                oldroot = root
                 root = branch
             else:
                 branch = BranchNode(therlist[i])
                 root.insertChild(branch)
-                oldroot = root
                 root = branch
 
             # now work on populating this new branch  
             new_branches = read_treatmentDB(key,root.name)    
             #print("new_branches = ", new_branches)
             theader5 = ["1","2","3","4","5","6","7","8","9"]
-            temp_leaves = ["Operations","B"]
             ### adding here to see if it will enable the empty tree display
             self.columns = max(self.columns, len(theader5)) 
             assert branch is not None
@@ -489,7 +475,6 @@ class TreeOfTableModel(QAbstractItemModel):
       
     def headerData(self,section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            #print("headerData: section=",section," headers=",self.headers)
             return (QVariant(self.headers[section])) if section < len(self.headers) else QVariant()
         return QVariant()
 
@@ -514,10 +499,8 @@ class TreeOfTableModel(QAbstractItemModel):
         if parent is None:
             return QModelIndex()
         if type(parent) != BranchNode:
-            #print("Debug: inside treeoftablemodel childname,node.name has no attribute name")
             return QModelIndex()
 
-        #print("Debug: inside treeoftablemodel parent:, type=",type(parent), parent.name," node.name=",node.name)
         grandparent = parent.parent
         if grandparent is None:
             return QModelIndex() 
@@ -529,10 +512,8 @@ class TreeOfTableModel(QAbstractItemModel):
         #root has rdepth value of 1
         rdepth = 1
         tnode = self.nodeFromIndex(index).parent
-        #print("debug:getDepth, name=",self.nodeFromIndex(index).name)
         ## works in some cases while tnode is not self.root: # None:
         while tnode.parent is not None:
             rdepth = rdepth+1
-            #print("debug:getDepth, tnode name1=",tnode.name)            
             tnode = tnode.parent             
         return rdepth

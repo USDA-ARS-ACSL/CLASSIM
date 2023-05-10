@@ -1,9 +1,8 @@
 __all__ = ["DateAxisItem"]
-from PyQt5 import QtSql,QtCore
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabBar, QTabWidget, QHBoxLayout, QSizePolicy
-from PyQt5.QtCore import pyqtSlot
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QTabBar, QTabWidget, QHBoxLayout
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QPainter, QColor, QFontMetrics
+from PyQt5.QtGui import QColor
 from CustomTool.custom1 import *
 from DatabaseSys.Databasesupport import *
 from TabbedDialog.ManagementTab import *
@@ -100,9 +99,6 @@ class Tabs_Widget(QTabWidget):
         self.layout = QHBoxLayout(self)
         self.setLayout(self.layout)
         self.setWindowTitle("CLASSIM - Crop, Land And Soil SIMulation")
-
-        if self.isWindowModified():
-            print("Debug window modified")
         
         # Connecting Output tab with Seasonal tab
         self.Outputtab.make_connection(self.Seasonaltab)

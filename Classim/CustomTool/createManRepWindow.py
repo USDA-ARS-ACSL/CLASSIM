@@ -1,17 +1,14 @@
-import sqlite3
 import os
 import pandas as pd
-
-from PyQt5 import QtSql, QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QTreeWidgetItem, QTextEdit, QWidget, QLabel, QHBoxLayout, QListWidget, QTableWidget, QVBoxLayout, \
-                            QHeaderView, QSpacerItem, QSizePolicy, QTableWidgetItem, QLineEdit
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QWidget, QLabel, QTableWidget, QVBoxLayout, QHeaderView, QTableWidgetItem, QLineEdit
 from PyQt5.QtCore import Qt
 from DatabaseSys.Databasesupport import *
 from pprint import pprint
 
 gusername = os.environ['username'] #windows. What about linux
 gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'classim_v3')
+dbDir = os.path.join(gparent_dir,'classim')
 
 class createManRepWindow(QWidget):
     """
