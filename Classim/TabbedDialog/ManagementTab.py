@@ -7,28 +7,6 @@ from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from CustomTool.createManRepWindow import *
 
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-        #print("text=", text)                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.green))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
-
- 
-#this is widget of type 1. It would be added to as a tab
 class ManagementTab_Widget(QWidget):
     def __init__(self):
         super(ManagementTab_Widget,self).__init__()
@@ -37,16 +15,16 @@ class ManagementTab_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10)) 
+        self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
-        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("management")              
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
 
         self.mainlayout1 = QGridLayout()          

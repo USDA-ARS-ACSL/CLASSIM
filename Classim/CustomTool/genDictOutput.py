@@ -4,10 +4,6 @@ from datetime import date, timedelta, datetime
 from time import mktime
 from shutil import copyfile
 
-global app_dir
-global index
-
-
 '''
 Generates dictionaries that will be used on outputTab.py and RotOutputTab.py.  The dictionaries correpond to 
 tables on cropOutput database.
@@ -30,7 +26,7 @@ def genDictOutput(cropArr,tabName,rotFlag):
                       'LeafN':'Leaf nitrogen content (crop)','PCRL':'Carbon allocated to roots (crop)','totalDM':'Total dry matter (crop)',
                       'shootDM':'Shoot dry matter (crop)','earDM':'Ear dry matter (crop)','TotLeafDM':'Leaf dry matter (crop)',
                       'DrpLfDM':'Dropped leaf dry matter (crop)','stemDM':'Stem dry matter (crop)','rootDM':'Root dry matter (crop)',
-                      'SoilRt':'Soil root dry matter (crop)','MxRtDep':'Maximum root depth (crop)','AvailW':'Available water in root zone (crop)',
+                      'SoilRt':'Carbon in soil roots (crop)','MxRtDep':'Maximum root depth (crop)','AvailW':'Available water in root zone (crop)',
                       'solubleC':'Soluble sugars as carbon (crop)'}
     varDescUnitMaiDict = {'Leaves':'Number of leaves (appeared) (crop)','MaturLvs':'Number of mature leaves (crop)',
                           'Dropped':'Number of dropped leaves (crop)','LA_pl':'Green leaf area per plant (crop) (cm2)',
@@ -41,14 +37,14 @@ def genDictOutput(cropArr,tabName,rotFlag):
                           'Tcan':'Canopy temperature (crop) (oC)','ETdmd':'Potential Transpiration (crop) (g/plant)',
                           'ETsply':'Actual Transpiration (crop) (g/plant)','Pn':'Net Photosynthesis (crop) (g carbon/plant/day)',
                           'Pg':'Gross photosynthesis (crop) (g carbon/plant/day)','Respir':'Respiration (crop) (g carbon/plant/day)',
-                          'av_gs':'Average stomatal conductance (crop)','VPD':'Vapor pressure density (crop) (kPa)',
+                          'av_gs':'Average stomatal conductance (crop) (micro-mol/m2/s)','VPD':'Vapor pressure density (crop) (kPa)',
                           'Nitr':'Total nitrogen in the plant (crop) (mg/plant)','N_Dem':'Nitrogen demand (crop) (g/plant)',
                           'NUpt':'Nitrogen uptake (crop) (g/plant)','LeafN':'Leaf nitrogen content (crop) (%)',
                           'PCRL':'Carbon allocated to roots (crop) (g/plant)','totalDM':'Total dry matter (crop) (g/plant)',
                           'shootDM':'Shoot dry matter (crop) (g/plant)','earDM':'Ear dry matter (crop) (g/plant)',
                           'TotLeafDM':'Leaf dry matter (crop) (g/plant)','DrpLfDM':'Dropped leaf dry matter (crop) (g/plant)',
                           'stemDM':'Stem dry matter (crop) (g/plant)','rootDM':'Root dry matter (crop) (g/plant)',
-                          'SoilRt':'Soil root dry matter (crop) (g/plant)','MxRtDep':'Maximum root depth (crop) (cm)',
+                          'SoilRt':'Carbon in soil roots (crop) (g/plant)','MxRtDep':'Maximum root depth (crop) (cm)',
                           'AvailW':'Available water in root zone (crop) (g)','solubleC':'Soluble sugars as carbon (crop) (g/plant)'}
     varFuncMaiDict = {'Leaves':'max','MaturLvs':'max','Dropped':'max','LA_pl':'max','LA_dead':'max','LAI':'max',
                       'RH':'mean','LeafWP':'mean','PFD':'sum','SolRad':'mean','SoilT':'mean','Tair':'mean',
@@ -60,7 +56,7 @@ def genDictOutput(cropArr,tabName,rotFlag):
     # Potato
     varDescPotDict = {'LAI':'Leaf area index (crop)','PFD':'Photosynthetic flux density (crop)','SolRad':'Solar radiation (crop)',
                       'Tair':'Air temperture at 2m (crop)','Tcan':'Canopy temperature (crop)','Pgross':'Gross photosynthesis (crop)',
-                      'Rg+Rm':'Respiration (crop)','Tr-Pot':'Potential Transpiration (crop)','Tr-Act':'Actual Transpiration (crop)',
+                      'Rg+Rm':'Respiration (crop)','Tr-Pot':'Potential transpiration (crop)','Tr-Act':'Actual transpiration (crop)',
                       'Stage':'Stage (crop)','totalDM':'Total dry matter (crop)','leafDM':'Leaf dry matter (crop)',
                       'stemDM':'Stem dry matter (crop)','rootDM':'Root dry matter (crop)','tuberDM':'Tuber dry matter (crop)',
                       'deadDM':'Dead dry matter (crop)','LWPave':'Leaf water potential (crop)','gs_ave':'Average stomatal conductance (crop)',
@@ -69,15 +65,15 @@ def genDictOutput(cropArr,tabName,rotFlag):
     varDescUnitPotDict = {'LAI':'Leaf area index (crop)','PFD':'Photosynthetic flux density (crop) (mol photons/day/m2)',
                           'SolRad':'Solar radiation (crop) (W/m2)','Tair':'Air temperture at 2m (crop) (oC)',
                           'Tcan':'Canopy temperature (crop) (oC)','Pgross':'Gross photosynthesis (crop) (g carbon/plant/day)',
-                          'Rg+Rm':'Respiration (crop) (g carbon/plant/day)','Tr-Pot':'Potential Transpiration (crop) (mg/plant)',
-                          'Tr-Act':'Actual Transpiration (crop) (mg/plant)','Stage':'Stage (crop)',
+                          'Rg+Rm':'Respiration (crop) (g carbon/plant/day)','Tr-Pot':'Potential transpiration (crop) (mg/plant)',
+                          'Tr-Act':'Actual transpiration (crop) (mg/plant)','Stage':'Stage (crop)',
                           'totalDM':'Total dry matter (crop) (g/plant)','leafDM':'Leaf dry matter (crop) (g/plant)',
                           'stemDM':'Stem dry matter (crop) (g/plant)','rootDM':'Root dry matter (crop) (g/plant)',
                           'tuberDM':'Tuber dry matter (crop) (g/plant)','deadDM':'Dead dry matter (crop) (g/plant)',
-                          'LWPave':'Leaf water potential (crop) (bars)','gs_ave':'Average stomatal conductance (crop)',
-                          'N_uptake':'Nitrogen Uptake (crop) (mg/plant)','tot_N':'Total Nitrogen in the Plant (crop) (mg/plant)',
-                          'leaf_N':'Leaf nitrogen content (crop) (mg/plant)','stem_N':'Stem nitrogen (crop) (mg/plant)',
-                          'root_N':'Root nitrogen (crop) (mg/plant)','tuber_N':'Tuber nitrogen (crop) (mg/plant)'}
+                          'LWPave':'Leaf water potential (crop) (bars)','gs_ave':'Average stomatal conductance (crop) (micro-mol/m2/s)',
+                          'N_uptake':'Nitrogen Uptake (crop) (g/plant)','tot_N':'Total Nitrogen in the Plant (crop) (g/plant)',
+                          'leaf_N':'Leaf nitrogen content (crop) (g/plant)','stem_N':'Stem nitrogen (crop) (g/plant)',
+                          'root_N':'Root nitrogen (crop) (g/plant)','tuber_N':'Tuber nitrogen (crop) (g/plant)'}
     varFuncPotDict = {'LAI':'max','PFD':'sum','SolRad':'mean','Tair':'mean','Tcan':'mean','Pgross':'sum',
                       'Rg+Rm':'sum','Tr-Pot':'sum','Tr-Act':'sum','Stage':'max','totalDM':'max','leafDM':'max',
                       'stemDM':'max','rootDM':'max','tuberDM':'max','deadDM':'max','LWPave':'mean','gs_ave':'mean',
@@ -86,15 +82,15 @@ def genDictOutput(cropArr,tabName,rotFlag):
     # Soybean
     varDescSoyDict = {'PFD':'Photosynthetic flux density (crop)','SolRad':'Solar radiation (crop)','Tair':'Air temperture at 2m (crop)',
 	                  'Tcan':'Canopy temperature (crop)','Pgross':'Gross photosynthesis (crop)','Pnet':'Net photosynthesis (crop)',
-	                  'gs':'Maximum stomatal conductance (crop)','PSIL':'Leaf Water Potential (crop)','LAI':'Leaf area index (crop)',
+	                  'gs':'Maximum stomatal conductance (crop)','PSIL':'Leaf water potential (crop)','LAI':'Leaf area index (crop)',
 	                  'LAREAT':'Leaf area (crop)','totalDM':'Total dry matter (crop)','rootDM':'Root dry matter (crop)',
                       'stemDM':'Stem dry matter (crop)','leafDM':'Leaf dry matter (crop)','seedDM':'Seed dry matter (crop)',
-	                  'podDM':'Pod dry matter (crop)','DeadDM':'Dead dry matter (crop)','Tr_pot':'Potential Transpiration (crop)',
-	                  'Tr_act':'Actual Transpiration (crop)'}
+	                  'podDM':'Pod dry matter (crop)','DeadDM':'Dead dry matter (crop)','Tr_pot':'Potential transpiration (crop)',
+	                  'Tr_act':'Actual transpiration (crop)'}
     varDescUnitSoyDict = {'PFD':'Photosynthetic flux density (crop) (mol photons/day/m2)','SolRad':'Solar radiation (crop) (W/m2)',
                           'Tair':'Air temperture at 2m (crop) (oC)','Tcan':'Canopy temperature (crop) (oC)',
                           'Pgross':'Gross photosynthesis (crop) (g carbon/plant/day)','Pnet':'Net photosynthesis (crop) (g carbon/plant/day)',
-                          'gs':'Maximum stomatal conductance (crop)','PSIL':'Leaf Water Potential (crop) (bars)',
+                          'gs':'Maximum stomatal conductance (crop)','PSIL':'Leaf water potential (crop) (bars)',
                           'LAI':'Leaf area index (crop)','LAREAT':'Leaf area (crop) (cm2)',
                           'totalDM':'Total dry matter (crop) (g/plant)','rootDM':'Root dry matter (crop) (g/plant)',
                           'stemDM':'Stem dry matter (crop) (g/plant)','leafDM':'Leaf dry matter (crop) (g/plant)',
@@ -110,36 +106,36 @@ def genDictOutput(cropArr,tabName,rotFlag):
     varDescCotDict = {'PlantH':'Plant height (crop)','LAI':'Leaf area index (crop)','LInt':'Canopy light interception (crop)','Nodes':'Number of main stem nodes (crop)',
                       'Sites':'Number of fruiting sites (crop)','N_Squares':'Number of squares (crop)','N_GB':'Number of green bolls (crop)',
                       'NLvsLoss':'Total number of leaves lost (crop)','NSqLoss':'Total number of squares lost (crop)','NBollsLoss':'Total number of bolls lost (crop)',
-                      'NFruitShed':'Total number of abscissed fruits (crop)','PetShd_DM':'Petal shed dry matter (crop)','GB_lossDM':'Green bolls lost dry matter (crop)',
-                      'Lf_lossDM':'Leaves abscissed dry matter (crop)','Rt_lossDM':'Root lost dry matter (crop)','Dd_WtDM':'Dead tissue lost dry matter (crop)',
+                      'NFruitShed':'Total number of abscised fruits (crop)','PetShd_DM':'Petal shed dry matter (crop)','GB_lossDM':'Green bolls lost dry matter (crop)',
+                      'Lf_lossDM':'Leaves abscised dry matter (crop)','Rt_lossDM':'Root lost dry matter (crop)','Dd_WtDM':'Dead tissue lost dry matter (crop)',
                       'SquareDM':'Squares dry matter (crop)','GB_DM':'Green boll dry matter (crop)','OB_DM':'Open boll dry matter (crop)','LeafDM':'Leaf dry matter (crop)',
                       'StemDM':'Stem dry matter (crop)','RootDM':'Root dry matter (crop)','ResC':'Reserved dry matter (crop)','PlantDM':'Total plant dry matter (crop)',
                       'R_S':'Root shoot ratio (crop)','Yield':'Total yield (crop)','Temp':'Average temperature (crop)','L_Temp':'Average leaf temperature (crop)',
                       'Rain':'Rain+irrigation (crop)','SRad':'Solar radiation (crop)','PFD':'Photosynthetic flux density (crop)','RH':'Relative humidity (crop)',
-                      'LeafN':'Leaf nitrogen (crop)','StemN':'Stem nitrogen (crop)','SeedN':'seed nitrogen (crop)','BurrN':'Burr nitrogen (crop)','RootN':'Root nitrogen (crop)',
+                      'LeafN':'Leaf nitrogen content (crop)','StemN':'Stem nitrogen (crop)','SeedN':'Seed nitrogen (crop)','BurrN':'Burr nitrogen (crop)','RootN':'Root nitrogen (crop)',
                       'Nloss':'Nitrogen lost abscission (crop)','PlantN':'Total Nitrogen in the Plant (crop)','N_uptake':'Total nitrogen uptake (crop)',
                       'S_Psi':'Average soil water potential in the root zone (crop)','L_Psi':'Leaf water potential (crop)','LArea':'Leaf area (crop)',
-                      'VPD':'Vapour pressure deficit (crop)','StCond':'Stomatal conductance (crop)','Pnet':'Net photosynthesis (crop)','PGross':'Gross photosynthesis (crop)',
-                      'L_Res':'Light respiration (crop)', 'Main_Res':'Maintanance respiration (crop)','Resp':'Total respiration (crop)','SPnet':'Cumulative net photosynthesis (crop)', 
+                      'VPD':'Vapor pressure density (crop)','StCond':'Average stomatal conductance (crop)','Pnet':'Net photosynthesis (crop)','PGross':'Gross photosynthesis (crop)',
+                      'L_Res':'Light respiration (crop)', 'Main_Res':'Maintenance respiration (crop)','Resp':'Total respiration (crop)','SPnet':'Cumulative net photosynthesis (crop)', 
                       'C_Bal':'Plant C balance (crop)','Nstress_Pn':'Nitrogen stress on the photosynthesis (crop)' }
     varDescUnitCotDict = {'PlantH':'Plant height (crop) (cm)','LAI':'Leaf area index (crop)','LInt':'Canopy light interception (crop)','Nodes':'Number of main stem nodes (crop)',
                           'Sites':'Number of fruiting sites (crop)','N_Squares':'Number of squares (crop)','N_GB':'Number of green bolls (crop)',
                           'NLvsLoss':'Total number of leaves lost (crop)','NSqLoss':'Total number of squares lost (crop)','NBollsLoss':'Total number of bolls lost (crop)',
-                          'NFruitShed':'Total number of abscissed fruits (crop)','PetShd_DM':'Petal shed dry matter (crop) (g carbon/plant)',
-                          'GB_lossDM':'Green bolls lost dry matter (crop) (g carbon/plant)','Lf_lossDM':'Leaves abscissed dry matter (crop) (g carbon/plant)',
+                          'NFruitShed':'Total number of abscised fruits (crop)','PetShd_DM':'Petal shed dry matter (crop) (g carbon/plant)',
+                          'GB_lossDM':'Green bolls lost dry matter (crop) (g carbon/plant)','Lf_lossDM':'Leaves absciseddry matter (crop) (g carbon/plant)',
                           'Rt_lossDM':'Root lost dry matter (crop) (g carbon/plant)','Dd_WtDM':'Dead tissue lost dry matter (crop) (g/plant)',
                           'SquareDM':'Squares dry matter (crop) (g/plant)','GB_DM':'Green boll dry matter (crop) (g/plant)','OB_DM':'Open boll dry matter (crop) (g/plant)',
                           'LeafDM':'Leaf dry matter (crop) (g/plant)','StemDM':'Stem dry matter (crop) (g/plant)','RootDM':'Root dry matter (crop) (g/plant)',
                           'ResC':'Reserved dry matter (crop) (g carbon/plant)','PlantDM':'Total plant dry matter (crop) (g carbon/plant)','R_S':'Root shoot ratio (crop)',
                           'Yield':'Total yield (crop) (kg/ha)','Temp':'Average temperature (crop) (oC)','L_Temp':'Average leaf temperature (crop) (oC)',
                           'Rain':'Rain+irrigation (crop) (mm/day)','SRad':'Solar radiation (crop) (W/m2)','PFD':'Photosynthetic flux density (crop) (mol photons/m2/day)',
-                          'RH':'Relative humidity (crop) (%)','LeafN':'Leaf nitrogen (crop) (g Nitrogen/plant)','StemN':'Stem nitrogen (crop) (g Nitrogen/plant)',
-                          'SeedN':'seed nitrogen (crop) (g Nitrogen/plant)','BurrN':'Burr nitrogen (crop) (g Nitrogen/plant)','RootN':'Root nitrogen (crop) (g Nitrogen/plant)',
+                          'RH':'Relative humidity (crop) (%)','LeafN':'Leaf nitrogen content (crop) (g Nitrogen/plant)','StemN':'Stem nitrogen (crop) (g Nitrogen/plant)',
+                          'SeedN':'Seed nitrogen (crop) (g Nitrogen/plant)','BurrN':'Burr nitrogen (crop) (g Nitrogen/plant)','RootN':'Root nitrogen (crop) (g Nitrogen/plant)',
                           'Nloss':'Nitrogen lost abscission (crop) (g Nitrogen/plant)','PlantN':'Total Nitrogen in the Plant (crop) (g/plant)',
                           'N_uptake':'Total nitrogen uptake (crop) (g Nitrogen/plant)','S_Psi':'Average soil water potential in the root zone (crop) (bar)',
-                          'L_Psi':'Leaf water potential (crop) (bar)','LArea':'Leaf area (crop) (cm2)','VPD':'Vapour pressure deficit (crop) (k Pa)',
-                          'StCond':'Stomatal conductance (crop) (micro-mol/m2/sec)','Pnet':'Net photosynthesis (crop) (g carbon/plant)',
-                          'PGross':'Gross photosynthesis (crop) (g carbon/plant)','L_Res':'Light respiration (crop) (g carbon/plant)','Main_Res':'Maintanance respiration (crop) (g carbon/plant)', 'Resp':'Total respiration (crop) (g carbon/plant)',
+                          'L_Psi':'Leaf water potential (crop) (bar)','LArea':'Leaf area (crop) (cm2)','VPD':'Vapor pressure density (crop) (k Pa)',
+                          'StCond':'Average stomatal conductance (crop) (micro-mol/m2/sec)','Pnet':'Net photosynthesis (crop) (g carbon/plant)',
+                          'PGross':'Gross photosynthesis (crop) (g carbon/plant)','L_Res':'Light respiration (crop) (g carbon/plant)','Main_Res':'Maintenance respiration (crop) (g carbon/plant)', 'Resp':'Total respiration (crop) (g carbon/plant)',
                           'SPnet':'Cumulative net photosynthesis (crop) (g carbon/plant)', 'C_Bal':'Plant C balance (crop) (g carbon/plant)',
                           'Nstress_Pn':'Nitrogen stress on the photosynthesis (crop)'}
     varFuncCotDict = {'PlantH':'max','LAI':'max','LInt':'max','Nodes':'max','Sites':'max','N_Squares':'max','N_GB':'max','NLvsLoss':'max','NSqLoss':'max','NBollsLoss':'max',

@@ -335,7 +335,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
 
     def getTreatmentSummary(ename,cname,tname):
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
         if c:
             # Get treatment id
             tid = getTreatmentID(tname,ename,cname)

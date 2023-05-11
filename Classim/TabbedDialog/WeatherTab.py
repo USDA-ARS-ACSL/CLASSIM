@@ -5,7 +5,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QVBoxLayout, QPushButton, QSizePolicy, \
-                            QMessageBox, QFileDialog, QScrollArea, QCheckBox, QGridLayout
+                            QMessageBox, QFileDialog, QScrollArea, QCheckBox, QGridLayout, QHeaderView
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -16,47 +16,16 @@ from functools import partial
 from datetime import datetime, timedelta
 from dateutil import parser
 
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(dbDir):
-    os.makedirs(dbDir)
-
-global db
-db = dbDir+'\\crop.db'
-
 ssl._create_default_https_context = ssl._create_unverified_context
 
 '''
-Contains 2 classes.
-1). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the tab classes. In 
-    future,we can centralize it. Lower priority.
-2). Class Weather_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. 
+Contains 1 class.
+1). Class Weather_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. 
     It handles all the features of Weather Tab on the interface. It has signal slot mechanism. It does interact with the 
     DatabaseSys\Databasesupport.py for all the databases related task.
     Pretty generic and self explanotory methods. 
     Refer baseline classes at http://pyqt.sourceforge.net/Docs/PyQt5/QtWidgets.html#PyQt5-QtWidgets
 '''
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
 
 class Weather_Widget(QWidget):
     def __init__(self):
@@ -69,13 +38,13 @@ class Weather_Widget(QWidget):
         self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
-        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("weather")              
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit()        
@@ -299,7 +268,7 @@ please provide a column named weather_id with the identifier you want.  For site
 
     def getWeatherSummary(stationtype):
         # getting weather data from sqlite
-        conn, c = openDB(db)
+        conn, c = openDB('crop.db')
         if c:
             weather_query = "select weather_id, date, hour, srad, wind, rh, rain, tmax, tmin, temperature from weather_data where stationtype=?" 
             df_weatherdata = pd.read_sql(weather_query,conn,params=[stationtype]) 
@@ -430,7 +399,7 @@ please provide a column named weather_id with the identifier you want.  For site
                     data['jday'] = pd.to_datetime(data['date']).dt.strftime('%j')
                 dateList = pd.to_datetime(data['date'])
 
-                conn, c = openDB(dbDir + '\\crop.db')
+                conn, c = openDB('crop.db')
                 # Check if data already exists in the database for stationType for this date range
                 minDate = min(dateList)
                 maxDate = max(dateList)
@@ -526,7 +495,7 @@ please provide a column named weather_id with the identifier you want.  For site
         data['rh'] = data['rh'] * 100
 
         msgBox.close()
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
 
         # Check if data already exists in the database for stationType for this date range
         dateList = data['date']

@@ -1,46 +1,12 @@
 from asyncio.windows_events import NULL
 import os
 import sys
-from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QCheckBox, QGridLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QCheckBox, QGridLayout, QHeaderView
 from PyQt5.QtCore import pyqtSlot
 from pyqtlet import L, MapWidget
 from DatabaseSys.Databasesupport import *
 from TabbedDialog.tableWithSignalSlot import *
 from CustomTool.UI import *
-
-'''
-Contains 1 class and some GLOBALS. These GLOBALS can be refined and moved to centralized place, at the 
-momemt lower priority.
-Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the
-tab classes. In future,we can centralize it. Lower priority.
-'''
-
-application_path = (
-    os.path.dirname(sys.executable)
-    if getattr(sys, "frozen", False)
-    else os.path.dirname(__file__)
-)
-
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
 
 class SiteWidget(QWidget):
     def __init__(self):
@@ -52,13 +18,13 @@ class SiteWidget(QWidget):
         self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
-        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
-        self.importfaq("field")              
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+        self.importfaq("Site")              
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit("")        

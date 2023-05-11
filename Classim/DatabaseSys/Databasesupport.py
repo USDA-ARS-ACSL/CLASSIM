@@ -7,14 +7,7 @@ import shutil
 from datetime import datetime as dt
 from datetime import datetime, timedelta
 from CustomTool.UI import *
-
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-# dbDir is the same as run_dir
-dbDir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(dbDir):
-    os.makedirs(dbDir)
-
+from CustomTool.getClassimDir import *
 
 def openDB(database):
     '''
@@ -24,7 +17,8 @@ def openDB(database):
     Output:
        database connector and cursor
     '''
-    conn = sqlite3.connect(database)
+    dbDir = getClassimDir()
+    conn = sqlite3.connect(dbDir+'\\'+database)
     c = conn.cursor()   
     if not c:
        print("database not open")
@@ -40,7 +34,7 @@ def insert_update_sitedetails(record_tuple,buttontext):
     record_tuple=(sitename, latitude, longitude, altitude)
     buttontext is Save or Update
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         record_tuple4= record_tuple[1:] + (record_tuple[0],)
         if buttontext == 'SaveAs':
@@ -58,7 +52,7 @@ def delete_sitedetails(site):
   Input:
     record_tuple = (sitename)
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         # First update site_id=23 (Generic Site) if there is any soil associated with this site
         c.execute("update soil set site_id=23 where site_id=(select si.id from sitedetails si where sitename=?)",(site,))    
@@ -84,7 +78,7 @@ def extract_sitedetails(site_string):
     '''
 
     result1 =0
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("select id,rlat,rlon,altitude from sitedetails where sitename = '%s';"%(site_string)) 
         c1_row = c1.fetchall()
@@ -103,7 +97,7 @@ def read_cropDB():
     Tuple with crop name
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT id, cropname FROM crops order by lower(cropname)")  
@@ -128,7 +122,7 @@ def read_cultivar_DB(cropname):
     tuple with hybridname list for specific crop
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #print("cropname=",cropname)
         if len(cropname) > 0:     
@@ -156,7 +150,7 @@ def read_tillageTypeDB():
     Tuple with tillage types name
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT id, tillage FROM tillageType order by lower(tillage)")  
@@ -178,7 +172,7 @@ def read_PGRChemicalDB():
     Tuple with PGR chemical types name
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT id, PGRChemical FROM PGRChemical order by lower(PGRChemical)")  
@@ -200,7 +194,7 @@ def read_PGRAppTypeDB():
     Tuple with PGR application types name
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT id, applicationType FROM PGRApplType order by lower(applicationType)")  
@@ -222,7 +216,7 @@ def read_PGRAppUnitDB():
     Tuple with PGR application units
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT id, PGRUnit FROM PGRUnit order by lower(PGRUnit)")  
@@ -244,7 +238,7 @@ def read_SurfResTypeDB():
     Tuple with surface residue type
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("select residueType from surfResType order by lower(residueType)")  
@@ -265,7 +259,7 @@ def read_SurfResApplTypeDB():
     Tuple with surface residue application type
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("select applicationType from surfResApplType order by lower(applicationType)")  
@@ -290,7 +284,7 @@ def read_cultivar_DB_detailed(hybridname,cropname):
     tuple with complete information about a particular hybridname
     '''
     rlist =() # tuple   
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(cropname) > 0:   
             if cropname == "maize":
@@ -326,7 +320,7 @@ def read_experimentDB():
     tuple with experiment names
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("SELECT exid, name FROM experiment order by experiment")  
@@ -349,7 +343,7 @@ def getExpTreatByCrop(cropname):
     tuple with experiment names
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #need auto increment ID, nonnull
         c1 = c.execute("select e.name || '/' || t.name as expTreat from experiment e, treatment t where t_exid=exid and e.crop = ? order by lower(e.name), lower(t.name)",[cropname])  
@@ -372,7 +366,7 @@ def getExpTreatByCropWeatherDate(cropname,stationtype,weatherID):
     tuple with experiment names
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         # Find the date range for the weatherID data
         record_tuple = (stationtype,weatherID)
@@ -404,7 +398,7 @@ def read_experimentDB_id(cropname, experimentname):
     experiment id
     '''
     rlist =None  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         record_tuple =(cropname,experimentname)
         if len(cropname) > 0 and len(experimentname) > 0:
@@ -426,7 +420,7 @@ def read_operationsDB_id(o_t_exid):
     tuple listing all operations with full detail.
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if isinstance(o_t_exid,int):
             c2 = c.execute("SELECT opID, name, odate FROM operations where o_t_exid = ?", (o_t_exid,))
@@ -448,7 +442,7 @@ def getPlantDensity(o_t_exid):
     plant density
     '''
     rlist = ""  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if isinstance(o_t_exid,int):
             c2 = c.execute("SELECT pop FROM initCondOp where opID = (select opID from operations where \
@@ -471,7 +465,7 @@ def read_treatmentDB_id(exid,treatmentname):
     tid = treatment id
     '''
     rlist =None
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         treatmentname2 = treatmentname+'%'
         record_tuple =(exid,treatmentname2)
@@ -494,7 +488,7 @@ def check_and_update_experimentDB(item,cropname):
   Output:
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(item) > 0:
             c1 = c.execute("SELECT exid, name FROM experiment where name = '%s' and crop = '%s';" %(''.join(item),''.join(cropname)))  
@@ -515,7 +509,7 @@ def check_and_delete_soilDB(soilname):
     soilname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         id = 0
         c.execute("Select id, o_gridratio_id FROM soil where soilname =?",[soilname])
@@ -541,7 +535,7 @@ def delete_soilDB(soilname):
     soilname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         id = 0
         c.execute("Select id, o_gridratio_id FROM soil where soilname =?",[soilname])
@@ -567,7 +561,7 @@ def check_and_delete_experimentDB(experimentname,cropname):
   Output:
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         record_tuple = (experimentname,cropname)     
         if len(experimentname) > 0:
@@ -597,7 +591,7 @@ def check_and_delete_treatmentDB(treatmentname, experimentname ,cropname):
     cropname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT exid, name FROM experiment where name = '%s' and crop = '%s';" %(''.join(experimentname),''.join(cropname)))  
         c1_row = c1.fetchone()
@@ -628,7 +622,7 @@ def isSiteOnPastruns(site):
   Output:
     true/false
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1row = c.execute("select count(id) from pastruns where site = ?",(site,))    
         c1_row = c1row.fetchone()
@@ -661,7 +655,7 @@ def update_pastrunsDB(rotationID,site,managementname,weather,stationtype,soilnam
     pastrun id
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         odate =  datetime.now()
 
@@ -688,7 +682,7 @@ def delete_pastrunsDB(id,cropname):
     cropname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         query = "delete from pastruns where id=" + id
         c.execute(query)    
@@ -712,7 +706,7 @@ def delete_pastrunsDB_rotationID(rotationID,run_dir,cropname):
     id
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         # Find which runs belong to this rotationID
         query = "select id from pastruns where rotationID = " + str(rotationID)
@@ -737,7 +731,7 @@ def extract_pastrunsidDB(id):
     Tuple with complete pastruns information.
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if id == 0:
             query = 'select id, rotationID, site, soil, stationtype, weather, treatment, startyear, endyear, waterstress, \
@@ -761,7 +755,7 @@ def getNextRotationID():
   Output:
     rotationID
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1=c.execute("select max(rotationID) from pastruns")
         c1_row = c1.fetchone()
@@ -783,7 +777,7 @@ def getTreatmentID(treatmentname, experimentname, cropname):
   Output:
     treatmentID
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #print("cropname=",cropname)
         record_tuple =(treatmentname,experimentname,cropname)
@@ -805,7 +799,7 @@ def check_and_update_treatmentDB(treatmentname, experimentname, cropname):
     cropname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     record_tuple =(treatmentname,experimentname,cropname)
     if c:
         #print("cropname=",cropname)
@@ -887,7 +881,7 @@ def copy_treatmentDB(treatmentname, experimentname, cropname, newtreatmentname):
     newtreatmentname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         treatmentID = getTreatmentID(newtreatmentname,experimentname,cropname)
         # Treatment with this name does not exist, so we can insert it 
@@ -952,7 +946,7 @@ def check_and_delete_operationDB(op_id,op_name):
     op_name = operation name
   Output:
     '''   
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c.execute("delete from operations where opID=?",(op_id,))
         if(op_name == "Simulation Start"):
@@ -997,7 +991,7 @@ def check_and_update_operationDB(op_id,treatmentname, experimentname, cropname, 
     #print("fertNut_record=",fertNut_record)
     #print("PGR_record=",PGR_record)
     #print("SR_record=",SR_record)
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         op_id = int(op_id)
         # If op_id=-10, it means it is a new operation record so we need to find treatment id and experiment id
@@ -1081,7 +1075,7 @@ def validate_date(o_t_exid,op_name,date):
     date
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         err_string = ""
         date = dt.strptime(date,"%m/%d/%Y")
@@ -1138,7 +1132,7 @@ def getme_date_of_first_operationDB(treatmentname, experimentname ,cropname):
     '''
     rlist =[]
    
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         search_str0 = treatmentname     
         search_str1 = experimentname 
@@ -1174,7 +1168,7 @@ def read_operation_timeDB2(operationname, treatmentname, experimentname ,cropnam
     operationname date info
     '''
     rtuple =() 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         record_tuple =(treatmentname,experimentname,cropname)
         check_str = re.sub(' ','',operationname)
@@ -1214,7 +1208,7 @@ def readOpDetails(operationid, operationName):
     tuple with operation info
     '''
     rlist = [] 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #search and extract            
         record_tuple = operationid, 
@@ -1259,7 +1253,7 @@ def read_treatmentDB(crop,experiment):
     return treatment name
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         record_tuple = (experiment, crop)
         c1 = c.execute("SELECT name FROM treatment where t_exid = (select exid from experiment where name = ? and crop = ?)",record_tuple)    
@@ -1281,7 +1275,7 @@ def read_operationsDB(crop,eitem,titem):
     Tuple with complete operation information sorted by date in ascending order
     '''
     rlist =[] # list
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(eitem) > 0:
             c1 = c.execute("SELECT name, odate, opID, DATE(year||'-'||month||'-'||day) as dt_frmtd \
@@ -1310,7 +1304,7 @@ def read_fertilizationClass():
     Fertilization list.
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT fertilizationClass from fertilizationClass order by fertilizationClass")
         c1_row = c1.fetchall()
@@ -1330,7 +1324,7 @@ def read_FaqDB(tabname,cropname):
     Tuple with FAQ information for a particular tab.
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if tabname == None:
             c1= c.execute("SELECT id, tabname, question, answer FROM Faq")            
@@ -1357,7 +1351,7 @@ def read_sitedetailsDB():
     Tuple with sitenames list.
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1= c.execute("SELECT id, sitename FROM sitedetails order by lower(sitename)")            
         c1_row = c1.fetchall()
@@ -1377,7 +1371,7 @@ def read_soilOMDB(soilname):
     Tuple with soil information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select rowid, Sand, Silt, Clay, BD, OM_pct, TH33, TH1500 FROM soil_long where o_sid = (SELECT id FROM soil \
@@ -1399,7 +1393,7 @@ def read_soilhydroDB(soilname):
     Tuple with soil information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select thr, ths, tha, th, Alfa, n, Ks, Kk, thk, BD, OM_pct, Sand, Silt FROM soil_long where o_sid = \
@@ -1420,7 +1414,7 @@ def insert_into_soillong(soilname,soilrow):
     soilrow = tuple with soil information to be ingested on soil_long table
   Output:
     '''  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT id FROM soil where soilname=?",(soilname,))
         c1_row = c1.fetchall()
@@ -1444,7 +1438,7 @@ def read_soillongDB(soilname):
   Output:
     '''  
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select Bottom_depth,OM_pct,NO3,NH4,HnNew,initType,Tmpr,Sand,Silt,Clay,BD,TH33,TH1500,thr,ths,tha,th,Alfa,n,Ks,\
@@ -1466,7 +1460,7 @@ def getSiteFromSoilname(soilname):
   Output:
     '''  
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("select sitename from soil so, sitedetails si where so.site_id = si.id and soilname=?",[soilname])
@@ -1487,7 +1481,7 @@ def read_soilshortDB(soilname):
     Tuple with soil information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select Bottom_depth,initType,OM_pct,NO3,NH4,HnNew,Tmpr,Sand,Silt,Clay,BD,TH33,TH1500,thr,ths,tha,th,Alfa,n,Ks,Kk,thk,CO2,O2 FROM soil_long \
@@ -1510,7 +1504,7 @@ def read_soiltextureDB(soilname):
     Tuple with soil information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select Sand,Silt,Clay FROM soil_long where o_sid = (SELECT id FROM soil where soilname = ? )",[soilname])
@@ -1530,7 +1524,7 @@ def read_gasDB():
     Tuple with gas information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1= c.execute("Select name,EPSI,bTort,Diffusion_Coeff FROM gas order by id")
         c1row = c1.fetchall()
@@ -1551,7 +1545,7 @@ def read_soilnitrogenDB(soilname):
     Tuple with soil information
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select kh,kL,km,kn,kd,fe,fh,r0,rL,rm,fa,nq,cs FROM soil_long where o_sid = (SELECT id FROM soil where \
@@ -1573,7 +1567,7 @@ def read_soluteDB(id=1): #
     Tuple with solute information
     '''
     rtuple = ()
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if isinstance(id, int):
             c1= c.execute("Select name,EPSI,IUPW,CourMax,Diffusion_Coeff FROM solute where id = ? ",[id])
@@ -1593,7 +1587,7 @@ def read_dispersivityDB(texture): #
     Tuple with dispersivity information
     '''
     rtuple = ()
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if texture != "":
             query = "Select alpha FROM dispersivity where texturecl like '%" + texture + "%'"
@@ -1614,7 +1608,7 @@ def read_soillongDB_maxdepth(soilname):
     Tuple with max Bottom_depth
     '''
     rlist = 0 #[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select max(Bottom_depth) FROM soil_long where o_sid = (SELECT id FROM soil where soilname = ? )",[soilname])
@@ -1632,7 +1626,7 @@ def delete_soillong(soilname):
     soilname
   Output:
     '''  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1= c.execute("Select o_sid, id from soil_long where o_sid = (Select id FROM soil where soilname =? ORDER by id ASC)",[soilname])
         c1row = c1.fetchall()  
@@ -1652,7 +1646,7 @@ def insert_soilgridratioDB(soilgrid_tuple):
   Output:
     next_gridratio_id
     '''  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #find what would be the id for next entry inside the gridratio table    
         c1= c.execute("Select max(gridratio_id) FROM gridratio")
@@ -1676,7 +1670,7 @@ def updateBottomBC(soilname,bottomBCVal):
     bottomBCVal
   Output:
     '''  
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT o_gridratio_id FROM soil where soilname=?",(soilname,))
         c1_row = c1.fetchone()
@@ -1698,7 +1692,7 @@ def check_soilDB(soilname,site_id):
     id = soil id
     '''  
     rlist = []   
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         soiltuple = (soilname,site_id)
         c1= c.execute("SELECT id FROM soil where soilname=? and site_id=?",soiltuple)
@@ -1725,7 +1719,7 @@ def check_and_insert_soilDB(soilname,site_id,gridratio_id):
     ###if rlist !=0:
     #print("rlist=",rlist)
     if rlist == []:
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
         if c:
             c1= c.execute("insert into soil (soilname, site_id, o_gridratio_id) values (?,?,?)",soiltuple)
             conn.commit()        
@@ -1743,7 +1737,7 @@ def read_soilDB():
     Tuple with soil id and name
     '''  
     rlist = [] #list
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT id, soilname FROM soil order by lower(soilname)")      
         c1_row = c1.fetchall()
@@ -1764,7 +1758,7 @@ def read_soilgridratioDB(soilname):
     Tuple with gridratio information 
     '''  
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(soilname) > 0:
             c1= c.execute("Select SR1,SR2,IR1,IR2,PlantingDepth,XLimitRoot,BottomBC,GasBCTop,GasBCBottom FROM gridratio where gridratio_id = (SELECT \
@@ -1785,7 +1779,7 @@ def read_biologydefault():
     Tuple with biologydefault information
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT dthH, dthL, es, Th_m, tb, QT, dThD, Th_d FROM biologydefault")          
         c1_row = c1.fetchall()
@@ -1805,7 +1799,7 @@ def read_experiment(item):
     Tuple with experiment name and id list
     '''
     rlist =[]
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         search_str = item     
         if len(search_str) > 0:
@@ -1828,7 +1822,7 @@ def getMulchGeo(nutrient):
     Tuple with mulch geo information
     '''
     rlist =() 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("select minHoriSize,diffusionRestriction,longWaveRadiationCtrl,decompositionCtrl,deltaRShort,deltaRLong, \
                         omega,epsilonMulch,alphaMulch,maxStepInPicardIteration,toleranceHead,rhoMulch,poreSpace,maxPondingDepth \
@@ -1850,7 +1844,7 @@ def getMulchDecomp(nutrient):
     Tuple with mulch decomp information
     '''
     rlist =() 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("select contactFraction,alphaFeeding,carbMass,cellMass,lignMass,carbNMass, \
                         cellNMass,lignNMass,carbDecomp,cellDecomp,lignDecomp from mulchDecomp where \
@@ -1872,7 +1866,7 @@ def read_weather_id_forstationtype(stationtype):
     Tuple with weather id list
     '''
     rlist = []
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT distinct weather_id FROM weather_data where stationtype = ? order by lower(weather_id)",(stationtype,))
         c1_row = c1.fetchall()
@@ -1893,7 +1887,7 @@ def read_weatheryears_fromtreatment(treatment):
     Tuple with operation date list
     '''
     rlist = [] # list {} # dictionary
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         experiment_name = treatment.split('/')[1]
         treatment_name = treatment.split('/')[2]
@@ -1918,7 +1912,7 @@ def read_weatherdate_fromtreatment(treatment):
     Tuple with operation date list
     '''
     rlist = [] 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         crop_name = treatment.split('/')[0]
         experiment_name = treatment.split('/')[1]
@@ -1945,7 +1939,7 @@ def read_weather_metaDBforsite(site):
     Tuple with id and stationtype list
     '''
     rlist ={} # dictionary
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if len(site) > 0: 
             c1 = c.execute("SELECT id, stationtype FROM weather_meta where site=? order by lower(stationtype)",[site])  
@@ -1966,7 +1960,7 @@ def read_weather_metaDB():
     Tuple with id and stationtype list
     '''
     rlist ={}
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         c1 = c.execute("SELECT id, stationtype FROM weather_meta order by lower(stationtype)")  
         c1_row = c1.fetchall()
@@ -1987,7 +1981,7 @@ def read_weatherlongDB(stationtype):
     Tuple with complete weather_meta information
     '''
     rlist =() 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         #print("Debug: stationtype=",stationtype)
         c1 = c.execute("Select rlat,rlon,Bsolar,Btemp,Atemp,BWInd,BIR,AvgWind,AvgRainRate,ChemCOnc,AvgCO2,stationtype,site FROM weather_meta wm, sitedetails s \
@@ -2008,7 +2002,7 @@ def insert_update_weather(record_tuple,buttontext):
     buttontext =  save or update
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if buttontext.find('SaveAs')==0:
             c.execute("insert into weather_meta (Bsolar,Btemp,Atemp,BWInd,BIR,AvgWind,AvgRainRate,ChemCOnc,AvgCO2,site,stationtype) values (?,?,?,?,?,?,?,?,?,?,?)",record_tuple) 
@@ -2028,7 +2022,7 @@ def delete_weather(site,stationtype):
     stationtype
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         weathertuple = (stationtype,site)
         c.execute("delete from weather_meta where stationtype=? and site=?",weathertuple) 
@@ -2048,7 +2042,7 @@ def delete_cultivar(crop,cultivarname):
     delete_flag = messageUserDelete("Are you sure you want to delete this record?")
 
     if delete_flag:
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
         if c:
             if crop == "maize":
                 c.execute("delete from cultivar_maize where hybridname=?",[cultivarname])
@@ -2072,7 +2066,7 @@ def insertUpdateCultivarMaize(record_tuple,buttontext):
     buttontext = Save/update
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if buttontext == "SaveAs":
             qstatus = c.execute("insert into cultivar_maize (hybridname,juvenileleaves,DaylengthSensitive,Rmax_LTAR,Rmax_LTIR,PhyllFrmTassel,StayGreen,\
@@ -2097,7 +2091,7 @@ def insertUpdateCultivarPotato(record_tuple,buttontext):
     buttontext = Save/update
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if buttontext == "SaveAs":
             qstatus = c.execute("insert into cultivar_potato (hybridname,A1,A6,A8,A9,A10,G1,G2,G3,G4,RRRM,RRRY,RVRL,ALPM,ALPY,RTWL,\
@@ -2122,7 +2116,7 @@ def insertUpdateCultivarSoybean(record_tuple,buttontext):
     buttontext = Save/update
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if buttontext == "SaveAs":
             qstatus = c.execute("insert into cultivar_soybean (hybridname,matGrp,seedLb,fill,v1,v2,v3,r1,r2,r3,r4,r5,r6,\
@@ -2152,7 +2146,7 @@ def insertUpdateCultivarCotton(record_tuple,buttontext):
     buttontext = Save/update
   Output:
     '''
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         if buttontext == "SaveAs":
             qstatus = c.execute("insert into cultivar_cotton (hybridname,calbrt11,calbrt12,calbrt13,calbrt15,calbrt16,\
@@ -2183,7 +2177,7 @@ def extract_cropOutputData(tablename,simulationname):
   Output:
     dataframe with output information
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         query = "select * from " + tablename + " where " + tablename + "_id=" + simulationname
         if tablename == "g01_potato":
@@ -2204,7 +2198,7 @@ def delete_cropOutputSim(id,crop):
     crop
   Output:
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         #print("crop=",crop)
         if crop == "maize":
@@ -2239,7 +2233,7 @@ def readSoilInfoCropOutputDB(crop,tablename,simulationname):
   Output:
     dataframe with output information
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         if tablename == "g03_maize" or tablename == "g03_fallow" or tablename == "g03_soybean" or tablename  == "g03_potato" or tablename == "g03_cotton":
             query = "select Date_Time, X, Y, hNew, abs(hNew) as absHNew, thNew, hNew/abs(hNew) as mult, NO3N, NH4N, Temp from " + tablename + " where " + tablename + "_id=" + simulationname
@@ -2319,7 +2313,7 @@ def ingestOutputFile(table_name,g_name,simulationname):
     simulationname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         id = table_name + "_id"
         g_df = pd.read_csv(g_name,skipinitialspace=True,index_col=False)
@@ -2374,7 +2368,7 @@ def ingestGeometryFile(grdFile,g03File,simulation):
     simulationname
   Output:
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         # First read the .grd file
         # Find line where this string is located, we don't want to read anything from this line on.
@@ -2417,7 +2411,7 @@ def readGeometrySimID(simulationname):
   Output:
     dataframe with output information
     '''
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         query = "select X, Y, Layer, Area from geometry where simID = " + simulationname
         df = pd.read_sql_query(query,conn)
@@ -2436,7 +2430,7 @@ def getMaizeDateByDev(sim_id,maizePhase):
     '''
     rlist = "" 
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         maizetuple = (sim_id,maizePhase)
         c2 = c.execute("select min(Date_Time) from g01_maize where g01_maize_id=? and Note=?",maizetuple)
@@ -2462,7 +2456,7 @@ def getMaxDateG01BySimID(crop, sim_id):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         query = "select max(Date_Time) from g01_" + crop + " where g01_" + crop + "_id=" + sim_id
         c2 = c.execute(query)
@@ -2484,7 +2478,7 @@ def getTuberInitDate(sim_id):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c2 = c.execute("select min(Date_Time) from g01_potato where (tuberDM > 0 or Stage > 2.01) and g01_potato_id=?",[sim_id])
         c2_row = c2.fetchone()
@@ -2508,7 +2502,7 @@ def getMaturityDate(sim_id):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c2 = c.execute("select min(Date_Time) from g01_potato where Stage > 10 and g01_potato_id=?",[sim_id])
         c2_row = c2.fetchone()
@@ -2535,7 +2529,7 @@ def getPotatoAgronomicData(sim_id, date):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         harvestDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
         querytuple = (sim_id,harvestDate+'%')
@@ -2562,7 +2556,7 @@ def getMaizeAgronomicData(sim_id, date):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         harvestDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
         querytuple = (sim_id,harvestDate+'%')
@@ -2589,7 +2583,7 @@ def getCottonAgronomicData(sim_id):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         querytuple = (sim_id,)
 
@@ -2613,7 +2607,7 @@ def getCottonDevDate(sim_id, stage):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         query = "select max(Date_time), Note from g01_cotton where Note like '" + stage + "%' and g01_cotton_id=" + sim_id
 
@@ -2640,7 +2634,7 @@ def getSoybeanDevDate(sim_id, rstage):
     '''
     rlist = None # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         querytuple = (rstage,sim_id)
 
@@ -2669,7 +2663,7 @@ def getSoybeanAgronomicData(sim_id, date):
     '''
     rlist = None
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         harvestDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
         querytuple = (sim_id,harvestDate+'%')
@@ -2706,7 +2700,7 @@ def getEnvironmentalData(sim_id, date, crop):
     '''
     rlist = None 
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         if crop == "maize" or crop == "soybean" or crop == "potato":
              maturityDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
@@ -2740,7 +2734,7 @@ def getNitrogenUptake(sim_id, date, crop):
     '''
     rlist = None  
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         harvestDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
         querytuple = (sim_id,harvestDate+'%')
@@ -2772,7 +2766,7 @@ def getNitroWaterStressDates(sim_id):
 
     rlist = [] # list   
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c1 = c.execute("select distinct Date_Time, PSIEffect_leaf, NEffect_leaf, PSIEffect_Pn, NEffect_Pn from plantStress_potato where \
                         (PSIEffect_leaf <= 0.75 or NEffect_leaf <= 0.75 or PSIEffect_Pn <= 0.75 or NEffect_Pn <= 0.75) and \
@@ -2802,7 +2796,7 @@ def getMaizePlantStressDates(sim_id):
 
     rlist = []
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c1 = c.execute("select distinct Date_Time, waterstress, N_stress, Shade_Stress, PotentialArea from plantStress_maize where \
                         (waterstress >= 0.25 or N_stress >= 0.25 or Shade_Stress >= 0.25 or PotentialArea >= 0.25) and \
@@ -2832,7 +2826,7 @@ def getSoybeanPlantStressDates(sim_id):
 
     rlist = [] 
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c1 = c.execute("select distinct ps.Date_Time, ps.wstress, ps.Nstress, ps.Cstress, g1.'Limit' from plantStress_soybean ps, \
                         g01_soybean g1 where (ps.wstress <= 0.75 or ps.Nstress <= 0.75 or ps.Cstress <= 0.75) and \
@@ -2863,7 +2857,7 @@ def getCottonPlantStressDates(sim_id):
     '''
     rlist = []
 
-    conn, c = openDB(dbDir + '\\cropOutput.db')
+    conn, c = openDB('cropOutput.db')
     if c:
         c1 = c.execute("select distinct Date_Time, W_stress, N_Veg_Str, N_Fru_Str, N_Rt_Str, C_Stress from plantStress_cotton where \
                         (W_stress<0.8 or N_Veg_Str<0.8 or N_Fru_Str<0.8 or N_Rt_Str<0.8 or C_Stress<0.8) and \

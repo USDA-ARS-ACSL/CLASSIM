@@ -43,6 +43,7 @@
     </Compile>
     <Compile Include="CustomTool\genDictOutput.py" />
     <Compile Include="CustomTool\generateModelInputFiles.py" />
+    <Compile Include="CustomTool\getClassimDir.py" />
     <Compile Include="CustomTool\UI.py" />
     <Compile Include="CustomTool\__init__.py">
       <SubType>Code</SubType>

@@ -6,16 +6,12 @@ from PyQt5.QtCore import Qt
 from DatabaseSys.Databasesupport import *
 from pprint import pprint
 
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-dbDir = os.path.join(gparent_dir,'classim')
-
 class createManRepWindow(QWidget):
     """
     This window is a QWidget.
     """
     def __init__(self):
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
         if c:
             super().__init__()
             self.setGeometry(0,0,520,400)

@@ -9,7 +9,8 @@ from datetime import date, timedelta, datetime
 from time import mktime
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
-                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QFrame, QFormLayout, QScrollArea, QCheckBox, QGridLayout, QGroupBox
+                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QFrame, QFormLayout, QScrollArea, QCheckBox, \
+                            QGridLayout, QGroupBox, QHeaderView
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
@@ -25,25 +26,15 @@ register_matplotlib_converters()
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 
-global app_dir
-global index
+global classimDir
+global runDir
 
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(app_dir):
-    os.makedirs(app_dir)
-
-run_dir = os.path.join(app_dir,'run')
-if not os.path.exists(run_dir):
-    os.makedirs(run_dir)
+classimDir = getClassimDir()
+runDir = os.path.join(classimDir,'run')
 
 '''
-Contains 2 classes.
-1). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the tab classes. 
-    In future,we can centralize it. Lower priority.
-
-2). Class Output_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. It handles 
+Contains 1 class.
+1). Class Output_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. It handles 
     all the features of OUTPUT Tab on the interface. It has signal slot mechanism. It does interact with the 
     DatabaseSys\Databasesupport.py for all the databases related task.
     Pretty generic and self explanotory methods. 
@@ -59,33 +50,6 @@ Contains 2 classes.
 '''
 
 
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
-
-class TimeAxisItem(pg.AxisItem):
-    def tickStrings(self, values, scale, spacing):
-        return [date.fromtimestamp(value).strftime('%m/%d') for value in values]
-
-
-#this is widget of type 1. It would be added to as a tab
 class RotOutput_Widget(QWidget):
     # Add a signal    
     def __init__(self):
@@ -95,20 +59,17 @@ class RotOutput_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setAccessibleName("rotation_output")
-        self.setFont(QtGui.QFont("Calibri",10)) 
+        self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("output")              
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
-        self.status2 = QTextEdit("Status.")        
-        self.status2.setReadOnly(True) 
-        self.status2.setVisible(False)
-        self.status2.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
+        self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit("Choose rotation by checking from the list box.")                
         self.tab_summary.setReadOnly(True)        
@@ -601,7 +562,7 @@ class RotOutput_Widget(QWidget):
             self.rotationID = self.table2.simGrp.buttons()[self.rowNumChecked].text()
             self.cropname = self.table2.item(self.rowNumChecked,6).text().split('/')[0]   
 
-            delete_pastrunsDB_rotationID(self.rotationID,run_dir,self.cropname)
+            delete_pastrunsDB_rotationID(self.rotationID,runDir,self.cropname)
             self.populate()
 
 
@@ -830,7 +791,7 @@ class RotOutput_Widget(QWidget):
                     self.simSummaryAgroData = "<i>Simulation Agronomic Data at <br>" + HarvestDate + " (harvest date)</i>"
                     self.simSummaryAgroData += "<br><i>Yield: </i>" + '{:3.2f}'.format(agroDataTuple[0]*plantDensity*10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Total biomass: </i>" +  '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
-                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]*10) + " kg/ha"
+                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]/10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Transpiration: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity/1000) + " mm"
                 elif self.cropArr[runNum] == "maize":
                     if(MaturityDate != "N/A"):
@@ -909,7 +870,7 @@ class RotOutput_Widget(QWidget):
         # Creates dictionaries based on crop type
         self.finalVarDescDict, self.finalVarDescUnitDict, self.finalVarFuncDict = genDictOutput(self.cropArr,"plant",1)
 
-        dateAxis = TimeAxisItem(orientation='bottom')
+        dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.plantGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
         self.plantTab.groupBox = QGroupBox("Select parameter to plot")
         self.leftBoxLayout = QGridLayout()
@@ -945,7 +906,7 @@ class RotOutput_Widget(QWidget):
         # Creates dictionaries based on crop type
         self.finalSoilCNVarDescDict, self.finalSoilCNVarDescUnitDict, self.finalSoilCNVarFuncDict = genDictOutput(self.cropArr,"soilCN",1)
 
-        dateAxis = TimeAxisItem(orientation='bottom')
+        dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.soilCNWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
         self.soilCNTab.groupBox = QGroupBox("Select parameter to plot")
         self.leftBoxLayout = QGridLayout()
@@ -1022,22 +983,22 @@ class RotOutput_Widget(QWidget):
 
         self.SoilTSGraphWidget = pg.GraphicsLayoutWidget()
 
-        dateAxisTotWatProf = TimeAxisItem(orientation='bottom')
+        dateAxisTotWatProf = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.totWaterProfilePlot = self.SoilTSGraphWidget.addPlot(row=0,col=0,title="Total Water for Entire Profile (mm)",axisItems = {'bottom':dateAxisTotWatProf,'unitPrefix':None})
 
-        dateAxisTotWatLayer = TimeAxisItem(orientation='bottom')
+        dateAxisTotWatLayer = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.totWaterLayerPlot = self.SoilTSGraphWidget.addPlot(row=0,col=1,title="Total Water by Layer (mm)",axisItems = {'bottom':dateAxisTotWatLayer,'unitPrefix':None})
 
-        dateAxisWaterContLayer = TimeAxisItem(orientation='bottom')
+        dateAxisWaterContLayer = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.waterContentLayerPlot = self.SoilTSGraphWidget.addPlot(row=0,col=2,title="Water Content by Layer (cm3/cm3)",axisItems = {'bottom':dateAxisWaterContLayer,'unitPrefix':None})
 
-        dateAxisNNO3ConcProf = TimeAxisItem(orientation='bottom')
+        dateAxisNNO3ConcProf = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.NNO3ConcProfilePlot = self.SoilTSGraphWidget.addPlot(row=1,col=0,title="Total NNO3 as Nitrogen for Entire Profile (kg/ha)",axisItems = {'bottom':dateAxisNNO3ConcProf,'unitPrefix':None})
 
-        dateAxisNNO3ConcLayer = TimeAxisItem(orientation='bottom')
+        dateAxisNNO3ConcLayer = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.NNO3ConcLayerPlot = self.SoilTSGraphWidget.addPlot(row=1,col=1,title="Total NNO3 as Nitrogen by Layer (kg/ha)",axisItems = {'bottom':dateAxisNNO3ConcLayer,'unitPrefix':None})
 
-        dateAxisTemp = TimeAxisItem(orientation='bottom')
+        dateAxisTemp = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.tempPlot = self.SoilTSGraphWidget.addPlot(row=1,col=2,title="Temperature by Layer (oC)",axisItems = {'bottom':dateAxisTemp,'unitPrefix':None})
        
         self.soilTSTab.mainlayout = QHBoxLayout()
@@ -1082,7 +1043,7 @@ class RotOutput_Widget(QWidget):
         t3['Y'] = maxY-t3['Y']
 
         # Need to get layers from soil_long table
-        connCrop, cCrop = openDB(dbDir + '\\crop.db')
+        connCrop, cCrop = openDB('crop.db')
         querySL = "select Bottom_depth as Y from soil_long where o_sid = (select id from soil where soilname = '" + self.soilname + "')"
         tSL = pd.read_sql_query(querySL,connCrop)
         tSL = tSL.reset_index()
@@ -1275,7 +1236,7 @@ class RotOutput_Widget(QWidget):
         # Creates dictionaries based on crop type
         self.varSurfChaDescDict, self.varSurfChaDescUnitDict, self.varSurfChaFuncDict = genDictOutput(self.cropArr,"surfCha",1)
 
-        dateAxis = TimeAxisItem(orientation='bottom')
+        dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.surfChaGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
  
         self.surfChaTab.groupBox = QGroupBox("Select parameter to plot")

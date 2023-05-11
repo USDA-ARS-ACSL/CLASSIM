@@ -5,7 +5,8 @@ import pandas as pd
 import sys
 import re
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
-                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QMenu, QCheckBox, QGridLayout, QGroupBox
+                            QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QMenu, QCheckBox, QGridLayout, QGroupBox, \
+                            QHeaderView
 from PyQt5.QtCore import QFile, QTextStream, pyqtSignal, QCoreApplication
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -15,80 +16,35 @@ from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from subprocess import Popen
 
-global runpath1
-global app_dir
-global repository_dir
+global classimDir
+global runDir
+global storeDir
 
-#----------------------
-# at some point in the future we will have to figure out a solution of alternative documents folders
-#import  winreg as wr
-#Registry = wr.ConnectRegistry(None, wr.HKEY_CURRENT_USER) # get a handle to the HKEY_CURRENT_USER branch in registry
-#RawKey = wr.OpenKey(Registry, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders") # get a handle to the key we need
-#newPath=wr.QueryValueEx(RawKey,r"Personal")  # retrieve a tuple with the information for the value of 'Personal'
-#gparent_dir=newPath[0]  #0 is the directory name
-# this is gparent_dir
-#----------------
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(app_dir):
-    os.makedirs(app_dir)
-
-    print(os.listdir())
-
-global db
-db = app_dir+'\\crop.db'
+classimDir = getClassimDir()
+runDir = os.path.join(classimDir,'run')
+storeDir = os.path.join(runDir,'store')
 
 # Create soil executable
-createsoilexe = app_dir+'\\createsoilfiles.exe'
+createsoilexe = classimDir+'\\createsoilfiles.exe'
 
 # maize model executables
-maizsimexe = app_dir+'\\2dmaizsim.exe'
+maizsimexe = classimDir+'\\2dmaizsim.exe'
 
 # Potato model executable
-spudsimexe = app_dir+'\\2dspudsim.exe'
+spudsimexe = classimDir+'\\2dspudsim.exe'
 
 # Soybean model executable
-glycimexe = app_dir+'\\2dglycim.exe'
+glycimexe = classimDir+'\\2dglycim.exe'
 
 # Cotton model executable
-gossymexe = app_dir+'\\2dgossym.exe'
+gossymexe = classimDir+'\\2dgossym.exe'
 
 # Flag to tell script if output files should be removed, the default is 1 so they are removed
 remOutputFilesFlag = 0
 
-run_dir = os.path.join(app_dir,'run')
-if not os.path.exists(run_dir):
-    os.makedirs(run_dir)
-
-runpath1= run_dir
-repository_dir = os.path.join(runpath1,'store')
-
 ## This should always be there
-if not os.path.exists(repository_dir):
-    print('RotationTab Error: Missing repository_dir')
-
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-        #print("text=", text)
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
+if not os.path.exists(storeDir):
+    print('RotationTab Error: Missing storeDir')
 
 class Seasonal_Widget(QWidget):
     # Add a signal
@@ -101,16 +57,16 @@ class Seasonal_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10)) 
+        self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
-        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
-        self.importfaq("general")              
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+        self.importfaq("seasonal")              
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit("Pick individual entries to create your simulation.  You have the ability \
@@ -702,7 +658,7 @@ start your simulation.")
         """
         this will create input files, and execute both exe's
         """
-        field_path = os.path.join(runpath1,str(simulation_name[0]))
+        field_path = os.path.join(runDir,str(simulation_name[0]))
         if not os.path.exists(field_path):
             os.makedirs(field_path)
 
@@ -727,13 +683,13 @@ start your simulation.")
         lrainVar = self.tablebasket.cellWidget(irow,11).currentText()
         lCO2Var = self.tablebasket.cellWidget(irow,12).currentText()
 
-        #copy water.dat file from store to runpath1
-        src_file = repository_dir+'\\Water.DAT'
+        #copy water.dat file from store to runDir
+        src_file = storeDir+'\\Water.DAT'
         dest_file = field_path+'\\Water.DAT'
         copyFile(src_file,dest_file)
 
-        #copy water.dat file from store to runpath1
-        src_file= repository_dir+'\\WaterBound.DAT'
+        #copy water.dat file from store to runDir
+        src_file= storeDir+'\\WaterBound.DAT'
         dest_file= field_path+'\\WatMovParam.dat'
         copyFile(src_file,dest_file)
 
@@ -745,11 +701,11 @@ start your simulation.")
         if cultivar != "fallow":
             WriteCropVariety(lcrop,cultivar,field_name,field_path)
         else:
-            src_file= repository_dir+'\\fallow.var'
+            src_file= storeDir+'\\fallow.var'
             dest_file= field_path+'\\fallow.var'
             copyFile(src_file,dest_file)
         WriteIrrigationFile(field_name,field_path)
-        hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_name,field_path,ltempVar,lrainVar,lCO2Var)
+        hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_path,ltempVar,lrainVar,lCO2Var)
         WriteSoluteFile(lsoilname,field_path)
         WriteGasFile(field_path)
         hourlyFlag = 1 if self.step_hourly.isChecked() else 0

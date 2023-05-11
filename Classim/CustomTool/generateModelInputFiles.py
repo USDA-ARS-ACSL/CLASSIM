@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from CustomTool.custom1 import *
 from CustomTool.UI import *
+from CustomTool.getClassimDir import *
 from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
@@ -14,30 +15,17 @@ from subprocess import Popen
 from PyQt5.QtCore import QFile, QTextStream, QIODevice
 
 
-global runpath1
-global app_dir
-global repository_dir
+global classimDir
+global runDir
+global storeDir
 
-gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(app_dir):
-    os.makedirs(app_dir)
-
-global db
-db = app_dir+'\\crop.db'
-
-run_dir = os.path.join(app_dir,'run')
-if not os.path.exists(run_dir):
-    os.makedirs(run_dir)
-
-runpath1= run_dir
-repository_dir = os.path.join(runpath1,'store')
-
+classimDir = getClassimDir()
+runDir = os.path.join(classimDir,'run')
+storeDir = os.path.join(runDir,'store')
 
 ## This should always be there
-if not os.path.exists(repository_dir):
-    print('RotationTab Error: Missing repository_dir')
+if not os.path.exists(storeDir):
+    print('RotationTab Error: Missing store folder.')
 
 
 def copyFile(src,dest):
@@ -329,11 +317,11 @@ PARM(12) PARM(13) PARM(14) PARM(15) PARM(16) PARM(17) PARM(18) PARM(19) PARM(20)
     fh.close()
             
 
-def WriteWeather(experiment,treatmentname,stationtype,weather,field_name,field_path,tempVar,rainVar,CO2Var):
+def WriteWeather(experiment,treatmentname,stationtype,weather,field_path,tempVar,rainVar,CO2Var):
     # First create .wea file that stores the daily/hourly weather information for the simulation period
     filename = field_path+'\\'+stationtype + '.wea'   
     # getting weather data from sqlite
-    conn, c = openDB(db)
+    conn, c = openDB('crop.db')
 
     # get date range for treatment
     op_date_query = "select distinct odate from operations o, treatment t, experiment e where t.tid = o.o_t_exid and e.exid=t.t_exid and e.name=? and t.name = ?"
@@ -658,7 +646,6 @@ def WriteMulchGeo(field_path,nutrient):
     mulchDecompList = getMulchDecomp(nutrient)   
 
     CODEC="UTF-8"        
-    #field_path = os.path.join(runpath1,field_name)
     filename = field_path+'\\MulchGeo.mul'        
     fh = QFile(filename)
 

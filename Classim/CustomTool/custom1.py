@@ -6,8 +6,6 @@ from TabbedDialog import *
 from DatabaseSys.Databasesupport import *
 from PyQt5.QtCore import Qt, QModelIndex, QVariant, QAbstractItemModel
 
-# add all the custom listbox, signal and slot cases here
-username=os.environ['username']
 KEY,NODE = range(2)
 
 @contextmanager

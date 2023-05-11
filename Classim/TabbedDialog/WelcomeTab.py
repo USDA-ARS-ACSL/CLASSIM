@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import QTreeWidgetItem, QTabWidget, QLabel, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QTreeWidgetItem, QTabWidget, QLabel, QHBoxLayout, QVBoxLayout, QHeaderView
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal
 from CustomTool.custom1 import *
@@ -10,32 +10,11 @@ from TabbedDialog.tableWithSignalSlot import *
 from collections import deque
 from pathlib import Path
 
-global runpath1
-global app_dir
-global repository_dir
-
 gusername = os.environ['username'] #windows. What about linux
-gparent_dir = 'C:\\Users\\'+gusername +'\\Documents'
-app_dir = os.path.join(gparent_dir,'classim')
-if not os.path.exists(app_dir):
-    os.makedirs(app_dir)
-
-run_dir = os.path.join(app_dir,'run')
-if not os.path.exists(run_dir):
-    os.makedirs(run_dir)
-
-runpath1 = run_dir
-repository_dir = os.path.join(runpath1,'store')
-
-## This should always be there
-if not os.path.exists(repository_dir):
-    print('RotationTab Error: Missing repository_dir')
 
 '''
-Contains 2 classes.
-1). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the tab classes. In future,we can centralize it. Lower priority.
-
-2). Class Welcome_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. It is acting like a index page of a book. It handles all the features of WELCOME Tab on the interface.
+Contains 1 class
+1). Class Welcome_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget. It is acting like a index page of a book. It handles all the features of WELCOME Tab on the interface.
     It has signal slot mechanism. It does interact with the DatabaseSys\Databasesupport.py for all the databases related task.
     Pretty generic and self explanotory methods. 
     Refer baseline classes at http://pyqt.sourceforge.net/Docs/PyQt5/QtWidgets.html#PyQt5-QtWidgets
@@ -43,28 +22,6 @@ Contains 2 classes.
     Some of the GLOBALS defined above can be removed sequential after testing. 
     Check out the logic for images/icons.
 '''
-
-#this is widget of type 1. It would be added to as a tab
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
 
 class Welcome_Widget(QTabWidget):
     # Add a signal to notify parent tab that user has selected following tabindex#     
@@ -83,21 +40,22 @@ class Welcome_Widget(QTabWidget):
         self.faqtree.setGeometry(500,200, 300, 500)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))
+        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.importfaq("welcome")
-        self.faqtree.header().resizeSection(1,200)
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+
         
         self.mainlayout1 = QHBoxLayout()  
         self.welcomeglayout1 = QVBoxLayout()  
 
         # Read crop.db user version
-        conn, c = openDB(dbDir + '\\crop.db')
+        conn, c = openDB('crop.db')
         query = "pragma user_version"
         cropDB = pd.read_sql_query(query,conn)
         
         # Read cropOutput.db user version
-        conn, c = openDB(dbDir + '\\cropOutput.db')
+        conn, c = openDB('cropOutput.db')
         query = "pragma user_version"
         cropOutDB = pd.read_sql_query(query,conn)
 

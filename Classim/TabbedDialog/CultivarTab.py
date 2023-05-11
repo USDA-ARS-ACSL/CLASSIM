@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem, QWidget, QLabel, QHBoxLayout, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, \
-                            QSizePolicy, QRadioButton, QButtonGroup, QScrollArea, QGridLayout, QCheckBox
+                            QSizePolicy, QRadioButton, QButtonGroup, QScrollArea, QGridLayout, QCheckBox, QHeaderView
 from PyQt5.QtCore import pyqtSlot
 from CustomTool.custom1 import *
 from CustomTool.UI import *
@@ -11,11 +11,8 @@ from TabbedDialog.tableWithSignalSlot import *
 import re
 
 '''
-Contains 2 classes.
-1). Class ItemWordWrap is to assist the text wrap features. You will find this class at the top of all the
-    tab classes. In future,we can centralize it. Lower priority.
-
-2). Class Cultivar_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget.
+Contains 1 Class.
+1). Class Cultivar_Widget is derived from Qwidget. It is initialed and called by Tabs.py -> class Tabs_Widget.
     It handles all the features of Cultivar Tab on the interface.  It has signal slot mechanism. It 
     interact with the DatabaseSys\Databasesupport.py for all the databases related task.
     Pretty generic and self explanotory methods. 
@@ -25,26 +22,6 @@ Contains 2 classes.
     Left panel does the heavy lifting and interacts with user. 
     Right panel is mainly for frequently asked questions (FAQ) stored in sqlite table "Faq".
 '''
-class ItemWordWrap(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
-        QtWidgets.QStyledItemDelegate.__init__(self, parent)
-        self.parent = parent
-
-
-    def paint(self, painter, option, index):
-        text = index.model().data(index) 
-                
-        document = QtGui.QTextDocument() 
-        document.setHtml(text) 
-        
-        document.setTextWidth(option.rect.width())  #keeps text from spilling over into adjacent rect
-        index.model().setData(index, option.rect.width(), QtCore.Qt.UserRole+1)
-        painter.setPen(QtGui.QPen(Qt.blue))        
-        painter.save() 
-        painter.translate(option.rect.x(), option.rect.y())         
-        document.drawContents(painter)  #draw the document with the painter        
-        painter.restore() 
-
 
 #this is widget of type 1. It would be added to as a tab
 class Cultivar_Widget(QWidget):
@@ -58,12 +35,12 @@ class Cultivar_Widget(QWidget):
         self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
-        self.faqtree.setGeometry(500,200, 400, 300)
+        self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
         self.faqtree.setFont(QtGui.QFont("Calibri",10))        
-        self.faqtree.header().resizeSection(1,200)       
-        self.faqtree.setItemDelegate(ItemWordWrap(self.faqtree))
+        self.faqtree.header().setStretchLastSection(False)  
+        self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
 
         self.tab_summary = QTextEdit("")        
@@ -664,6 +641,11 @@ class Cultivar_Widget(QWidget):
             for key in cultivarlists:
                 self.cultivarcombo.addItem(cropname + ":" + str(key))   
             self.cultivarcombo.currentIndexChanged.connect(self.showcultivardetailscombo)
+
+            if self.helpcheckbox.isChecked():
+                self.importfaq("cultivar")              
+                self.faqtree.setVisible(True)
+
         return True
 
 
