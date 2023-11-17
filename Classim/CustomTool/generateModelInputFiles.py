@@ -39,7 +39,7 @@ def copyFile(src,dest):
 def WriteBiologydefault(field_name,field_path):
 #  writes to file: BiologyDefault.bio
     CODEC="UTF-8"        
-    filename = field_path+"\\BiologyDefault.bio"              
+    filename = os.path.join(field_path, "BiologyDefault.bio")            
     fh = QFile(filename)
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
         print("Could not open file")
@@ -60,10 +60,10 @@ def WriteBiologydefault(field_name,field_path):
     fh.close()
 
 
-def WriteIrrigationFile(field_name,field_path):
+def WriteDripIrrigationFile(field_name,field_path):
 ############### Write DRP file
      CODEC="UTF-8"        
-     filename = field_path+"\\"+field_name+".drp"
+     filename = "".join([os.path.join(field_path, field_name), ".drp"])
      fh = QFile(filename)
 
      if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -83,7 +83,7 @@ def WriteCropVariety(crop,cultivar,field_name,field_path):
     hybridparameters = read_cultivar_DB_detailed(hybridname,crop)
     CODEC="UTF-8"
 
-    filename = field_path+"\\"+hybridname+".var"
+    filename ="".join([os.path.join(field_path, hybridname), ".var"])
     fh = QFile(filename)
 
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -319,7 +319,7 @@ PARM(12) PARM(13) PARM(14) PARM(15) PARM(16) PARM(17) PARM(18) PARM(19) PARM(20)
 
 def WriteWeather(experiment,treatmentname,stationtype,weather,field_path,tempVar,rainVar,CO2Var):
     # First create .wea file that stores the daily/hourly weather information for the simulation period
-    filename = field_path+'\\'+stationtype + '.wea'   
+    filename = "".join([os.path.join(field_path, stationtype),'.wea'])
     # getting weather data from sqlite
     conn, c = openDB('crop.db')
 
@@ -350,6 +350,7 @@ the date range of your simulation, there are data missing for this simulation pe
     weather_length = df_weatherdata['date'].max() - df_weatherdata['date'].min()
     num_records = len(df_weatherdata)
     df_weatherdata['date'] = pd.to_datetime(df_weatherdata['date'],format='%Y-%m-%d')
+    weatherRoundDict = {"Radiation":2, "rain":2, "Wind":2, "rh":1, "CO2":1}
     if(num_records > (weather_length.days+1)):
         # header for hourly file
         df_weatherdata = df_weatherdata.drop(columns=['tmax','tmin'])
@@ -359,6 +360,7 @@ the date range of your simulation, there are data missing for this simulation pe
         # Sensitivity analyses temperature variance
         if tempVar != 0:
             df_weatherdata['temperature'] = df_weatherdata['temperature'] + float(tempVar)
+        weatherRoundDict['temperature'] = 1
     else:
         # header for daily file
         df_weatherdata = df_weatherdata.drop(columns=['hour','temperature'])
@@ -368,14 +370,17 @@ the date range of your simulation, there are data missing for this simulation pe
         if tempVar != 0:
             df_weatherdata['tmax'] = df_weatherdata['tmax'] + float(tempVar)
             df_weatherdata['tmin'] = df_weatherdata['tmin'] + float(tempVar)
+        weatherRoundDict['tmax'] = 1
+        weatherRoundDict['tmin'] = 1
 
-    df_weatherdata['date'] = df_weatherdata['date'].dt.strftime('%m/%d/%Y')
+    df_weatherdata['date'] = df_weatherdata['date'].dt.strftime('\'%m/%d/%Y\'')
     df_weatherdata.columns = weather_col_names         
 
     rh_flag = 1
     if (df_weatherdata['rh'].isna().sum() > 0 or (df_weatherdata['rh'] == '').sum() > 0):
         df_weatherdata = df_weatherdata.drop(columns=['rh'])
         rh_flag = 0
+        del weatherRoundDict['rh']
 
     co2_flag = 1  
     if CO2Var != "None":
@@ -384,19 +389,20 @@ the date range of your simulation, there are data missing for this simulation pe
         if (df_weatherdata['CO2'].isna().sum() > 0 or (df_weatherdata['CO2'] == '').sum() > 0):
             df_weatherdata = df_weatherdata.drop(columns=['CO2'])
             co2_flag = 0
+            del weatherRoundDict['CO2']
 
-    rain_flag = 1
     # Sensitivity analyses rain number is in %
     if rainVar != 0:
         df_weatherdata['rain'] = df_weatherdata['rain'] + (df_weatherdata['rain']*(float(rainVar)/100.0))         
     else:
         if (df_weatherdata['rain'].isna().sum() > 0 or (df_weatherdata['rain'] == '').sum() > 0):
             df_weatherdata = df_weatherdata.drop(columns=['rain'])
-            rain_flag = 0
+            del weatherRoundDict['rain']
 
     wind_flag = 1
     if (df_weatherdata['Wind'].isna().sum() > 0 or (df_weatherdata['Wind'] == '').sum() > 0):
         df_weatherdata = df_weatherdata.drop(columns=['Wind'])
+        del weatherRoundDict['Wind']
         wind_flag = 0
 
     # the inputs for weather file comes from the weather flags. So we have to build that data stream 
@@ -407,13 +413,14 @@ the date range of your simulation, there are data missing for this simulation pe
         ff.write(comment_value)
         ff.write('\n')
 
-    df_weatherdata.to_csv(filename,sep=' ',index=False,quotechar='"',quoting=csv.QUOTE_NONNUMERIC,mode='a')
+    df_weatherdata = df_weatherdata.round(weatherRoundDict)
+    df_weatherdata.to_csv(filename,sep=' ',index=False,mode='a')
 
     # Create .cli file
     # Extracts weather information from the weather_meta table and write the text file.       
     weatherparameters = read_weatherlongDB(stationtype) #returns a tuple
     CODEC="UTF-8"
-    filename = field_path+"\\"+stationtype+".cli"
+    filename ="".join([os.path.join(field_path, stationtype), ".cli"])
 
 #        print("Debug: weatherparameters=",weatherparameters)
 #        print("Debug: filename=",filename)
@@ -461,7 +468,7 @@ the date range of your simulation, there are data missing for this simulation pe
 def WriteSoluteFile(soilname,field_path):
 # Writes the SOLUTE FILE
     CODEC="UTF-8"
-    filename = field_path+"\\NitrogenDefault.sol"        
+    filename = "".join([field_path,"\\NitrogenDefault.sol"])        
     fh = QFile(filename)
         
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -506,7 +513,7 @@ def WriteSoluteFile(soilname,field_path):
 def WriteGasFile(field_path):
 # Writes the SOLUTE FILE
     CODEC="UTF-8"
-    filename = field_path+"\\GasID.gas"        
+    filename = "".join([field_path, "\\GasID.gas" ])       
     fh = QFile(filename)
         
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -542,7 +549,7 @@ def WriteTimeFileData(treatmentname,experimentname,cropname,stationtype,hourlyFl
     DMul1 = 1.3
     DMul2 = 0.3
     CODEC="UTF-8"
-    filename = field_path+'\\'+field_name + '.tim'
+    filename = "".join([os.path.join(field_path,field_name), '.tim'])
     fh = QFile(filename)
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
         print("Could not open file")
@@ -575,7 +582,7 @@ def WriteNitData(soilname,field_name,field_path,rowSpacing):
     MaxX = rowSpacing/2
 
     CODEC="UTF-8"
-    filename = field_path+"\\"+field_name+".nit"      
+    filename = "".join([os.path.join(field_path,field_name), ".nit"])      
     fh = QFile(filename)
 
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -602,7 +609,7 @@ def WriteSoiData(soilname,field_name,field_path):
 
     NCount = len(soil_hydrology_list)               
     CODEC="UTF-8"        
-    filename = field_path+'\\'+soilname + '.soi'        
+    filename = "".join([os.path.join(field_path,soilname), '.soi'])        
     fh = QFile(filename)
 
     if not fh.open(QIODevice.WriteOnly|QIODevice.Text):
@@ -616,7 +623,9 @@ def WriteSoiData(soilname,field_name,field_path):
             record_tuple=soil_hydrology_list[rrow]
             record_tuple = [float(i) for i in record_tuple]
             fout<<'%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f%-9.6f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],record_tuple[7],record_tuple[8],record_tuple[9],record_tuple[10],record_tuple[11],record_tuple[12])<<"\n"
-
+            if rrow == 0:
+                sandcontent = record_tuple[11]
+            
     fh.close()
     filename = field_path+'\\'+field_name + '.dat'        
     fh = QFile(filename)
@@ -634,6 +643,7 @@ def WriteSoiData(soilname,field_name,field_path):
             fout<<'%-5d%-8.3f%-8.3f%-8.3f%record_tuple-8.3f%-8.3f%-8.3f%-8.3f' %(record_tuple[0],record_tuple[1],record_tuple[2],record_tuple[3],record_tuple[4],record_tuple[5],record_tuple[6],record_tuple[7])<<"\n"
 
     fh.close()
+    return sandcontent
 
 
 def WriteMulchGeo(field_path,nutrient):
@@ -689,6 +699,56 @@ def WriteMulchGeo(field_path,nutrient):
         fout<<'%-10.4f%-10.4f%-10.4f' %(mulchDecompList[8],mulchDecompList[9],mulchDecompList[10])<<"\n"
     fh.close()
 
+def WriteIrrigation(field_name,field_path,irrigationClass,simulationname, o_t_exid):
+    conn, c = openDB('crop.db')
+    if c:
+        c1 = c.execute("select o_t_exid from operations")
+       # o_t_exid = c1.fetchall()
+    print("o_t_exid: ", o_t_exid)
+    irrAmtlist = []
+    irrAmtlist = getIrrigationData(simulationname,o_t_exid)
+    NCount = len(irrAmtlist)
+
+   # print("irrAmtlist:",irrAmtlist)
+    #print(NCount)
+
+   #irrType = "No Irrigation"
+    # First create .irr file for the simulation period
+    CODEC="UTF-8"
+    filename = field_path+'\\'+field_name + '.irr'  
+    irrfile = QFile(filename)
+
+   # for rrow in range(NCount):
+    #    print(irrAmtlist[rrow])
+     #   record_tuple = irrAmtlist[rrow]
+      #          #print("#####")
+       # print(record_tuple)
+
+    if not irrfile.open(QIODevice.WriteOnly|QIODevice.Text):
+        print("Could not open file")
+    else:
+        fout = QTextStream(irrfile)            
+        fout.setCodec(CODEC)
+        fout<<"*** Script for irrigation"<<"***\n"
+        fout<<"Sprinkler irrigation"<<"\n"
+        fout<<"Average irrigation rate (cm/hour)" <<"\n"
+        fout<<"3"<<"\n"
+        fout<<"Number of irrigation application"<<"\n"
+        if irrigationClass != "No Irrigation":
+           fout<<"%5d" %NCount<<"\n"
+           fout<<"Date             AmtIrrAppl (mm/day)"<<"\n"
+           for rrow in range(0, NCount):
+                record_tuple = irrAmtlist[rrow]
+                #print("#####")
+                print(record_tuple)
+                fout << "'%-10s'      %-14d" %(record_tuple[0], record_tuple[1])<<"\n" 
+        else:
+            
+            fout<<"0"<<"\n"
+            fout<<"No Irrigation \n"
+            
+    irrfile.close()
+
 
 def WriteRunFile(cropname,soilname,field_name,cultivar,field_path,stationtype):
 #  Writes Run file with input data file names
@@ -712,6 +772,7 @@ def WriteRunFile(cropname,soilname,field_name,cultivar,field_path,stationtype):
         fout<<field_path<<"\\"<<soilname<<".soi\n"
         fout<<field_path<<"\\MulchGeo.mul\n"
         fout<<field_path<<"\\"<<field_name<<".man\n"
+        fout<<field_path<<"\\"<<field_name<<".irr\n"
         fout<<field_path<<"\\"<<field_name<<".drp\n"
         fout<<field_path<<"\\Water.DAT\n"
         fout<<field_path<<"\\WatMovParam.dat\n"
@@ -741,7 +802,7 @@ def WriteRunFile(cropname,soilname,field_name,cultivar,field_path,stationtype):
 
 
 def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowSpacing):
-# Get data from operation, fertilizerOp and fertNutOp
+# Get data from operation, fertilizerOp and fertNutOp and Irrig_pivotOp
  
     fertCount = 0
     PGRCount = 0
@@ -764,16 +825,19 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
     PGRAppRate = []
     PGRAppUnit = []
     SurfResInfo = []
+    IrrigationInfo = []
 
     exid = read_experimentDB_id(cropname,experiment)
     tid = read_treatmentDB_id(exid,treatmentname)
     operationList = read_operationsDB_id(tid)
     #print("op list=",operationList)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
     factor = (rowSpacing/2)/10000
     # Surface residue type is set to be Rye as a default, if we have Surface Residue operation
     # then we will use that nutrient.  At this point Rye is the only option.  The much file will 
     # be generated even if a run doen't use surface residue, that is why we need to set this variable.
     surfResType = "Rye"
+    irrType = "No Irrigation"
 
     for ii,jj in enumerate(operationList):
         if jj[1] == "Fertilizer":   
@@ -833,7 +897,12 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
                 tillDepth = 10
             elif TillageInfo[0][3] == "Vertical tillage":
                 tillDepth = 5
+       # if jj[1] == "Irrigation":
+      #      IrrigationInfo = readOpDetails(jj[0],jj[1])
+       #     irrType = IrrigationInfo[0][3]
+        #    print(IrrigationInfo)
 
+   
     # Write *.MAN file
     CODEC="UTF-8"
     filename = field_path+"\\"+field_name+".man"                
@@ -885,4 +954,22 @@ def WriteManagement(cropname,experiment,treatmentname,field_name,field_path,rowS
             fout<<"'"<<TillageInfo[0][2]<<"'  "'%-14.6f' %(tillDepth)<<"\n"
         fh.close()
 
-        return surfResType
+        return surfResType# irrType
+
+def irrigationInfo(cropname,experiment,treatmentname):
+    operationList = []
+    IrrigationInfo = []
+
+    exid = read_experimentDB_id(cropname,experiment)
+    tid = read_treatmentDB_id(exid,treatmentname)
+    operationList = read_operationsDB_id(tid)
+
+    irrType = "No Irrigation"
+
+    for ii,jj in enumerate(operationList):
+	    if jj[1] == "Irrigation":
+                IrrigationInfo = readOpDetails(jj[0],jj[1])
+                irrType = IrrigationInfo[0][3]
+                print(IrrigationInfo)
+
+    return irrType

@@ -40,7 +40,7 @@ glycimexe = classimDir+'\\2dglycim.exe'
 gossymexe = classimDir+'\\2dgossym.exe'
 
 # Flag to tell script if output files should be removed, the default is 1 so they are removed
-remOutputFilesFlag = 0
+remOutputFilesFlag = 1
 
 ## This should always be there
 if not os.path.exists(storeDir):
@@ -57,13 +57,13 @@ class Rotation_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+      # self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+      # self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("rotation")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -82,6 +82,12 @@ make sure to press the Execute Rotation button.")
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Rotation Builder Tab Video Tutorial</a><br>"
+        self.rotationVidlabel=QLabel()
+        self.rotationVidlabel.setOpenExternalLinks(True)
+        self.rotationVidlabel.setText(urlLink)
 
         self.vl1 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
@@ -249,6 +255,7 @@ make sure to press the Execute Rotation button.")
         self.hl2.addWidget(self.rgroupbox)
         
         self.vl1.addLayout(self.hl1)
+        self.vl1.addWidget(self.rotationVidlabel)
         self.vl1.addWidget(self.helpcheckbox)
         self.vl1.addLayout(self.hl2)
         self.vl1.addStretch(1)
@@ -654,6 +661,9 @@ make sure to press the Execute Rotation button.")
         """
         self.simulation_name = str(simulation_name)
         field_path = os.path.join(runDir,self.simulation_name)
+        print("/////*****+++++++++++++++++++++++++++++*****////")
+        print(field_path)
+        print("/////*****+++++++++++++++++++++++++++++*****////")
         if not os.path.exists(field_path):
             os.makedirs(field_path)
 
@@ -680,8 +690,22 @@ make sure to press the Execute Rotation button.")
 
         src_file = storeDir+'\\Water.DAT'
         dest_file = field_path+'\\Water.DAT'
+        
         copyFile(src_file,dest_file)
 
+        waterrotfilecontent=[]
+        with open(dest_file, 'r') as read_file:
+            waterrotfilecontent = read_file.readlines()
+           
+
+        sandcontent = WriteSoiData(lsoilname,field_name,field_path)       
+        if sandcontent >= 75:
+            with open(dest_file, 'w') as write_file:
+                for line in waterrotfilecontent:
+                        write_file.write(line.replace("-1.00000E+005", "-1.00000E+004"))  
+                 
+
+        #copy waterBound.dat file from store to runDir
         src_file= storeDir+'\\WaterBound.DAT'
         dest_file= field_path+'\\WatMovParam.dat'
         copyFile(src_file,dest_file)
@@ -697,7 +721,7 @@ make sure to press the Execute Rotation button.")
             src_file= storeDir+'\\fallow.var'
             dest_file= field_path+'\\fallow.var'
             copyFile(src_file,dest_file)
-        WriteIrrigationFile(field_name,field_path)
+        WriteDripIrrigationFile(field_name,field_path)
         hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_path,ltempVar,lrainVar,lCO2Var)
         WriteSoluteFile(lsoilname,field_path)
         WriteGasFile(field_path)
@@ -707,7 +731,10 @@ make sure to press the Execute Rotation button.")
         self.WriteLayerGas(irow,lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
         WriteSoiData(lsoilname,field_name,field_path)
         surfResType = WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
-        WriteMulchGeo(field_path,surfResType)
+        irrType = irrigationInfo(lcrop,lexperiment,ltreatmentname)
+        WriteMulchGeo(field_path,surfResType)  
+        o_t_exid = getTreatmentID(ltreatmentname,lexperiment,lcrop)
+        WriteIrrigation(field_name,field_path,irrType, simulation_name,o_t_exid)
         WriteRunFile(lcrop,lsoilname,field_name,cultivar,field_path,lstationtype)            
         src_file= field_path+"\\"+field_name+".lyr"                    
         layerdest_file= field_path+"\\"+field_name+".lyr"
@@ -783,7 +810,6 @@ make sure to press the Execute Rotation button.")
                 # Ingest .grd file and Area from G03 file on the geometry table
                 if ext == 'G03' or ext == 'g03':
                     ingestGeometryFile(field_path+"\\\\"+field_name+".grd",g_name2,self.simulation_name)
-                    os.remove(field_path+"\\"+field_name+".grd")
                 ingestOutputFile(table_name,g_name2,self.simulation_name)
                 if remOutputFilesFlag:
                     os.remove(g_name)
@@ -935,7 +961,7 @@ make sure to press the Execute Rotation button.")
         '''
         Writes Layer file (*.lyr)
         If irow > 0, we will read information from previous run from cropOutput database to get part 
-        of the information needed to build the lyr file.
+        of the information needed to build the lyr file. 
         '''
         # get Grid Ratio for the soil
         gridratio_list = read_soilgridratioDB(soilname)
@@ -965,13 +991,13 @@ make sure to press the Execute Rotation button.")
                 fout<<'%-14.3f%-14.3f%-14.3f\n' %(record_tuple[4],record_tuple[5],rootWeightPerSlab)
 
             fout<<"Surface water Boundary Code  surface and bottom Gas boundary codes(for all bottom nodes) 1 constant -2 seepage face, 7 drainage, 4 atmospheric\n"
-            fout<<"water boundary code for bottom layer, gas BC for the surface and bottom layers\n"
+            fout<<"water boundary code for bottom layer, gas BC for the surface and bottom layers. Initial water variable depends on indicator variable. \n"
             for rrow in range(0,len(gridratio_list)):
                 record_tuple=gridratio_list[rrow]
                 fout<<'%-14d%-14d%-14d\n' %(record_tuple[6],record_tuple[7],record_tuple[8])
 
             fout<<" Bottom depth   Init Type  OM (%/100)   Humus_C    Humus_N    Litter_C    Litter_N    Manure_C    Manure_N  no3(ppm)  NH4  \
-                   hNew  Tmpr     CO2     O2    Sand     Silt    Clay     BD     TH33     TH1500  thr ths tha th  Alfa    n   Ks  Kk  thk\n"
+                   initial water   Tmpr     CO2     O2    Sand     Silt    Clay     BD     TH33     TH1500  thr ths tha th  Alfa    n   Ks  Kk  thk\n"
             fout<<" cm         w/m       Frac      ppm    ppm    ppm    ppm   ppm    ppm   ppm     ppm   cm     0C     ppm   ppm  ----  fraction---     \
                    g/cm3    cm3/cm3   cm3/cm3\n"
             soilgrid_list = read_soilshortDB(soilname)

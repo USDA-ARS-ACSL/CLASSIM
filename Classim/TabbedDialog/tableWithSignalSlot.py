@@ -357,6 +357,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                             operationSummary += str(op_row[0]) + " Date: " + str(op_row[1]) + "<br>"
                         else:
                             initCond = readOpDetails(op_row[2],op_row[0])
+                         #   print(initCond)
                             loc = "Middle"
                             if(initCond[0][8]  == 0.5):
                                 loc = "Left"
@@ -379,7 +380,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                         fert = readOpDetails(op_row[2],op_row[0])
                         operationSummary += str(fert[0][3]) + " Date: " + str(op_row[1]) + " Fertilizer Depth (cm): " + str(fert[0][4]) + "<br>"
                         for j in range(len(fert)):
-                            operationSummary += str(fert[j][5]) + ": " + str(fert[j][6]) + " kg/ha<br>"
+                            operationSummary += " -- " + str(fert[j][5]) + ": " + str(fert[j][6]) + " kg/ha<br>"
                     elif(op_row[0] == "Plant Growth Regulator"):
                         pgr = readOpDetails(op_row[2],op_row[0])
                         operationSummary += str(op_row[0]) + " Date: " + str(op_row[1]) + "<br>" + \
@@ -389,6 +390,11 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                         surfRes = readOpDetails(op_row[2],op_row[0])
                         operationSummary += str(op_row[0]) + " Date: " + str(op_row[1]) + "<br>" + \
                                             "Residue Type: " + str(surfRes[0][3]) + ", " + str(surfRes[0][4]) + ": " + str(surfRes[0][5]) + "<br>"
+                    elif(op_row[0] == "Irrigation"):
+                        irrig = readOpDetails(op_row[2],op_row[0])
+                        operationSummary +=  "Irrigation Date: " + str(op_row[1]) + "<br>"
+                        for j in range(len(irrig)):
+                            operationSummary += " -- " + str(irrig[j][3]) + ": " + str(irrig[j][4]) + " mm/day<br>"
                     else:
                         operationSummary += op_row[0] + " Date: " + str(op_row[1]) + "<br>"
 
@@ -555,12 +561,28 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
 
         self.savebutton1 = QPushButton("Save")
 
+        #################################Irrigation Type Applicable for All Crops###############################
+        self.irrigationTypelabel = QLabel("Irrigation Type")
+        self.comboirrigationType = QComboBox()
+
+        self.irrigationType = read_irrigationType()
+        self.comboirrigationType.clear()
+        self.comboirrigationType.addItem("Select Irrigation Type")
+        for irrigation in self.irrigationType:
+            self.comboirrigationType.addItem(irrigation)
+
+        self.numIrrAppllabel = QLabel("Number of Irrigation")
+        self.numIrrAppllabeledit = QLineEdit("")
+
+        self.AmtIrrAppllabel = QLabel("Amount of Irrigation (mm/day)")
+        self.AmtIrrAppllabeledit = QLineEdit("")
+
         self.sitetable1.clearContents()
         self.sitetable1.setRowCount(0)
         self.sitetable1.clear()
         self.sitetable1.reset()
 
-        self.sitetable1.setRowCount(21)
+        self.sitetable1.setRowCount(24)
         self.sitetable1.setColumnCount(3)       
         self.show_table_rows()        
         self.sitetable1.horizontalHeader().hide()
@@ -588,6 +610,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.setCellWidget(17,0,self.PGRAppUnitlabel)
         self.sitetable1.setCellWidget(18,0,self.surfReslabel)
         self.sitetable1.setCellWidget(19,0,self.comboSurfResApplType)
+        self.sitetable1.setCellWidget(20,0,self.irrigationTypelabel)
+        self.sitetable1.setCellWidget(21,0,self.numIrrAppllabel)
+        self.sitetable1.setCellWidget(22,0,self.AmtIrrAppllabel)  
 
         self.sitetable1.setCellWidget(0,1,self.comboFertClass)
         self.sitetable1.setCellWidget(1,1,self.calendar)
@@ -609,7 +634,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.setCellWidget(17,1,self.comboPGRAppUnit)
         self.sitetable1.setCellWidget(18,1,self.comboSurfResType)
         self.sitetable1.setCellWidget(19,1,self.surfResApplTypeValedit)
-        self.sitetable1.setCellWidget(20,1,self.savebutton1)
+        self.sitetable1.setCellWidget(20,1,self.comboirrigationType)
+        self.sitetable1.setCellWidget(21,1,self.numIrrAppllabeledit)
+        self.sitetable1.setCellWidget(22,1,self.AmtIrrAppllabeledit)
+        self.sitetable1.setCellWidget(23,1,self.savebutton1)
         
         self.sitetable1.resizeColumnsToContents();
         self.sitetable1.resizeRowsToContents();
@@ -649,11 +677,14 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         else:
             self.sitetable1.hideRow(18)
         self.sitetable1.hideRow(19)
-        self.sitetable1.hideRow(20)
+        self.sitetable1.showRow(20)
+        self.sitetable1.hideRow(21)
+        self.sitetable1.hideRow(22)
+        self.sitetable1.showRow(23)
         self.comboFertClass.currentIndexChanged.connect(self.oncomboactivated)
         self.comboPGRChemical.currentIndexChanged.connect(self.oncomboPGRactivated)
         self.comboSurfResType.currentIndexChanged.connect(self.oncomboSurfResactivated)
-
+        self.comboirrigationType.currentIndexChanged.connect(self.oncomboIrractivated) 
 
     def showExistingOperationDialog(self,value,strval1,strval2,strval3,strval4):
         """
@@ -745,12 +776,27 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.comboSurfResApplType = QComboBox()
         self.surfResApplTypeValedit = QLineEdit("")
 
+        self.irrigationTypelabel = QLabel("Irrigation Type")
+        self.comboirrigationType = QComboBox()
+
+       # self.irrigationType = read_irrigationType()
+       # self.comboirrigationType.clear()
+      #  self.comboirrigationType.addItem("Select Irrigation Type")
+      #  for irrigation in self.irrigationType:
+       #     self.comboirrigationType.addItem(irrigation)
+
+        self.numIrrAppllabel = QLabel("Number of Irrigation")
+        self.numIrrAppllabeledit = QLineEdit("")
+
+        self.AmtIrrAppllabel = QLabel("Amount of Irrigation (mm/day)")
+        self.AmtIrrAppllabeledit = QLineEdit("")
+
         self.sitetable1.clearContents()
         self.sitetable1.setRowCount(0) # necessary. It will clean the table internally     
         self.sitetable1.clear()
         self.sitetable1.reset()
         
-        self.sitetable1.setRowCount(21)
+        self.sitetable1.setRowCount(24)
         self.sitetable1.setColumnCount(3)
         self.show_table_rows()           
         self.sitetable1.horizontalHeader().hide()
@@ -776,8 +822,11 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.setCellWidget(17,0,self.PGRAppUnitlabel)
         self.sitetable1.setCellWidget(18,0,self.surfReslabel)
         self.sitetable1.setCellWidget(19,0,self.comboSurfResApplType)
-        if self.operationname == 'Fertilizer' or self.operationname == "Plant Growth Regulator" or self.operationname == "Surface Residue":
-            self.sitetable1.setCellWidget(20,0,self.deletebutton)
+        self.sitetable1.setCellWidget(20,0,self.irrigationTypelabel)
+        self.sitetable1.setCellWidget(21,0,self.numIrrAppllabel)
+        self.sitetable1.setCellWidget(22,0,self.AmtIrrAppllabel) 
+        if self.operationname == 'Fertilizer' or self.operationname == "Plant Growth Regulator" or self.operationname == "Surface Residue" or self.operationname == "Irrigation":
+            self.sitetable1.setCellWidget(23,0,self.deletebutton)
 
         self.sitetable1.setCellWidget(0,1,self.comboFertClass)
         self.sitetable1.setCellWidget(1,1,self.calendar)        
@@ -799,7 +848,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.setCellWidget(17,1,self.comboPGRAppUnit)
         self.sitetable1.setCellWidget(18,1,self.comboSurfResType)
         self.sitetable1.setCellWidget(19,1,self.surfResApplTypeValedit)
-        self.sitetable1.setCellWidget(20,1,self.savebutton1)
+        self.sitetable1.setCellWidget(20,1,self.comboirrigationType)
+        self.sitetable1.setCellWidget(21,1,self.numIrrAppllabeledit)
+        self.sitetable1.setCellWidget(22,1,self.AmtIrrAppllabeledit)
+        self.sitetable1.setCellWidget(23,1,self.savebutton1)
         
         header = self.sitetable1.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -873,7 +925,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(17)
             self.sitetable1.hideRow(18)
             self.sitetable1.hideRow(19)
-
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
+            self.sitetable1.showRow(23) 
         # Check if there is any fertilization operation on fertilizationOp table
         elif self.operationname == 'Fertilizer':
             self.sitetable1.showRow(0) 
@@ -917,7 +972,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(15)
             self.sitetable1.hideRow(16)
             self.sitetable1.hideRow(17)
-           
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
+            self.sitetable1.showRow(23)
         # Tillage
         elif(self.operationname == "Tillage"):
             self.sitetable1.hideRow(0)
@@ -949,7 +1007,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(17)
             self.sitetable1.hideRow(18)
             self.sitetable1.hideRow(19)
-
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
+            self.sitetable1.showRow(23)
         # Plant Growth Regulator
         elif self.operationname == "Plant Growth Regulator":
             self.sitetable1.hideRow(0)
@@ -992,6 +1053,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.showRow(17)
             self.sitetable1.hideRow(18)
             self.sitetable1.hideRow(19) 
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
         elif self.operationname == "Surface Residue":
             self.sitetable1.hideRow(0)
             self.sitetable1.hideRow(2)
@@ -1010,6 +1074,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(15)
             self.sitetable1.hideRow(16)
             self.sitetable1.hideRow(17)
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
+            self.sitetable1.showRow(23)
 
             self.surfResTypeList = read_SurfResTypeDB()
             self.comboSurfResType.addItem("Select Surface Residue Type")
@@ -1027,6 +1095,43 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.comboSurfResApplType.setCurrentIndex(matchedindex)      
             self.surfResApplTypeValedit.setText(str(self.record[0][5]))
             self.sitetable1.showRow(19)
+        elif self.operationname == "Irrigation":
+            self.sitetable1.showRow(20)
+            self.sitetable1.hideRow(0)
+            
+            self.sitetable1.hideRow(2)
+            self.sitetable1.hideRow(3)
+            self.sitetable1.hideRow(4)
+            self.sitetable1.hideRow(5)
+            self.sitetable1.hideRow(6)
+            self.sitetable1.hideRow(7)
+            self.sitetable1.hideRow(8)
+            self.sitetable1.hideRow(9)
+            self.sitetable1.hideRow(10)                    
+            self.sitetable1.hideRow(11)                    
+            self.sitetable1.hideRow(12)                    
+            self.sitetable1.hideRow(13)
+            self.sitetable1.hideRow(14)
+            self.sitetable1.hideRow(15)
+            self.sitetable1.hideRow(16)
+            self.sitetable1.hideRow(17)
+            self.sitetable1.hideRow(18)
+            self.sitetable1.hideRow(19)
+            
+            self.sitetable1.hideRow(21)
+            self.sitetable1.showRow(22)
+            self.irrgClass = read_irrigationClass()        
+            self.comboirrigationType.clear()
+            self.comboirrigationType.addItem("Select Fertilization")
+            for irrigation in self.irrgClass:
+	            self.comboirrigationType.addItem(irrigation)
+            self.comboirrigationType.setCurrentIndex(self.comboirrigationType.findText(self.record[0][3]))
+            self.comboirrigationType.setEnabled(False) 
+
+            for j in range(len(self.record)):
+                if j == 0:
+                    self.sitetable1.showRow(23)
+                    self.AmtIrrAppllabeledit.setText(str(self.record[j][4]))
         else:
             self.sitetable1.hideRow(0)
             self.sitetable1.hideRow(2)
@@ -1047,8 +1152,10 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
             self.sitetable1.hideRow(17)
             self.sitetable1.hideRow(18)
             self.sitetable1.hideRow(19)
-
-        self.sitetable1.showRow(20)
+            self.sitetable1.hideRow(20)
+            self.sitetable1.hideRow(21)
+            self.sitetable1.hideRow(22)
+            self.sitetable1.showRow(23)
         self.sitetable1.resizeColumnsToContents();
         self.sitetable1.resizeRowsToContents();
         self.sitetable1.setShowGrid(False)
@@ -1083,7 +1190,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.hideRow(17)
         self.sitetable1.hideRow(18)
         self.sitetable1.hideRow(19)
-        self.sitetable1.showRow(20)
+        self.sitetable1.hideRow(20)
+        self.sitetable1.hideRow(21)
+        self.sitetable1.hideRow(22)
 
         self.op_id = -10
         self.savebutton1.clicked.connect(self.on_savebutton_operation_clicked)
@@ -1116,7 +1225,9 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.showRow(17)
         self.sitetable1.hideRow(18)
         self.sitetable1.hideRow(19)
-        self.sitetable1.showRow(20)
+        self.sitetable1.hideRow(20)
+        self.sitetable1.hideRow(21)
+        self.sitetable1.hideRow(22)
 
         self.op_id = -10
         self.savebutton1.clicked.connect(self.on_savebutton_operation_clicked)
@@ -1149,14 +1260,52 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         self.sitetable1.hideRow(17)
         self.sitetable1.showRow(18)
         self.sitetable1.showRow(19)
-        self.sitetable1.showRow(20)
+        self.sitetable1.hideRow(20)
+        self.sitetable1.hideRow(21)
+        self.sitetable1.hideRow(22)
 
         self.op_id = -10
         self.savebutton1.clicked.connect(self.on_savebutton_operation_clicked)
         self.sitetable1.resizeColumnsToContents();
         self.sitetable1.resizeRowsToContents();
         self.sitetable1.setShowGrid(False)
+    
+    def oncomboIrractivated(self,listindex):
+    # This function is only activated when an Irrigation is added, therefore only
+    # Irrigation items should be activated
+        self.operationname = "Irrigation"
+        self.sitetable1.showRow(20)
+        self.sitetable1.hideRow(0)
+        self.sitetable1.showRow(1)
+        self.sitetable1.hideRow(2)
+        self.sitetable1.hideRow(3)
+        self.sitetable1.hideRow(4)
+        self.sitetable1.hideRow(5)
+        self.sitetable1.hideRow(6)
+        self.sitetable1.hideRow(7)
+        self.sitetable1.hideRow(8)
+        self.sitetable1.hideRow(9)
+        self.sitetable1.hideRow(10)
+        self.sitetable1.hideRow(11)
+        self.sitetable1.hideRow(12) 
+        self.sitetable1.hideRow(13)
+        self.sitetable1.hideRow(14)
+        self.sitetable1.hideRow(15)
+        self.sitetable1.hideRow(16)
+        self.sitetable1.hideRow(17)
+        self.sitetable1.hideRow(18)
+        self.sitetable1.hideRow(19)
         
+        self.sitetable1.hideRow(21)
+        self.sitetable1.showRow(22)
+
+
+        self.op_id = -10
+        self.savebutton1.clicked.connect(self.on_savebutton_operation_clicked)
+        self.sitetable1.resizeColumnsToContents();
+        self.sitetable1.resizeRowsToContents();
+        self.sitetable1.setShowGrid(False)
+
         
     def oncomboTillageActivated(self,listindex):
         # Tillage
@@ -1176,6 +1325,8 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
         PGR_record = []
         SR_record = []
         set_unittest_reportflags
+        irr_record = []
+        irrAmt_record = []
 
         tid = getTreatmentID(self.treatmentname,self.experimentname,self.cropname)
         operationList = read_operationsDB_id(tid) #gets all the operations
@@ -1288,7 +1439,7 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                     tillage_record.append("No tillage") 
                     temp_new_record = ["Tillage",""]
                     status = check_and_update_operationDB(jj[0],self.treatmentname, self.experimentname, self.cropname, temp_new_record, \
-                                              initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record)
+                                              initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record, irrAmt_record)
                     messageUserInfo("Tillage operation was set to 'No Tillage' because tillage is not compatible with surface residue.")
             SR_record.append(self.comboSurfResType.currentText())
             self.surfResApplType = self.comboSurfResApplType.currentText()
@@ -1303,14 +1454,32 @@ name, click SAVE. Once it is registered in left panel, you add new treatment(s)"
                 if self.surfResApplTypeVal < 2 or self.surfResApplTypeVal > 10:
                     return messageUser("Surface residue thickness should be greater than 2cm and less than 10cm.")
 
+        elif self.operationname == "Irrigation":
+            irr_record.append(self.comboirrigationType.currentText())
+            print("irr_record:",irr_record)
+            # Number of Irrigation
+           # if float(self.numIrrAppllabeledit.text()) >= 0:
+           #     irr_record.append(float(self.numIrrAppllabeledit.text()))
+          #  else:
+          #      return messageUser("Please enter a number greather than 0.")
+            # Amount of Irrigation
+            if float(self.AmtIrrAppllabeledit.text()) <= 0:
+                return messageUser("Please enter a number greather than 0.")
+            if float(self.AmtIrrAppllabeledit.text()) >= 1000 :
+                return messageUser("Check water amount, it is too high.")
+            irrAmt_record.append(float(self.AmtIrrAppllabeledit.text()))
+            irrAmt_record.append("Sprinkler")
+            print("irrAmt_record",irrAmt_record)
+
+
         print("before check and update operation_id=",self.op_id)
         status = check_and_update_operationDB(self.op_id, self.treatmentname, self.experimentname, self.cropname, new_record, \
-                                              initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record)
+                                              initCond_record, tillage_record, fert_record, fertNut_record, PGR_record, SR_record, irrAmt_record)
 
         if status:
             self.sitetable1.setVisible(False)
             self.sig2.emit(1)
-
+       
 
     def on_deletebutton_operation_clicked(self,value):
         delete_flag = messageUserDelete("Are you sure you want to delete this operation?")

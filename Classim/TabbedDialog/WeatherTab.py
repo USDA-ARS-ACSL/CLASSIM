@@ -35,14 +35,14 @@ class Weather_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+     #  self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
-        self.importfaq("weather")              
+      # self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+        self.importfaq("weather")             
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
@@ -62,11 +62,18 @@ please provide a column named weather_id with the identifier you want.  For site
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
 
+        urlLink="<a href=\"https://youtu.be/m22yAianoFw/\">Click here \
+                to watch the Weather Tab video tutorial. </a><br>"
+        self.weatherVidlabel=QLabel()
+        self.weatherVidlabel.setOpenExternalLinks(True)
+        self.weatherVidlabel.setText(urlLink)
+
         self.mainlayout = QGridLayout()
         self.spacer = QSpacerItem(10,10, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.vHeader = QVBoxLayout()
         self.vHeader.setContentsMargins(0,0,0,0)
         self.vHeader.addWidget(self.tab_summary)
+        self.vHeader.addWidget(self.weatherVidlabel)
         self.vHeader.addWidget(self.helpcheckbox)
         self.vHeader.setAlignment(QtCore.Qt.AlignTop)
 
@@ -476,7 +483,7 @@ please provide a column named weather_id with the identifier you want.  For site
         weathertuple = extract_sitedetails(site)     
         lat = str(weathertuple[1])
         lon = str(weathertuple[2])  
-        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&start=2015-1-1&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv"
+        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&start=2015-1-1&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv&predicted=true"
         try:
             data = pd.read_csv(url,storage_options={'User-Agent':'Mozilla/5.0'})
         except:

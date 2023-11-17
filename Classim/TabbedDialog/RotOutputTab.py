@@ -10,7 +10,7 @@ from time import mktime
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
                             QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QFrame, QFormLayout, QScrollArea, QCheckBox, \
-                            QGridLayout, QGroupBox, QHeaderView
+                            QGridLayout, QGroupBox, QHeaderView,  QMenu, QAction
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
@@ -25,6 +25,7 @@ from shutil import copyfile
 register_matplotlib_converters()
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
+from PyQt5.QtGui import QPixmap
 
 global classimDir
 global runDir
@@ -59,13 +60,13 @@ class RotOutput_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+     #   self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+     #   self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("output")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -84,6 +85,12 @@ class RotOutput_Widget(QWidget):
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
         self.faqtree.setVisible(False)
 
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Rotation Output Tab Video Tutorial</a><br>"
+        self.rotationoutVidlabel=QLabel()
+        self.rotationoutVidlabel.setOpenExternalLinks(True)
+        self.rotationoutVidlabel.setText(urlLink)
+
         self.vl1 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
         self.vl1.setAlignment(QtCore.Qt.AlignTop)        
@@ -92,6 +99,7 @@ class RotOutput_Widget(QWidget):
         self.vl1.setContentsMargins(0,0,0,0)
         self.vl1.setSpacing(1)
         self.vl1.addWidget(self.tab_summary)
+        self.vl1.addWidget(self.rotationoutVidlabel)
         self.vl1.addWidget(self.helpcheckbox)
         self.table2 = QTableWidget()
 
@@ -425,6 +433,27 @@ class RotOutput_Widget(QWidget):
             plt.tight_layout()
             i = i + 1
 
+            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.customContextMenuRequested.connect(self.exportSurfaceRot)
+
+    def exportSurfaceRot(self, rotevent):
+        self.rotfig=os.path.join(runDir,'ContourSurfaceRot.png')
+        plt.savefig(self.rotfig)
+        self.rotpixmap = QPixmap(self.rotfig)
+        self.rotlabel = QLabel()
+        self.rotlabel.setPixmap(self.rotpixmap)
+        rotmenu = QMenu(self)
+        rotexportsurfImage = QAction('Export', self)  
+        rotmenu.addAction(rotexportsurfImage)
+        sim_dir = os.path.join(runDir,self.simIDArr[0])
+        rotexportsurface_path = os.path.join(sim_dir,'PlantSoil2DRot.png')
+        if not os.path.exists(rotexportsurface_path):
+            rotexportsurfImage.triggered.connect(lambda: self.rotpixmap.save(rotexportsurface_path))
+            rotmenu.exec_(self.mapToGlobal(rotevent))
+        else:
+            pass
+        os.remove(self.rotfig)
+
 
     def on_click_rootTab(self):
         date = self.comboDateRoot.currentText()
@@ -491,10 +520,33 @@ class RotOutput_Widget(QWidget):
             plt.tight_layout()
             i = i + 1
 
+            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.customContextMenuRequested.connect(self.export2DRootRot)
+
+    def export2DRootRot(self, rootrotevent):
+        self.rootrotfig=os.path.join(runDir,'ContourRot.png')
+        plt.savefig(self.rootrotfig)
+        self.rootrotpixmap = QPixmap(self.rootrotfig)
+        self.rootrotlabel = QLabel()
+        self.rootrotlabel.setPixmap(self.rootrotpixmap)
+        rootrotmenu = QMenu(self)
+        rootrotexportImage = QAction('Export', self)   
+        rootrotmenu.addAction(rootrotexportImage)  
+        sim_dir = os.path.join(runDir,self.simIDArr[0])
+        rotexport2Droot_path = os.path.join(sim_dir,'RDentandRMassRot.png')
+        if not os.path.exists(rotexport2Droot_path):
+            rootrotexportImage.triggered.connect(lambda: self.rootrotpixmap.save(rotexport2Droot_path))
+            rootrotmenu.exec_(self.mapToGlobal(rootrotevent))
+        else:
+            pass
+        os.remove(self.rootrotfig)
+    pd.set_option('display.max_rows', None)
 
     def on_click_plotSurfChaTab(self):
         checkedVar = []
         LINECOLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'w']
+        SEASONAL_COLS = ['SeasPSoEv', 'SeasASoEv', 'SeasPTran', 'SeasATran', 'SeasRain', 'SeasInfil']
+
         for i, checkbox in enumerate(self.surfChaCheckboxes):
             if checkbox.isChecked():
                 for key, value in self.varSurfChaDescDict.items():
@@ -502,7 +554,13 @@ class RotOutput_Widget(QWidget):
                          checkedVar.append(key)
 
         data_df = pd.DataFrame([])
+        rot_Irrig_df = pd.DataFrame([])
+
         # Loop through each run model to give detail information about each run
+        t51 = []
+        t51_max = []
+        t51_max_index = []
+        data_df_mid = pd.DataFrame([])
         for runNum in range(len(self.simIDArr)):
             t5 = pd.DataFrame([])
             self.g05Tablename = "g05_" + self.cropArr[runNum]
@@ -515,14 +573,69 @@ class RotOutput_Widget(QWidget):
             # Converting from ugco2/plant to kg/ha
             t5['CO2Flux'] = (t5['CO2Flux']/10)
             t5['O2Flux'] = (t5['O2Flux']/10)
-           
-            data_df = data_df.append(t5,ignore_index=True) 
+          #  print(t5['SeasPSoEv'])
+            if runNum != 0:
+                n = runNum -1
+                t51 = extract_cropOutputData("g05_" + self.cropArr[n],self.simIDArr[n])
+                t51 = np.asarray(t51)
+                t51_max = t51.max(axis=0, keepdims=True)
+                t51_max_df = pd.DataFrame(t51_max)    
+              #  print("t51_max_df.iloc[:, 15]:", t51_max_df.iloc[:, 15:21])    
+                t51_max_index = t51.argmax(axis=0)
+                t51_max_index_df = pd.DataFrame(t51_max_index)
+         
+                t5_cum = t5.iloc[:, 14:20]
+                       
+            if runNum == 0:
+	            data_df = data_df.append(t5, ignore_index=False)             
+            else:
+                for i in range(15, 21):
+                    t5_cum_joined = t5_cum.iloc[:, i-15].apply(lambda x:x + t51_max_df.iloc[:, i] )        
+                    t5.iloc[:,i-1] = t5_cum_joined
+                data_df_mid = data_df_mid.append(t5,ignore_index=False)
+                                
+      
+                data_df= data_df.append(data_df_mid, ignore_index=False)
+
+        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        for runNum in range(len(self.simIDArr)):
+            o_t_exid = getTreatmentID(self.treatArr[runNum],self.expArr[runNum],self.cropArr[runNum]) 
+            t5_Irrig = getIrrigationData(self.simIDArr[runNum],o_t_exid)
+            Irrig_df = pd.DataFrame(t5_Irrig, columns=['Date','AmtIrrAppl'])
+       
+            new_Irrig_df = Irrig_df
+            new_Irrig_df['Date'] = pd.to_datetime(Irrig_df['Date'])
+
+             # convert the date column to object format
+            new_Irrig_df['Date'] = new_Irrig_df['Date'].dt.strftime('%Y-%m-%d')
+         
+            rot_Irrig_df =  rot_Irrig_df.append(new_Irrig_df, ignore_index=True)
+            
+
         new_df = data_df['Date_Time'].str.split(' ', n=1, expand=True)
         data_df['Date'] = new_df[0]
+        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
 
         for key in self.varSurfChaFuncDict:
-            data_df[key] = pd.to_numeric(data_df[key],errors='coerce')
+            if key == "TotIrrig":               
+                data_df =  data_df.groupby(['Date'], as_index=False).agg(sum)
+                merged_df = pd.merge(data_df['Date'],rot_Irrig_df, on='Date', how ='outer').fillna(0) 
+                data_df['Date'] = merged_df['Date']     
+                t51 = []
+                for e, element in merged_df['Date'].iteritems() :
+                    if np.all(merged_df['AmtIrrAppl'][e] == 0.0) : 
+                       t51.append(0) 
+                    else:                          
+                        t51.append(merged_df['AmtIrrAppl'][e])
+                data_df[key] = Cumulative(t51)
+            else :      
+                
+                data_df[key] = pd.to_numeric(data_df[key], errors='coerce')
+            
+
         data_df = data_df.fillna(0)
+   
         data_df_grouped = data_df.groupby(['Date'], as_index=False).agg(self.varSurfChaFuncDict)
         data_df_grouped.rename(columns={'Date':'Date_Time'}, inplace=True)
         data_df_grouped['Date_Time'] = pd.to_datetime(data_df_grouped['Date_Time'])
@@ -690,6 +803,7 @@ class RotOutput_Widget(QWidget):
             plantDensity = getPlantDensity(tid)
             operationList = read_operationsDB_id(tid) #gets all the operations
             FertilizerDateList = []
+            IrrigationDateList = []
             BeginDate = ""
             SowingDate = ""
             TillageDate = ""
@@ -697,6 +811,7 @@ class RotOutput_Widget(QWidget):
             HarvestDate = ""
             EndDate = ""            
             totalNAppl = 0
+            totalirrAppl = 0
                  
             for ii,jj in enumerate(operationList):
                 if jj[1] == 'Simulation Start':
@@ -727,13 +842,25 @@ class RotOutput_Widget(QWidget):
                 if jj[1] == 'Harvest':                            
                     HarvestDate=jj[2] #month/day/year
 
+                if jj[1] == "Irrigation":
+                    IrrigationDateList.append(jj[2])       
+                    irrInfo = readOpDetails(jj[0],jj[1])
+                    for j in range(len(irrInfo)):
+                        if irrInfo[j][3] == "Sprinkler":
+                            totalirrAppl = totalirrAppl + irrInfo[j][4]
+
                 if jj[1] == 'Simulation End':                            
                     EndDate=jj[2] #month/day/year
 
             FertilizerDate = ""
+            IrrigationDate = ""
             if len(FertilizerDateList) >= 1:
                 FertilizerDate = ", "
                 FertilizerDate = FertilizerDate.join(FertilizerDateList) 
+
+            if len(IrrigationDateList) >= 1:
+                IrrigationDate = ", "
+                IrrigationDate = IrrigationDate.join(IrrigationDateList) 
 
             self.simSummaryDates = "<i>Simulation Dates </i>"
             self.simSummaryDates += "<br><i>Start Date: </i>" + BeginDate
@@ -742,7 +869,9 @@ class RotOutput_Widget(QWidget):
             if self.cropArr[runNum] != "fallow":
                 self.simSummaryDates += "<br><i>Planting Date: </i>" + SowingDate
             if FertilizerDate != "":
-                self.simSummaryDates += "<br><i>Fertilization Date: </i>" + FertilizerDate
+                self.simSummaryDates += "<br><i>Fertilization Date: </i>" +  "<br>----" + "<br>----".join(FertilizerDateList)
+            if IrrigationDate != "":
+                self.simSummaryDates += "<br><i>Irrigation Date: </i>" + "<br>----" + "<br>----".join(IrrigationDateList) 
             if self.cropArr[runNum] == "potato":
                 TuberInitDate = getTuberInitDate(self.simIDArr[runNum])
                 MaturityDate = getMaturityDate(self.simIDArr[runNum])
@@ -791,7 +920,7 @@ class RotOutput_Widget(QWidget):
                     self.simSummaryAgroData = "<i>Simulation Agronomic Data at <br>" + HarvestDate + " (harvest date)</i>"
                     self.simSummaryAgroData += "<br><i>Yield: </i>" + '{:3.2f}'.format(agroDataTuple[0]*plantDensity*10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Total biomass: </i>" +  '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
-                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]/10) + " kg/ha"
+                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(NitrogenUptakeTuple[0]*plantDensity*10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Transpiration: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity/1000) + " mm"
                 elif self.cropArr[runNum] == "maize":
                     if(MaturityDate != "N/A"):
@@ -820,6 +949,7 @@ class RotOutput_Widget(QWidget):
                     self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" + '{:3.2f}'.format(yieldDataTuple[3]*plantDensity*10) + " kg/ha"
 
                 self.simSummaryAgroData += "<br><i>Total Nitrogen Applied: </i>" + '{:3.2f}'.format(totalNAppl) + " kg/ha"
+                self.simSummaryAgroData += "<br><i>Total Irrigation Applied: </i>" + '{:3.2f}'.format(totalirrAppl) + " mm"
                 genInfoBoxAgroDataLabel.setText(self.simSummaryAgroData)
                 datesAgroEnvBoxSum.addLayout(genInfoBoxAgroData)
 
@@ -872,6 +1002,7 @@ class RotOutput_Widget(QWidget):
 
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.plantGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
+        self.plantGraphWidget.setMinimumSize(500,300)
         self.plantTab.groupBox = QGroupBox("Select parameter to plot")
         self.leftBoxLayout = QGridLayout()
 
@@ -908,7 +1039,9 @@ class RotOutput_Widget(QWidget):
 
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.soilCNWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
+        self.soilCNWidget.setMinimumSize(500,300)
         self.soilCNTab.groupBox = QGroupBox("Select parameter to plot")
+    
         self.leftBoxLayout = QGridLayout()
 
         self.soilCheckboxes = []
@@ -916,6 +1049,7 @@ class RotOutput_Widget(QWidget):
         for var in self.finalSoilCNVarDescDict:
             checkbox = QtWidgets.QCheckBox(self.finalSoilCNVarDescDict[var])
             self.soilCheckboxes.append(checkbox)
+            
             j = i//2
             if i % 2 == 0:
                 self.leftBoxLayout.addWidget(checkbox,j,0)
@@ -925,7 +1059,7 @@ class RotOutput_Widget(QWidget):
         j+=1
 
         self.plotButtom = QPushButton("Plot")
-
+        
         self.leftBoxLayout.addWidget(self.plotButtom,j,0,1,2)
         self.leftBoxLayout.addWidget(self.soilCNWidget,0,2,j-1,4)
         self.soilCNTab.groupBox.setLayout(self.leftBoxLayout)
@@ -933,6 +1067,7 @@ class RotOutput_Widget(QWidget):
  
         self.soilCNTab.mainlayout = QHBoxLayout()
         self.soilCNTab.mainlayout.addWidget(self.soilCNTab.groupBox)
+        
         self.soilCNTab.setLayout(self.soilCNTab.mainlayout)
      
         ########## Soil Water Heat Nitrogen components ##########
@@ -1238,7 +1373,7 @@ class RotOutput_Widget(QWidget):
 
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.surfChaGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
- 
+        self.surfChaGraphWidget.setMinimumSize(500,300)
         self.surfChaTab.groupBox = QGroupBox("Select parameter to plot")
         self.surfChaTab.groupBox.setMaximumWidth(270)
         self.vboxSurfChaLayout = QVBoxLayout()

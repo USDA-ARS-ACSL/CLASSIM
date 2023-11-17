@@ -21,7 +21,7 @@ class ManagementTab_Widget(QWidget):
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+      # self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("management")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -49,6 +49,12 @@ button to create copies of the treatment information so you do not need to fill 
         self.tab_summary.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
         self.tab_summary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # horizontal, vertical
         self.tab_summary.setFrameShape(QtWidgets.QFrame.NoFrame)
+
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Management Tab Video Tutorial</a><br>"
+        self.managementVidlabel=QLabel()
+        self.managementVidlabel.setOpenExternalLinks(True)
+        self.managementVidlabel.setText(urlLink)
 
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
@@ -93,7 +99,8 @@ button to create copies of the treatment information so you do not need to fill 
 
         self.gl = QGridLayout()
         self.gl.setSpacing(1)
-        self.vl1.addWidget(self.tab_summary)        
+        self.vl1.addWidget(self.tab_summary)  
+        self.vl1.addWidget(self.managementVidlabel)
         self.vl1.addWidget(self.helpcheckbox)
         self.vl1.addWidget(self.manRepButton)
         

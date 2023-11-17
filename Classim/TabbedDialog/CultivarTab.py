@@ -32,13 +32,13 @@ class Cultivar_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+    #   self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+    #   self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
         self.faqtree.setVisible(False)
@@ -52,6 +52,12 @@ class Cultivar_Widget(QWidget):
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Cultivar Tab Video Tutorial</a><br>"
+        self.cultivarVidlabel=QLabel()
+        self.cultivarVidlabel.setOpenExternalLinks(True)
+        self.cultivarVidlabel.setText(urlLink)
   
         self.hbox = QHBoxLayout()    
         self.scrollArea = QScrollArea()
@@ -64,6 +70,7 @@ class Cultivar_Widget(QWidget):
         self.vHeader = QVBoxLayout()
         self.vHeader.setContentsMargins(0,0,0,0)
         self.vHeader.addWidget(self.tab_summary)
+        self.vHeader.addWidget(self.cultivarVidlabel)
         self.vHeader.addWidget(self.helpcheckbox)
         self.vHeader.setAlignment(QtCore.Qt.AlignTop)
 
@@ -134,9 +141,9 @@ class Cultivar_Widget(QWidget):
         self.v2Edit = QLineEdit("14.6")
         self.v3Label = QLabel("Correction Factor for the Early Vegetative Rate to Account for Clay Content")
         self.v3Edit = QLineEdit("0.5")
-        self.r1Label = QLabel("Progress Rate towards Floral Initiation at Solstice")
+        self.r1Label = QLabel("Progress Rate towards Floral Initiation Before Solstice")
         self.r1Edit = QLineEdit("0.0198")
-        self.r2Label = QLabel("Daily Rate of the Progress to Floral Initiation Before Solstice")
+        self.r2Label = QLabel("Daily Rate of the Progress to Floral Initiation at Solstice")
         self.r2Edit = QLineEdit("0.0119")
         self.r3Label = QLabel("Daily Rate of the Progress to Floral Initiation After Solstice")
         self.r3Edit = QLineEdit("-0.0907")

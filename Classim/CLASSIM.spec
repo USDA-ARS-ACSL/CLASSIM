@@ -1,17 +1,19 @@
-# -*- mode: python -*- 
-import sys
+# -*- mode: python -*-
+import sys, os
 sys.setrecursionlimit(5000)
 block_cipher = None
 
 options =[]
+user_profile = os.environ['userprofile']
+print(user_profile)
 added_files= [
    ('.\\images\\*.png','images'),
    ('.\\images\\*.ico','images'),
    (os.environ['Conda_prefix'] + '\\Lib\\site-packages\\pyqtlet','pyqtlet')
+  # (user_profile +'\\AppData\\Local\\anaconda3\\envs\\classim2022\\Lib\\site-packages\\pyqtlet', 'pyqtlet')
    ]
-
 a = Analysis(['classim.py'],
-             pathex=[os.environ['Conda_prefix'] + '\\Library\\bin'],
+             pathex=[os.environ['Conda_prefix'] + '\\Library\\bin'], #[ "/%userprofile%/AppData/Local/anaconda3/envs/classim2022/Library/bin"], 
              binaries=[],
              datas=added_files,
              hiddenimports=[],

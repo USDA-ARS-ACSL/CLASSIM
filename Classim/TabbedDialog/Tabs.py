@@ -16,6 +16,9 @@ from TabbedDialog.RotOutputTab import *
 from TabbedDialog.OutputTab import *
 from TabbedDialog.WelcomeTab import *
 from TabbedDialog.SiteTab import *
+from TabbedDialog.AboutTab import *
+#from TabbedDialog.ExpertSystab import *
+
 import os
 
 '''
@@ -79,6 +82,8 @@ class Tabs_Widget(QTabWidget):
         self.Rotationtab = Rotation_Widget()
         self.Outputtab = Output2_Widget()
         self.RotOutputtab = RotOutput_Widget()
+      #  self.ExpertSystab = ExpertSys_Widget()
+        self.Abouttab = About_Widget()
                 
         self.Managementtab.setUpdatesEnabled(True)
         self.addTab(self.Welcometab, ("  Welcome  "))        
@@ -91,6 +96,8 @@ class Tabs_Widget(QTabWidget):
         self.addTab(self.Rotationtab, "  Rotation Builder  ")      
         self.addTab(self.Outputtab, "  Seasonal Output  ")
         self.addTab(self.RotOutputtab, "  Rotation Output  ")
+       # self.addTab(self.ExpertSystab, "Expert System")
+        self.addTab(self.Abouttab, "  About  ")
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(9)

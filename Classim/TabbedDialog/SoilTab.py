@@ -38,7 +38,7 @@ class Soil_Widget(QWidget):
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+      #  self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("Soil")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -59,6 +59,19 @@ UPDATE/SAVE button.")
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        urlLink1="<a href=\"https://youtu.be/JoaKV-NHcA0/\">Click here \
+                to watch the video tutorial for existing soil. </a><br>"
+        self.soilVidlabel1=QLabel()
+        self.soilVidlabel1.setOpenExternalLinks(True)
+        self.soilVidlabel1.setText(urlLink1)
+
+        urlLink2="<a href=\"https://youtu.be/a6B1Ud4LGhk/\">Click here \
+                to watch the video tutorial to add new soil. </a><br>"
+        self.soilVidlabel2=QLabel()
+        self.soilVidlabel2.setOpenExternalLinks(True)
+        self.soilVidlabel2.setText(urlLink2)
+
         
         self.vl1 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
@@ -68,6 +81,7 @@ UPDATE/SAVE button.")
         self.hl1.addWidget(self.tab_summary)
         self.hl1.setContentsMargins(0,0,0,0)
         self.hl1.setSpacing(0)
+       
 
         self.save_update_button = QPushButton("Save")
         self.delete_button = QPushButton("Delete")
@@ -142,6 +156,8 @@ UPDATE/SAVE button.")
         self.vl1.setContentsMargins(1,1,1,1)
         self.vl1.addLayout(self.hl1)        
         self.vl1.addItem(self.spacer)
+        self.vl1.addWidget(self.soilVidlabel1)
+        self.vl1.addWidget(self.soilVidlabel2)
         self.vl1.addWidget(self.helpcheckbox)
         self.vl1.addLayout(self.soilpagegl)
         self.vl1.addLayout(self.hl2)
@@ -660,7 +676,7 @@ UPDATE/SAVE button.")
         '''
         aim: to delete the soil file, on display, from the database
         '''
-        check_and_delete_soilDB(self.soilname2.text())
+        check_and_delete_soilDB(self.soilname2.text(),True)
         self.reset_view()
 
 
@@ -743,6 +759,7 @@ UPDATE/SAVE button.")
 
         wrnMess = ""
         errMess = "" 
+        soilTableRowList = []
         for rrow in range(rowNum):
             retrieved_datalist = []
             for ccol in range(self.soiltable1.columnCount()):
@@ -768,27 +785,16 @@ UPDATE/SAVE button.")
             if(hNew>=0 and val==1):
                 wrnMess += "For bottom depth " + lLev + " cm: if HNew >= 0, the unit type should be 'w', otherwise this will be treated as ponded water surface.<br>"
 
+            soilTableRowList.append(retrieved_datalist)
+
         if errMess != "":
             if self.save_update_button.text() == "SaveAs":
-                delete_soilDB(self.soilname2.text())
+                check_and_delete_soilDB(self.soilname2.text(),False)
+            messageUser(errMess)
             self.save_update_button.clicked.connect(lambda:self.on_savebuttonclick())
-            return messageUser(errMess)
         else:
-            for rrow in range(rowNum):
-                retrieved_datalist = []
-                errMess = "" 
-                for ccol in range(self.soiltable1.columnCount()):
-                    if(ccol == 5):
-                        opt = self.soiltable1.cellWidget(rrow,ccol).currentText()
-                        if(opt == "m"):
-                            val = 1
-                        if(opt == "w"):
-                            val = 2
-                        retrieved_datalist.append(int(val))
-                    else:
-                        retrieved_datalist.append(self.soiltable1.item(rrow,ccol).text())
-                retrieved_datalist[1] = float(retrieved_datalist[1])/100
-                insert_into_soillong(self.soilname2.text(), tuple(retrieved_datalist))
+            for row in soilTableRowList:
+                insert_into_soillong(self.soilname2.text(), tuple(row))
 
             if  wrnMess != "":
                 messageUserInfo(wrnMess)

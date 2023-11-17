@@ -49,7 +49,7 @@ def genDictOutput(cropArr,tabName,rotFlag):
     varFuncMaiDict = {'Leaves':'max','MaturLvs':'max','Dropped':'max','LA_pl':'max','LA_dead':'max','LAI':'max',
                       'RH':'mean','LeafWP':'mean','PFD':'sum','SolRad':'mean','SoilT':'mean','Tair':'mean',
                       'Tcan':'mean','ETdmd':'sum','ETsply':'sum','Pn':'sum','Pg':'sum','Respir':'sum',
-                      'av_gs':'mean','VPD':'mean','Nitr':'mean','N_Dem':'sum','NUpt':'sum','LeafN':'max',
+                      'av_gs':'mean','VPD':'mean','Nitr':'max','N_Dem':'max','NUpt':'max','LeafN':'max',
                       'PCRL':'max','totalDM':'max','shootDM':'max','earDM':'max','TotLeafDM':'max','DrpLfDM':'max',
                       'stemDM':'max','rootDM':'max','SoilRt':'max','MxRtDep':'max','AvailW':'max','solubleC':'max'}
 
@@ -162,11 +162,10 @@ def genDictOutput(cropArr,tabName,rotFlag):
     # g03_cropname table 
     # Same variables for all crops
     varSoilwhn2DDescDict = {"hNew":"Soil Matric Potential","thNew":"Soil Water Content",
-                            "NO3N":"Nitrogen Concentration","Temp":"Average Temperature","CO2Conc":"Carbon Dioxide Concentration","O2Conc":"Oxygen Concentration"}
+                            "NO3N":"Nitrogen Concentration","Temp":"Average Temperature"} 
     varSoilwhn2DDescUnitDict = {"hNew":"Soil Matric Potential\n(cm suction)","thNew":"Soil Water Content\n(cm3/cm3)",
-                                "NO3N":"Nitrogen Concentration\n(mg/L)","Temp":"Average Temperature\n(oC)","CO2Conc":"Carbon Dioxide Concentration\n(mg/L)",
-                                "O2Conc":"Oxygen Concentration\n(mg/L)"}
-    varSoilwhn2DFuncDict = {'hNew':'mean','thNew':'mean','NO3N':'mean','Temp':'mean','CO2Conc':'mean','O2Conc':'mean'}
+                                "NO3N":"Nitrogen Concentration\n(mg/L)","Temp":"Average Temperature\n(oC)"} 
+    varSoilwhn2DFuncDict = {'hNew':'mean','thNew':'mean','NO3N':'mean','Temp':'mean'} 
 
     ########## Soil Time Series ##########
     # g03_cropname table 
@@ -193,16 +192,16 @@ def genDictOutput(cropArr,tabName,rotFlag):
                           'SeasPSoEv':'Seasonal potential soil evaporation','SeasASoEv':'Seasonal actual soil evaporation',
                           'SeasPTran':'Seasonal potential transpiration','SeasATran':'Seasonal actual transpiration',
                           'SeasRain':'Seasonal rainfall','SeasInfil':'Seasonal infiltration','Runoff':'Runoff',
-                          'CO2Flux':'Carbon Dioxide Flux','O2Flux':'Oxygen Flux'}
+                          'CO2Flux':'Carbon Dioxide Flux','O2Flux':'Oxygen Flux','TotIrrig':'Total Irrigation'}
     varSurfChaDescUnitDict = {'PSoilEvap':'Potential soil evaporation (mm/cm2)','ASoilEVap':'Actual Soil evaporation (mm/cm2)',
                               'PE_T_int':'Potential transpiration by leaf energy balance (mm/cm2)','transp':'Transpiration (mm/cm2)',
                               'SeasPSoEv':'Seasonal potential soil evaporation (mm/cm2)','SeasASoEv':'Seasonal actual soil evaporation (mm/cm2)',
                               'SeasPTran':'Seasonal potential transpiration (mm/cm2)','SeasATran':'Seasonal actual transpiration (mm/cm2)',
                               'SeasRain':'Seasonal rainfall (mm/cm2)','SeasInfil':'Seasonal infiltration (mm/cm2)','Runoff':'Runoff (mm/cm2)',
-                              'CO2Flux':'Carbon Dioxide Flux (kg CO2/ha)','O2Flux':'Oxygen Flux (kg O2/ha)'}
+                              'CO2Flux':'Carbon Dioxide Flux (kg CO2/ha)','O2Flux':'Oxygen Flux (kg O2/ha)','TotIrrig':'Total Irrigation (mm/day)'}
     varSurfChaFuncDict = {'PSoilEvap':'sum','ASoilEVap':'sum','PE_T_int':'sum','transp':'sum','SeasPSoEv':'max',
                           'SeasASoEv':'max','SeasPTran':'max','SeasATran':'max','SeasRain':'max','SeasInfil':'max',
-                          'Runoff':'sum','CO2Flux':'sum','O2Flux':'sum'}
+                          'Runoff':'sum','CO2Flux':'sum','O2Flux':'sum','TotIrrig':'sum'}
 
     # The dictionary for plant will not be the same for simulation and rotation
     if tabName  == "plant":  

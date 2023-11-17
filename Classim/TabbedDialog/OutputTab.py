@@ -6,12 +6,14 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import shutil
+import io
+from PIL import Image
 from datetime import date, timedelta, datetime
 from time import mktime
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget, QTabWidget, QLabel, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QVBoxLayout, QPushButton, \
                             QSpacerItem, QSizePolicy, QHeaderView, QRadioButton, QButtonGroup, QFormLayout, QScrollArea, QCheckBox, QGridLayout, \
-                            QHeaderView, QGroupBox
+                            QHeaderView, QGroupBox, QMenu, QAction
 from CustomTool.custom1 import *
 from CustomTool.UI import *
 from DatabaseSys.Databasesupport import *
@@ -26,6 +28,9 @@ from shutil import copyfile
 register_matplotlib_converters()
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+import textwrap
 
 global classimDir
 global runDir
@@ -54,13 +59,13 @@ class Output2_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+       #self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+     #  self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("output")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -80,6 +85,12 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
         self.faqtree.setVisible(False)
 
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Seasonal RunTab Video Tutorial</a><br>"
+        self.seasonalrunVidlabel=QLabel()
+        self.seasonalrunVidlabel.setOpenExternalLinks(True)
+        self.seasonalrunVidlabel.setText(urlLink)
+
         self.vl1 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
         self.vl1.setAlignment(QtCore.Qt.AlignTop)        
@@ -88,9 +99,9 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.vl1.setContentsMargins(0,0,0,0)
         self.vl1.setSpacing(1)
         self.vl1.addWidget(self.tab_summary)
+        self.vl1.addWidget(self.seasonalrunVidlabel)
         self.vl1.addWidget(self.helpcheckbox)
-        self.table2 = QTableWidget()
-
+        self.table2 = QTableWidget()        
         self.plotoutput = QPushButton("Select Simulation")
         self.deleteSim = QPushButton("Delete Simulation")
         self.buttonhlayout = QVBoxLayout()
@@ -382,6 +393,26 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             plt.tight_layout()
             i = i + 1
 
+            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.customContextMenuRequested.connect(self.exportSurface)
+
+    def exportSurface(self, event):
+        self.fig=os.path.join(runDir,'ContourSurface.png')
+        plt.savefig(self.fig)
+        self.pixmap = QPixmap(self.fig)
+        self.label = QLabel()
+        self.label.setPixmap(self.pixmap)
+        menu = QMenu(self)
+        exportImage = QAction('Export', self)  
+        menu.addAction(exportImage)
+        sim_dir = os.path.join(runDir,self.simulationID)
+        exportsurface_path = os.path.join(sim_dir,'PlantSoil2D.png')
+        if not os.path.exists(exportsurface_path):
+            exportImage.triggered.connect(lambda: self.pixmap.save(exportsurface_path))
+            menu.exec_(self.mapToGlobal(event))
+        else:
+            pass
+        os.remove(self.fig)
 
     def on_click_rootTab(self):
         date = self.comboDateRoot.currentText()
@@ -425,6 +456,8 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.rootTab.ax.invert_yaxis()
             levels = np.linspace(z.min(), z.max(),10)
             cf = self.rootTab.ax.contourf(x, y, z, levels=levels, cmap=colorMap)
+            self.var2DRoot = var[:5]
+            
             if var == 'RDenT':
                 cb = self.rootTab.fig.colorbar(cf, ax=self.rootTab.ax,  shrink=0.9, format='%.2f')
             else:
@@ -438,7 +471,29 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             self.rootTab.canvas.draw()
             plt.tight_layout()
             i = i + 1
+                        
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.export2DRoot)
 
+    def export2DRoot(self, rootevent):
+        self.rootfig=os.path.join(runDir,'Contour.png')
+        plt.savefig(self.rootfig)
+        self.rootpixmap = QPixmap(self.rootfig)
+        self.rootlabel = QLabel()
+        self.rootlabel.setPixmap(self.rootpixmap)
+        rootmenu = QMenu(self)
+        rootexportImage = QAction('Export', self)  
+        rootmenu.addAction(rootexportImage)
+        sim_dir = os.path.join(runDir,self.simulationID)
+        export2Droot_path = os.path.join(sim_dir,'RDentandRMass.png')
+        if not os.path.exists(export2Droot_path):
+            rootexportImage.triggered.connect(lambda: self.rootpixmap.save(export2Droot_path))    
+            rootmenu.exec_(self.mapToGlobal(rootevent))          
+        else:
+            pass
+        os.remove(self.rootfig)
+        
+    
 
     def on_click_plotSurfChaTab(self):
         checkedVar = []
@@ -456,12 +511,44 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
        # Create dictionary to hold dataframes
         t5 = extract_cropOutputData(self.g05Tablename,self.simulationID)
 
+
+        o_t_exid = getTreatmentID(self.treatmentname,self.experimentname,self.cropname) 
+        t5_Irrig = getIrrigationData(self.simulationID,o_t_exid)
+
+        Irrig_df = pd.DataFrame(t5_Irrig, columns=['Date','AmtIrrAppl'])
+       # print(Irrig_df)
+        new_Irrig_df = Irrig_df
+        new_Irrig_df['Date'] = pd.to_datetime(Irrig_df['Date'])
+
+        # convert the date column to object format
+        new_Irrig_df['Date'] = new_Irrig_df['Date'].dt.strftime('%Y-%m-%d')
+      #  print(new_Irrig_df)
+
+    
         new_df = t5['Date_Time'].str.split(' ', n=1, expand=True)
         t5['Date'] = new_df[0]
-        for key in self.varSurfChaFuncDict:
-            t5[key] = pd.to_numeric(t5[key],errors='coerce')
+        
+        for key in self.varSurfChaFuncDict:           
+            if key == "TotIrrig":               
+                t5 =  t5.groupby(['Date'], as_index=False).agg(sum)
+                merged_df = pd.merge(t5['Date'],new_Irrig_df, on='Date', how ='outer').fillna(0) 
+                t5['Date'] = merged_df['Date']                              
+                t51 = []
+                for e, element in merged_df['Date'].iteritems() :
+                #   print(e, merged_df['Date'][e])
+                    if np.all(merged_df['AmtIrrAppl'][e] == 0.0) : 
+                       t51.append(0) 
+                    else:                          
+                        t51.append(merged_df['AmtIrrAppl'][e])
+                t5[key] = Cumulative(t51)
+            else :                
+                t5[key] = pd.to_numeric(t5[key],errors='coerce') 
+                t5 =  t5.groupby(['Date'], as_index=False).agg(max)
         t5 = t5.fillna(0)
+        print(t5['SeasRain'], t5['TotIrrig'])
+      
         t5_grouped = t5.groupby(['Date'], as_index=False).agg(self.varSurfChaFuncDict)
+
         t5_grouped.rename(columns={'Date':'Date_Time'}, inplace=True)
         t5_grouped['Date_Time'] = pd.to_datetime(t5_grouped['Date_Time'])
         tmstampArray = np.array([row['Date_Time'].timestamp() for index, row in t5_grouped.iterrows()])
@@ -489,9 +576,9 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
                 i = i + 1
             else:
                 i = 0
-        # set Y  and X range
-        self.surfChaGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(minY*1.05,maxY*1.05),padding=0)
-        self.surfChaGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=minY*1.05,yMax=maxY*1.05)
+            # set Y  and X range
+            self.surfChaGraphWidget.setRange(xRange=(min(tmstampArray),max(tmstampArray)),yRange=(minY*1.05,maxY*1.05),padding=0)
+            self.surfChaGraphWidget.setLimits(xMin=min(tmstampArray),xMax=max(tmstampArray),yMin=minY*1.05,yMax=maxY*1.05)
 
  
     def on_deletebuttonclick(self):
@@ -513,6 +600,11 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             delete_pastrunsDB(self.simulationID,self.cropname)
             self.populate()
 
+   # def testWrap(value):
+   #     wrapper = textwrap.TextWrapper(width=22)
+     #   word_list,_ = wrapper.wrap(text=value)
+    #    for element in word_list:
+     #       print(element)
 
     def on_click_table_widget(self):
         '''
@@ -535,6 +627,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         self.g04Tablename = "g04_" + self.cropname
         self.g05Tablename = "g05_" + self.cropname
         self.g07Tablename = "g07_" + self.cropname
+        self.irrigTablename = "Irrig_pivotOp"
         
         self.display1.clear()
         scrollbar = QScrollArea(widgetResizable=True)
@@ -593,7 +686,10 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         operationList = read_operationsDB_id(tid) #gets all the operations
         FertilizerDateList = []
         PGRDateList = []
+        IrrigationDateList = []
+
         totalNAppl = 0
+        totalirrAppl = 0
 
         for ii,jj in enumerate(operationList):
             if jj[1] == 'Simulation Start':
@@ -627,16 +723,32 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             if jj[1] == 'Harvest':                            
                 HarvestDate=jj[2] #month/day/year
 
+            if jj[1] == "Irrigation":
+                IrrigationDateList.append(jj[2])       
+                irrInfo = readOpDetails(jj[0],jj[1])
+                for j in range(len(irrInfo)):
+                    if irrInfo[j][3] == "Sprinkler":
+                        totalirrAppl = totalirrAppl + irrInfo[j][4]
+             #   print(totalirrAppl)
+
         FertilizerDate = ""
         if len(FertilizerDateList) >= 1:
             FertilizerDate = ", "
             FertilizerDate = FertilizerDate.join(FertilizerDateList) 
+        
+        IrrigationDate = ""
+        if len(IrrigationDateList) >= 1:
+            IrrigationDate = ", "
+            IrrigationDate = IrrigationDate.join(IrrigationDateList) 
 
         PGRDate = ""
         if len(PGRDateList) >= 1:
             PGRDate = ", "
             PGRDate = PGRDate.join(PGRDateList) 
 
+       # wrapper = textwrap.TextWrapper(width=22)
+      #  word_list,_ = wrapper.wrap(text=IrrigationDate)
+        print(IrrigationDateList)
         self.simSummaryGen = "<i>General Information </i>"
         self.simSummaryGen += "<br><i>Site: </i>" + self.sitename
         self.simSummaryGen += "<br><i>Soil: </i>" + self.soilname
@@ -653,7 +765,9 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         if self.cropname != "fallow" and self.cropname != "cotton":
             self.simSummaryDates += "<br><i>Planting Date: </i>" + SowingDate
         if FertilizerDate != "":
-            self.simSummaryDates += "<br><i>Fertilization Date: </i>" + FertilizerDate
+            self.simSummaryDates += "<br><i>Fertilization Date: </i>" + "<br>" + "----" + "<br>----".join(FertilizerDateList)
+        if IrrigationDate != "":
+                self.simSummaryDates += "<br><i>Irrigation Date: </i>" + "<br>" + "----" + "<br>----".join(IrrigationDateList) 
         if PGRDate != "":
             self.simSummaryDates += "<br><i>Plant Growth Regulator Application Date: </i>" + PGRDate
         if self.cropname == "potato":
@@ -736,6 +850,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             envDataTuple = getEnvironmentalData(self.simulationID, "", self.cropname)
             self.envSummaryData = "<i>Simulation Environmental Data </i>"
         self.simSummaryAgroDates += "<br><i>Total Nitrogen Applied: </i>" + '{:3.2f}'.format(totalNAppl) + " kg/ha"
+        self.simSummaryAgroDates += "<br><i>Total Irrigation Applied: </i>" + '{:3.2f}'.format(totalirrAppl) + " mm"
         genInfoBoxAgroDatesLabel.setText(self.simSummaryAgroDates)
  
         self.envSummaryData += "<br><i>Total Potential Transpiration: </i>" + '{:3.2f}'.format(envDataTuple[0]) + " mm"
@@ -890,6 +1005,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         #dateAxis = TimeAxisItem(orientation='bottom')
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.plantGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis})
+        self.plantGraphWidget.setMinimumSize(500,300)
         if self.cropname != "fallow":
             self.plantTab.groupBox = QGroupBox("Select parameter to plot")
             self.leftBoxLayout = QGridLayout()
@@ -923,6 +1039,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
 
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.soilCNWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
+        self.soilCNWidget.setMinimumSize(500,300)
         self.soilCNTab.groupBox = QGroupBox("Select parameter to plot")
         self.leftBoxLayout = QGridLayout()
         self.soilCheckboxes = []
@@ -1016,6 +1133,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
      
         # Read geometry table for this simulation
         geo_df = readGeometrySimID(self.simulationID)
+
         # Read g03 table for this simulation
         t3 = extract_cropOutputData(self.g03Tablename,self.simulationID)
         new_df = t3['Date_Time'].str.split(' ', n=1, expand=True)
@@ -1115,7 +1233,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         NConcProf = t3.groupby('Date',as_index=False)['thNewNO3NArea'].sum()
         #N is ug/cm3 soil water. NNO3*10,000 cm2/m2 * 10,000 m2/ha * 1kg/1e9 ug/ (slab width) == kg/ha
         #NConcProf['NConcProf'] = NConcProf['thNewNO3N']*(14/64)*10000*10000/1000000000
-        NConcProf['NConcProf'] = NConcProf['thNewNO3NArea']*(14/64)/10/(self.eomult*self.rowSP)
+        NConcProf['NConcProf'] = NConcProf['thNewNO3NArea']*(14/62)/10/(self.eomult*self.rowSP)
         NNO3ConcProfMaxY = max(NConcProf['NConcProf'])
         self.NNO3ConcProfilePlot.plot(x=tmstampArray,y=np.array(NConcProf['NConcProf']), pen=pen)
         # Set NNO3 concentration profile x-axis and y-axis
@@ -1154,7 +1272,7 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
             NConcLay = temp.groupby(['Date','Layer'],as_index=False)['thNewNO3NArea'].sum()
             #N is ug/cm3 soil water. NNO3*10,000 cm2/m2 * 10,000 m2/ha * 1kg/1e9 ug/ (slab width) == kg/ha
             #NConcProf['NConcProf'] = NConcProf['thNewNO3N']*(14/64)*10000*10000/1000000000
-            NConcLay['NConcLay'] = NConcLay['thNewNO3NArea']*(14/64)/10/(self.eomult*self.rowSP)
+            NConcLay['NConcLay'] = NConcLay['thNewNO3NArea']*(14/62)/10/(self.eomult*self.rowSP)
             NNO3ConcLayMaxY = max(NConcLay['NConcLay']) if NNO3ConcLayMaxY < max(NConcLay['NConcLay']) else NNO3ConcLayMaxY
             self.NNO3ConcLayerPlot.plot(x=tmstampArray,y=np.array(NConcLay['NConcLay']), name="Layer "+str(depth)+" cm", pen=pen)
 
@@ -1220,10 +1338,11 @@ categorized into 5 types and are displayed individually in bottom tabbed panel."
         ### Surface Characteristics tab ###
         # Creates dictionaries based on crop type
         self.varSurfChaDescDict, self.varSurfChaDescUnitDict, self.varSurfChaFuncDict = genDictOutput(cropArr,"surfCha",0)
+        #print(self.varSurfChaDescDict, self.varSurfChaDescUnitDict, self.varSurfChaFuncDict)
 
         dateAxis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation = 'bottom')
         self.surfChaGraphWidget = pg.PlotWidget(axisItems = {'bottom':dateAxis}) 
- 
+        self.surfChaGraphWidget.setMinimumSize(500,300)
         self.surfChaTab.groupBox = QGroupBox("Select parameter to plot")
         self.surfChaTab.groupBox.setMaximumWidth(270)
         self.vboxSurfChaLayout = QVBoxLayout()

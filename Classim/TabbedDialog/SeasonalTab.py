@@ -20,27 +20,28 @@ global classimDir
 global runDir
 global storeDir
 
+
 classimDir = getClassimDir()
 runDir = os.path.join(classimDir,'run')
 storeDir = os.path.join(runDir,'store')
 
 # Create soil executable
-createsoilexe = classimDir+'\\createsoilfiles.exe'
+createsoilexe = os.path.join(classimDir, 'createsoilfiles.exe')
 
 # maize model executables
-maizsimexe = classimDir+'\\2dmaizsim.exe'
+maizsimexe =  os.path.join(classimDir,'2dmaizsim.exe')
 
 # Potato model executable
-spudsimexe = classimDir+'\\2dspudsim.exe'
+spudsimexe =  os.path.join(classimDir, '2dspudsim.exe')
 
 # Soybean model executable
-glycimexe = classimDir+'\\2dglycim.exe'
+glycimexe =  os.path.join(classimDir, '2dglycim.exe')
 
 # Cotton model executable
-gossymexe = classimDir+'\\2dgossym.exe'
+gossymexe =  os.path.join(classimDir, '2dgossym.exe')
 
 # Flag to tell script if output files should be removed, the default is 1 so they are removed
-remOutputFilesFlag = 0
+remOutputFilesFlag = 1
 
 ## This should always be there
 if not os.path.exists(storeDir):
@@ -57,13 +58,13 @@ class Seasonal_Widget(QWidget):
 
     def init_ui(self):
         self.setGeometry(QtCore.QRect(10,20,700,700))
-        self.setFont(QtGui.QFont("Calibri",10))
+      # self.setFont(QtGui.QFont("Calibri",10))
         self.faqtree = QtWidgets.QTreeWidget(self)   
         self.faqtree.setHeaderLabel('FAQ')     
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+       #self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("seasonal")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -81,6 +82,12 @@ start your simulation.")
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        urlLink="<a href=\"https://www.ars.usda.gov/northeast-area/beltsville-md-barc/beltsville-agricultural-research-center/adaptive-cropping-systems-laboratory/\">Click here \
+                to watch the Seasonal Tab Video Tutorial</a><br>"
+        self.seasonalVidlabel=QLabel()
+        self.seasonalVidlabel.setOpenExternalLinks(True)
+        self.seasonalVidlabel.setText(urlLink)
 
         self.vl1 = QVBoxLayout()
         self.hl1 = QHBoxLayout()
@@ -237,6 +244,7 @@ start your simulation.")
         self.hl2.addWidget(self.rgroupbox)
         
         self.vl1.addLayout(self.hl1)
+        self.vl1.addWidget(self.seasonalVidlabel)
         self.vl1.addWidget(self.helpcheckbox)
         self.vl1.addLayout(self.hl2)
         self.vl1.addStretch(1)
@@ -564,8 +572,8 @@ start your simulation.")
             self.tablebasket.setItem(currentrow,6,QTableWidgetItem(""))
             self.tablebasket.setItem(currentrow,7,QTableWidgetItem(""))
         else:
-            cropExperimentTreatment = crop + "/" +  experiment
-            #print("cropExperimentTreatment=",cropExperimentTreatment)
+            cropExperimentTreatment = "".join([crop,'/',experiment])
+            print("cropExperimentTreatment=",cropExperimentTreatment)
             # get weather years
             weatheryears_list = read_weatheryears_fromtreatment(cropExperimentTreatment)
             syear = str(weatheryears_list[0])
@@ -686,12 +694,26 @@ start your simulation.")
         #copy water.dat file from store to runDir
         src_file = storeDir+'\\Water.DAT'
         dest_file = field_path+'\\Water.DAT'
-        copyFile(src_file,dest_file)
+        copyFile(src_file,dest_file) 
 
-        #copy water.dat file from store to runDir
+        waterfilecontent=[]
+        with open(dest_file, 'r') as read_file:
+            waterfilecontent = read_file.readlines()
+            
+            
+        sandcontent = WriteSoiData(lsoilname,field_name,field_path)
+        if sandcontent > 75:
+            with open(dest_file, 'w') as write_file:
+                for line in waterfilecontent:
+                        write_file.write(line.replace("-1.00000E+005", "-1.00000E+004"))  
+                        
+
+        #copy waterBound.dat file from store to runDir
         src_file= storeDir+'\\WaterBound.DAT'
         dest_file= field_path+'\\WatMovParam.dat'
         copyFile(src_file,dest_file)
+
+        
 
         WriteBiologydefault(field_name,field_path)
 
@@ -704,7 +726,7 @@ start your simulation.")
             src_file= storeDir+'\\fallow.var'
             dest_file= field_path+'\\fallow.var'
             copyFile(src_file,dest_file)
-        WriteIrrigationFile(field_name,field_path)
+        WriteDripIrrigationFile(field_name,field_path)
         hourly_flag, edate = WriteWeather(lexperiment,ltreatmentname,lstationtype,lweather,field_path,ltempVar,lrainVar,lCO2Var)
         WriteSoluteFile(lsoilname,field_path)
         WriteGasFile(field_path)
@@ -712,9 +734,17 @@ start your simulation.")
         WriteTimeFileData(ltreatmentname,lexperiment,lcrop,lstationtype,hourlyFlag,field_name,field_path,hourly_flag,0)
         WriteNitData(lsoilname,field_name,field_path,rowSpacing)
         self.WriteLayerGas(lsoilname,field_name,field_path,rowSpacing,rootWeightPerSlab)
-        WriteSoiData(lsoilname,field_name,field_path)
-        surfResType = WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+       # WriteSoiData(lsoilname,field_name,field_path)
+        surfResType=WriteManagement(lcrop,lexperiment,ltreatmentname,field_name,field_path,rowSpacing)
+
+        irrType = irrigationInfo(lcrop,lexperiment,ltreatmentname)
+        print(irrType)
+
         WriteMulchGeo(field_path,surfResType)
+        o_t_exid = getTreatmentID(ltreatmentname,lexperiment,lcrop)
+
+        WriteIrrigation(field_name,field_path,irrType, simulation_name, o_t_exid)
+
         WriteRunFile(lcrop,lsoilname,field_name,cultivar,field_path,lstationtype)            
         src_file= field_path+"\\"+field_name+".lyr"                    
         layerdest_file= field_path+"\\"+field_name+".lyr"
@@ -789,12 +819,9 @@ start your simulation.")
                 # Ingest .grd file and Area from G03 file on the geometry table
                 if ext == 'G03' or ext == 'g03':
                     ingestGeometryFile(field_path+"\\\\"+field_name+".grd",g_name2,str(simulation_name[0]))
-                    os.remove(field_path+"\\"+field_name+".grd")
-                #print("Working on = ",table_name)
                 ingestOutputFile(table_name,g_name2,str(simulation_name[0]))
                 if remOutputFilesFlag:
                     os.remove(g_name)
-                #print("Work done")
 
             ingestOutputFile("plantStress_"+lcrop,field_path+"\\\\plantstress.crp",str(simulation_name[0]))
             if remOutputFilesFlag:

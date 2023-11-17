@@ -21,7 +21,7 @@ class SiteWidget(QWidget):
         self.faqtree.setGeometry(500,200, 400, 400)
         self.faqtree.setUniformRowHeights(False)
         self.faqtree.setWordWrap(True)
-        self.faqtree.setFont(QtGui.QFont("Calibri",10))        
+       #self.faqtree.setFont(QtGui.QFont("Calibri",10))        
         self.importfaq("Site")              
         self.faqtree.header().setStretchLastSection(False)  
         self.faqtree.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
@@ -40,12 +40,19 @@ class SiteWidget(QWidget):
         self.helpcheckbox = QCheckBox("Turn FAQ on?")
         self.helpcheckbox.setChecked(False)
         self.helpcheckbox.stateChanged.connect(self.controlfaq)
+
+        urlLink="<a href=\"https://youtu.be/VxEn6QM7nzU/\">Click here \
+                to watch the Site Tab video tutorial. </a><br>"
+        self.siteVidlabel=QLabel()
+        self.siteVidlabel.setOpenExternalLinks(True)
+        self.siteVidlabel.setText(urlLink)
        
         self.mainlayout = QGridLayout()
         self.spacer = QSpacerItem(10,10, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.vHeader = QVBoxLayout()
         self.vHeader.setContentsMargins(0,0,0,0)
         self.vHeader.addWidget(self.tab_summary)
+        self.vHeader.addWidget(self.siteVidlabel)
         self.vHeader.addWidget(self.helpcheckbox)
         self.vHeader.setAlignment(QtCore.Qt.AlignTop)
 
@@ -100,7 +107,7 @@ class SiteWidget(QWidget):
         self.mainlayout.addWidget(self.sitenameedit,10,1)
         self.mainlayout.addWidget(self.savebutton,11,2)
         self.mainlayout.addWidget(self.deletebutton,11,3)
-        self.MapWidget.setVisible(False)
+        self.MapWidget.setVisible(True)
         self.rlatlabel.setVisible(False)
         self.rlatedit.setVisible(False)
         self.rlonlabel.setVisible(False)
@@ -181,7 +188,7 @@ class SiteWidget(QWidget):
 
         self.savebutton.clicked.connect(lambda:self.on_savebuttonclick(self.sitenameedit.text()))
         # Only display delete button if the site is NOT being used in any simulation
-        if not isSiteOnPastruns(self.sitecombo.itemText(value)):
+        if not isSiteOnPastruns(self.sitecombo.itemText(value)) and sitename != 'Add New Site':
             self.deletebutton.setVisible(True)
             self.deletebutton.clicked.connect(lambda:self.on_deletebuttonclick(sitename))
         
@@ -304,3 +311,4 @@ class SiteWidget(QWidget):
         """
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         return os.path.join(base_path, relative_path)          
+
