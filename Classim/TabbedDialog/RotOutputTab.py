@@ -574,28 +574,51 @@ class RotOutput_Widget(QWidget):
             t5['CO2Flux'] = (t5['CO2Flux']/10)
             t5['O2Flux'] = (t5['O2Flux']/10)
           #  print(t5['SeasPSoEv'])
+
             if runNum != 0:
-                n = runNum -1
-                t51 = extract_cropOutputData("g05_" + self.cropArr[n],self.simIDArr[n])
-                t51 = np.asarray(t51)
-                t51_max = t51.max(axis=0, keepdims=True)
-                t51_max_df = pd.DataFrame(t51_max)    
-              #  print("t51_max_df.iloc[:, 15]:", t51_max_df.iloc[:, 15:21])    
-                t51_max_index = t51.argmax(axis=0)
-                t51_max_index_df = pd.DataFrame(t51_max_index)
-         
-                t5_cum = t5.iloc[:, 14:20]
-                       
+                 n = runNum - 1
+                 t51 = extract_cropOutputData("g05_" + self.cropArr[n], self.simIDArr[n])
+                 t51 = np.asarray(t51)
+
+                 t51_max = np.max(t51, axis=0, keepdims=True)
+                 t51_max_df = pd.DataFrame(t51_max)
+
+                 t51_max_index = np.argmax(t51, axis=0)
+                 t51_max_index_df = pd.DataFrame(t51_max_index)
+
+                 t5_cum = t5.values[:, 14:20]
+
             if runNum == 0:
-	            data_df = data_df.append(t5, ignore_index=False)             
+                 data_df = data_df.append(t5, ignore_index=False)
             else:
-                for i in range(15, 21):
-                    t5_cum_joined = t5_cum.iloc[:, i-15].apply(lambda x:x + t51_max_df.iloc[:, i] )        
-                    t5.iloc[:,i-1] = t5_cum_joined
-                data_df_mid = data_df_mid.append(t5,ignore_index=False)
+                t5_cum_joined = t5_cum + t51_max_df.values[:, 15:21]
+                t5.values[:, 14:20] = t5_cum_joined
+                data_df_mid = data_df_mid.append(t5, ignore_index=False)
+                data_df = data_df.append(data_df_mid, ignore_index=False)
+
+
+            #if runNum != 0:
+            #    n = runNum -1
+            #    t51 = extract_cropOutputData("g05_" + self.cropArr[n],self.simIDArr[n])
+            #    t51 = np.asarray(t51)
+            #    t51_max = t51.max(axis=0, keepdims=True)
+            #    t51_max_df = pd.DataFrame(t51_max)    
+            #  #  print("t51_max_df.iloc[:, 15]:", t51_max_df.iloc[:, 15:21])    
+            #    t51_max_index = t51.argmax(axis=0)
+            #    t51_max_index_df = pd.DataFrame(t51_max_index)
+         
+            #    t5_cum = t5.iloc[:, 14:20]
+                       
+            #if runNum == 0:
+	           # data_df = data_df.append(t5, ignore_index=False)             
+            #else:
+            #    for i in range(15, 21):
+            #        t5_cum_joined = t5_cum.iloc[:, i-15].apply(lambda x:x + t51_max_df.iloc[:, i] )        
+            #        t5.iloc[:,i-1] = t5_cum_joined
+            #    data_df_mid = data_df_mid.append(t5,ignore_index=False)
                                 
       
-                data_df= data_df.append(data_df_mid, ignore_index=False)
+            #    data_df= data_df.append(data_df_mid, ignore_index=False)
 
         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         for runNum in range(len(self.simIDArr)):
@@ -632,7 +655,7 @@ class RotOutput_Widget(QWidget):
             else :      
                 
                 data_df[key] = pd.to_numeric(data_df[key], errors='coerce')
-            
+                data_df =  data_df.groupby(['Date'], as_index=False).agg(max)
 
         data_df = data_df.fillna(0)
    
@@ -931,7 +954,7 @@ class RotOutput_Widget(QWidget):
                         self.simSummaryAgroData = "<i>Simulation Agronomic Data at <br>" + HarvestDate + " (harvest date)</i>"
                     self.simSummaryAgroData += "<br><i>Yield: </i>" + '{:3.2f}'.format(agroDataTuple[0]*plantDensity*10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Total biomass: </i>" + '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
-                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(agroDataTuple[2]/10) + " kg/ha"
+                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity*10) + " kg/ha"
                 elif self.cropArr[runNum] == "cotton":
                     yieldDataTuple = getCottonAgronomicData(self.simIDArr[runNum])
                     yieldDate = dt.strptime(yieldDataTuple[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y %H:%M')

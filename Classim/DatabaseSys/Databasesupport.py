@@ -2672,7 +2672,7 @@ def getMaizeAgronomicData(sim_id, date):
   Output:
     earDM = yield
     shootDM = total biomass
-    Nitr
+    NUpt
     '''
     rlist = None # list   
 
@@ -2681,7 +2681,7 @@ def getMaizeAgronomicData(sim_id, date):
         harvestDate = dt.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
         querytuple = (sim_id,harvestDate+'%')
 
-        c1 = c.execute("select (max(earDM)*.86), max(shootDM), max(Nitr) from g01_maize where g01_maize_id=? and Date_Time <= ?",querytuple)
+        c1 = c.execute("select (max(earDM)*.86), max(shootDM), max(NUpt) from g01_maize where g01_maize_id=? and Date_Time <= ?",querytuple)
         c1row = c1.fetchone()
         if c1row != None:
             rlist = c1row
