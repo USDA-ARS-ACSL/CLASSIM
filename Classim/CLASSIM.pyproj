@@ -10,12 +10,6 @@
     <SearchPath>helper</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>crop_int_new</Name>
-    <RootNamespace>crop_int</RootNamespace>
-    <SccProjectName>SAK</SccProjectName>
-    <SccProvider>SAK</SccProvider>
-    <SccAuxPath>SAK</SccAuxPath>
-    <SccLocalPath>SAK</SccLocalPath>
     <PublishUrl>
     </PublishUrl>
     <SuppressEnvironmentCreationPrompt>True</SuppressEnvironmentCreationPrompt>

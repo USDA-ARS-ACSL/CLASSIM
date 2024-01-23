@@ -6,7 +6,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QApplication
 
 '''
-Starting point for the application. It calls tabs.py (to calls all the other tabs of Welcome, Site, Soil, Cultivar, Weather, 
+Starting point for the application. It calls tabs.py (to call all the other tabs of Welcome, Site, Soil, Cultivar, Weather, 
 Management, Run, Output).
 DPI scaling is handled here. Important.
 Note the comment for remote debugging. Important.
@@ -17,7 +17,8 @@ if hasattr(QtCore.Qt, 'AA_EnableHighDpiScaling'):
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
  
 if hasattr(QtCore.Qt, 'AA_UseHighDpiPixmaps'):
-    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+    #QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
 os.environ["QT_SCALE_FACTOR"] ="1.25"
 
@@ -31,7 +32,7 @@ QWidget {
 
 QLabel, QTextEdit {
     color: black;
-}  
+}   
 
 QPushButton {
     background-color: #97b498;
@@ -108,19 +109,14 @@ if __name__ == '__main__':
     app.setStyleSheet(style)
     mQFont = app.font()
 
-    if mQFont.pixelSize() >0 :
-        mQFont.setPixelSize(11)
-    else:
-        mQFont.setPointSize(11)
-
-    mQFont.setPointSizeF(7)
-    mQFont.setPixelSize(7)
+    mQFont.setPointSizeF(11)
+    mQFont.setPixelSize(11)
     app.setFont(mQFont)
     
     import sys
     sys.excepthook = except_hook
 
-    conn, c = openDB(dbDir + '\\crop.db')
+    conn, c = openDB('crop.db')
     if c:
         ManagementTab = Tabs_Widget()
         sys.exit(app.exec_())
