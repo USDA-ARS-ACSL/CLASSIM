@@ -15,6 +15,7 @@ from DatabaseSys.Databasesupport import *
 from Models.cropdata import *
 from TabbedDialog.tableWithSignalSlot import *
 from subprocess import Popen
+from dateutil.parser import parse
 
 global classimDir
 global runDir
@@ -550,13 +551,40 @@ start your simulation.")
         crow = self.tablebasket.currentRow()
         if(crow == -1):
             crow = 0
-        
+        stationtype = self.stationTypeCombo.currentText()
+        weather_id= self.weatherCombo.currentText()
+       # weatherID = read_weather_id_forstationtype(stationtype)
+        rlist_max, rlist_min = read_weatherDate_forstationtype(stationtype,weather_id)
+        print("rlist_min, rlist_max: ",  rlist_min, rlist_max )
+        print(type(rlist_min))
+
+        r_min = parse(rlist_min)
+        r_max = parse(rlist_max)
+
+        wea_min = r_min.strftime("%Y")
+        wea_max = r_max.strftime("%Y")
+
         self.expTreatCombo = QComboBox()          
         if crop != "Select from list":
-            self.experimentlists = getExpTreatByCrop(crop)            
+            self.experimentlists = getExpTreatByCrop(crop)      
+         #   self.experimentlists = getExpTreatByCropWeatherDate(crop,stationtype,weatherID)
+            
             self.expTreatCombo.addItem("Select from list") 
             for val in self.experimentlists:
-                self.expTreatCombo.addItem(val)
+                cropExperimentTreatment = "".join([crop,'/',val])
+                print(cropExperimentTreatment)
+                weatheryears_list = read_weatheryears_fromtreatment(cropExperimentTreatment)
+                print(weatheryears_list)
+                num_weatheryears_list = len(weatheryears_list)
+                if num_weatheryears_list == 1:
+                    if (int(wea_min) <= weatheryears_list[0] <= int(wea_max)):
+                       self.expTreatCombo.addItem(val)
+                elif num_weatheryears_list == 2:
+                    if (weatheryears_list[0] >= int(wea_min)) and (weatheryears_list[1] <= int(wea_max)):
+                        self.expTreatCombo.addItem(val)
+                else:
+                    pass
+       
         self.expTreatCombo.currentIndexChanged.connect(self.showtreatmentyear)
         self.tablebasket.setCellWidget(crow,5,self.expTreatCombo)
         return True
@@ -576,6 +604,7 @@ start your simulation.")
             print("cropExperimentTreatment=",cropExperimentTreatment)
             # get weather years
             weatheryears_list = read_weatheryears_fromtreatment(cropExperimentTreatment)
+            print(weatheryears_list)
             syear = str(weatheryears_list[0])
             eyear = str(weatheryears_list[-1])
             self.tablebasket.setItem(currentrow,6,QTableWidgetItem(syear))
@@ -945,22 +974,27 @@ start your simulation.")
                 fout<<"Stresses (Nitrogen, Water stress: 1-nonlimiting, 2-limiting): Simulation Type (1-meteorological, 2-physiological)"<<"\n"
                 fout<<"Nstressoff  Wstressoff  Water-stress-simulation-method"<<"\n"
                 fout<<"%d    %d    %d" %(waterStressFlag,nitroStressFlag,0)<<"\n"
-                rootWeightPerSlab = seedpieceMass * pop  * 0.25 * RowSP / 100 * 0.5 * 0.01
+                popSlab = RowSP/100 * 0.5 * 0.01 * pop  
+                rootWeightPerSlab = seedpieceMass * 0.25 * popSlab
+               # rootWeightPerSlab = seedpieceMass * pop  * 0.25 * RowSP / 100 * 0.5 * 0.01
             elif cropname == "soybean":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
                 fout<<"Sowing          Emergence          End	TimeStep(m)"<<"\n"
                 fout<<"'%-10s'  '%-10s'  '%-10s'  %d" %(SowingDate,EmergenceDate, EndDate,60)<<"\n"
-                rootWeightPerSlab = 0.0275
+                popSlab = RowSP/100 * eomult * 0.01 * pop
+                rootWeightPerSlab = 0.0275 * popSlab
+               
             elif cropname == "cotton":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
                 fout<<"Emergence          End	TimeStep(m)"<<"\n"
                 fout<<"'%-10s'  '%-10s'  %d" %(EmergenceDate, HarvestDate,60)<<"\n"
-                rootWeightPerSlab = 0.0275
+                popSlab = RowSP/100 * eomult * 0.01 * pop
+                rootWeightPerSlab = 0.2 * popSlab
             fout<<"output soils data (g03, g04, g05 and g06 files) 1 if true"<<"\n"
             fout<<"no soil files        output soil files"<<"\n"
-            fout<<"    0                     1  "<<"\n"
+            fout<<"    0                   1  "<<"\n"
                
         fh.close()
 

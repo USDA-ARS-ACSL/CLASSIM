@@ -340,7 +340,7 @@ def read_cultivar_DB_detailed(hybridname,cropname):
   Output:
     tuple with complete information about a particular hybridname
     '''
-    rlist =() # tuple   
+    rlist = [] # tuple   
     conn, c = openDB('crop.db')
     if c:
         if len(cropname) > 0:   
@@ -366,6 +366,8 @@ def read_cultivar_DB_detailed(hybridname,cropname):
             c1_row = c1.fetchone()
             if c1_row != None:        
                 rlist=c1_row
+
+        print(rlist)
         conn.close()
         return rlist
 
@@ -1987,13 +1989,31 @@ def read_weather_id_forstationtype(stationtype):
     if c:
         c1 = c.execute("SELECT distinct weather_id FROM weather_data where stationtype = ? order by lower(weather_id)",(stationtype,))
         c1_row = c1.fetchall()
+ 
         if c1_row != None:
             for c1_row_record in c1_row:
                 rlist.append(c1_row_record[0])
-        
+         
         conn.close()            
         return rlist
 
+def read_weatherDate_forstationtype(stationtype, weather_id):  
+    '''
+  Returns weather date list for a specific site name/stationtype.
+  Input:
+    stationtype
+  Output:
+    Tuple with weather date list
+    '''
+
+    conn, c = openDB('crop.db')
+    if c:
+       # c1 = c.execute("SELECT date FROM weather_data where stationtype = ?",(stationtype,)) #order by lower(weather_id)",(stationtype,))
+        c1= c.execute("SELECT max(date), min(date) FROM weather_data where stationtype =? and weather_id = ? group by stationtype, weather_id", (stationtype,weather_id))
+        c1_row = c1.fetchall()
+         
+        conn.close()            
+        return c1_row[0][0], c1_row[0][1]
 
 def read_weatheryears_fromtreatment(treatment):  
     '''
@@ -2148,32 +2168,31 @@ def delete_weather(site,stationtype):
         conn.close()
         return True
 
-
+'''
 def delete_cultivar(crop,cultivarname):
-    '''
-  Delete record on cultivar table based on cultivarname
-  Input:
-    cultivarname
-  Output:
-    '''
-    delete_flag = messageUserDelete("Are you sure you want to delete this record?")
+    
+#  Delete record on cultivar table based on cultivarname
+#  Input:
+ #   cultivarname
+#  Output:
+    
+  #  delete_flag = messageUserDelete("Are you sure you want to delete this record?")
 
-    if delete_flag:
-        conn, c = openDB('crop.db')
-        if c:
-            if crop == "maize":
-                c.execute("delete from cultivar_maize where hybridname=?",[cultivarname])
-            elif crop == "potato":
-                c.execute("delete from cultivar_potato where hybridname=?",[cultivarname]) 
-            elif crop == "soybean":
-                c.execute("delete from cultivar_soybean where hybridname=?",[cultivarname]) 
-            elif crop == "cotton":
-                c.execute("delete from cultivar_cotton where hybridname=?",[cultivarname]) 
-
-            conn.commit()
-            conn.close()
-            return True
-
+   # if delete_flag:
+    conn, c = openDB('crop.db')
+    if c:
+        if crop == "maize":
+            c.execute("delete from cultivar_maize where hybridname=?",[cultivarname])
+        elif crop == "potato":
+            c.execute("delete from cultivar_potato where hybridname=?",[cultivarname]) 
+        elif crop == "soybean":
+            c.execute("delete from cultivar_soybean where hybridname=?",[cultivarname]) 
+        elif crop == "cotton":
+            c.execute("delete from cultivar_cotton where hybridname=?",[cultivarname]) 
+        conn.commit()
+        conn.close()
+        return True
+'''
 
 def insertUpdateCultivarMaize(record_tuple,buttontext):
     '''
@@ -2995,3 +3014,117 @@ def Cumulative(lists):
     length = len(lists)
     cu_list = [sum(lists[0:x:1]) for x in range(0, length+1)]
     return cu_list[1:]   
+
+
+def delete_cultivar(crop, cultivarname, askUserFlag):
+        delete_flag = False
+      
+        if askUserFlag:
+                delete_flag = messageUserDelete("Are you sure you want to delete this record?")
+        else:
+            delete_flag = True
+
+        if delete_flag:
+            conn, c = openDB('crop.db')
+            if c:
+                if crop == "maize":
+                    c.execute("delete from cultivar_maize where hybridname=?",[cultivarname])
+                elif crop == "potato":
+                    c.execute("delete from cultivar_potato where hybridname=?",[cultivarname]) 
+                elif crop == "soybean":
+                    c.execute("delete from cultivar_soybean where hybridname=?",[cultivarname]) 
+                elif crop == "cotton":
+                    c.execute("delete from cultivar_cotton where hybridname=?",[cultivarname]) 
+                conn.commit()
+                conn.close()
+
+
+
+def insert_cultivarDB(crop, record_tuple):
+   # print(crop, record_tuple[0])
+    cultivarname = record_tuple[0]
+    rlist = []
+    rlist = check_cultivarDB(crop, cultivarname)
+
+    if rlist == []:
+        conn, c = openDB('crop.db')
+
+        if c:
+            if crop == 'maize':
+                c.execute('insert into cultivar_maize (hybridname, juvenileleaves, Rmax_LTAR, Rmax_LTIR, PhyllFrmTassel, StayGreen) values (?,?,?,?,?,?)', record_tuple)
+            elif crop == 'soybean':
+                c.execute('insert into cultivar_soybean(hybridname,seedLb, fill, v1, v2, v3, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, g1, g2, g3, g4, g5, g6, g7, g8, g9) \
+               values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', record_tuple)
+            elif crop == 'potato':
+                c.execute('insert into cultivar_potato (hybridname, A1, A6, A8, A9, A10, G1, G2, G3, G4) values (?,?,?,?,?,?,?,?,?,?)', record_tuple)
+            elif crop == 'cotton':
+                c.execute('insert into cultivar_cotton (hybridname, calbrt11, calbrt12, calbrt13, calbrt15, calbrt16, calbrt17, calbrt18, calbrt19, calbrt22, calbrt26, calbrt27, \
+                calbrt28, calbrt29, calbrt30, calbrt31, calbrt32, calbrt33, calbrt34, calbrt35, calbrt36, calbrt37, calbrt38, calbrt39, calbrt40, calbrt41, calbrt42, calbrt43,  \
+                calbrt44, calbrt45, calbrt47, calbrt48, calbrt49, calbrt50, calbrt52, calbrt57) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', record_tuple)
+            conn.commit()
+            conn.close()
+        return True
+    else:
+        return messageUser("This cultivarname exists, please use a different name.")
+
+      
+        
+def check_cultivarDB(crop, cultivarname): 
+    '''
+  Check if cultivar exists.
+  Input:
+    crop, cultivarname
+  Output:
+    id = cultivar id
+    '''  
+    rlist = []   
+    conn, c = openDB('crop.db')
+  #  print("cultivar: ",type(cultivarname))
+    if c:
+        if crop == 'maize':
+            #cultivartuple = (cultivarname, cultivar_id)
+            c1= c.execute("SELECT id FROM cultivar_maize where hybridname=?", (cultivarname,))
+        elif crop == 'soybean':
+            c1= c.execute("SELECT id FROM cultivar_soybean where hybridname=?", (cultivarname,))
+        elif crop == 'potato':
+            c1= c.execute("SELECT id FROM cultivar_potato where hybridname=?", (cultivarname,))
+        elif crop == 'cotton':
+            c1= c.execute("SELECT id FROM cultivar_cotton where hybridname=?", (cultivarname,))
+
+        c1row = c1.fetchone()
+        if c1row != None:
+            rlist.append(c1row[0])   
+        conn.close()
+        return rlist
+
+            
+def update_cultivarDB(crop, record_tuple):
+    print(record_tuple)
+    # print(crop, record_tuple[0])
+ 
+
+    (crop,cultivarname) =record_tuple[0].split(":")
+  #  rlist = []
+  #  rlist = check_cultivarDB(crop, cultivarname)
+    print(cultivarname)
+
+  #  if rlist == []:
+    updated_tuple = record_tuple[1:] + (cultivarname,)
+    print("Updated_tuple:", updated_tuple)
+    conn, c = openDB('crop.db')
+
+    if c:
+        if crop == 'maize':
+            c.execute('update cultivar_maize set juvenileleaves=?, Rmax_LTAR=?, Rmax_LTIR=?, PhyllFrmTassel=?, StayGreen=? where hybridname = ?', updated_tuple)
+        elif crop == 'soybean':
+            c.execute('update cultivar_soybean set seedLb=?, fill=?, v1=?, v2=?, v3=?, r1=?, r2=?, r3=?, r4=?, r5=?, r6=?, r7=?, r8=?, r9=?, r10=?, r11=?, r12=?, g1=?, g2=?, g3=?, g4=?, \
+           g5=?, g6=?, g7=?, g8=?, g9=? where hybridname = ?', updated_tuple)
+        elif crop == 'potato':
+            c.execute('update cultivar_potato set A1=?, A6=?, A8=?, A9=?, A10=?, G1=?, G2=?, G3=?, G4=? where hybridname = ?', updated_tuple)
+        elif crop == 'cotton':
+            c.execute('update cultivar_cotton set calbrt11=?, calbrt12=?, calbrt13=?, calbrt15=?, calbrt16=?, calbrt17=?, calbrt18=?, calbrt19=?, calbrt22=?, calbrt26=?, calbrt27=?, \
+            calbrt28=?, calbrt29=?, calbrt30=?, calbrt31=?, calbrt32=?, calbrt33=?, calbrt34=?, calbrt35=?, calbrt36=?, calbrt37=?, calbrt38=?, calbrt39=?, calbrt40=?, calbrt41=?, \
+                     calbrt42=?, calbrt43=?,  calbrt44=?, calbrt45=?, calbrt47=?, calbrt48=?, calbrt49=?, calbrt50=?, calbrt52=?, calbrt57=? where hybridname = ?', updated_tuple)
+        conn.commit()
+        conn.close()
+    return True

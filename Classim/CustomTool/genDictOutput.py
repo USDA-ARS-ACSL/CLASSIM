@@ -181,7 +181,7 @@ def genDictOutput(cropArr,tabName,rotFlag):
     # Same variables for all crops
 
     varRootDescDict = {"RDenT":"Root Density Total","RMassT":"Root Mass Total"}
-    varRootDescUnitDict = {"RDenT":"Root Density Total (g/cm2)","RMassT":"Root Mass Total (g/cm2)"}
+    varRootDescUnitDict = {"RDenT":"Root Density Total (cm/cm2)","RMassT":"Root Mass Total (g/cm2)"}
     varRootFuncDict = {'RDenT':'max','RMassT':'max'}
     
     ### Surface Characteristics tab ###

@@ -140,6 +140,9 @@ class Tabs_Widget(QTabWidget):
             self.Seasonaltab.refresh()
         if self.currentIndex() == 7:
             self.Rotationtab.refresh()
+   #     if self.currentIndex() == 8:
+    #        self.Cultivartab.refresh()
+
 
 
     def center(self):

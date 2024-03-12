@@ -1,3 +1,4 @@
+from cmath import nan
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem, QWidget, QLabel, QHBoxLayout, QComboBox, QVBoxLayout, QPushButton, QSpacerItem, \
                             QSizePolicy, QRadioButton, QButtonGroup, QScrollArea, QGridLayout, QCheckBox, QHeaderView
@@ -88,6 +89,7 @@ class Cultivar_Widget(QWidget):
         self.cultivarlistlabel = QLabel("Cultivar List")
         self.cultivarcombo = QComboBox()
         self.cultivarlistlabel.setBuddy(self.cultivarcombo)
+        
 
         ###### Creating maize fields #####
         self.daylengthabel = QLabel("Daylength Sensitive")
@@ -452,7 +454,74 @@ class Cultivar_Widget(QWidget):
         self.cultivardeletebutton.setVisible(False)        
         self.setLayout(self.hbox) 
 
- 
+
+
+    def controlfaq(self):                
+        if self.helpcheckbox.isChecked():
+            self.importfaq("cultivar")              
+            self.faqtree.setVisible(True)
+        else:
+            self.faqtree.setVisible(False)
+
+    def importfaq(self, thetabname=None):        
+        cropname = self.cropcombo.currentText()
+        faqlist = read_FaqDB(thetabname,cropname)         
+        self.faqtree.clear()
+
+        for item in faqlist:
+            roottreeitem = QTreeWidgetItem(self.faqtree)
+            roottreeitem.setText(0,item[2])
+            childtreeitem = QTreeWidgetItem()
+            childtreeitem.setText(0,item[3])
+            roottreeitem.addChild(childtreeitem)
+
+    
+    def showcultivarcombo(self):   
+        if self.cropcombo.itemText(self.cropcombo.currentIndex()) == "Select a crop" or \
+            self.cropcombo.itemText(self.cropcombo.currentIndex()) == "":
+            self.cultivarcombo.setVisible(False)
+            self.cultivarlistlabel.setVisible(False)
+            self.cornFieldSwitch(False)
+            self.potatoFieldSwitch(False)
+            self.soybeanFieldSwitch(False)
+            self.cottonFieldSwitch(False)
+            self.cultivarnamelabel.setVisible(False)
+            self.cultivarnameedit.setVisible(False)
+            self.cultivarbutton.setVisible(False)   
+        else:
+            self.cropname = self.cropcombo.itemText(self.cropcombo.currentIndex())
+            print(self.cropname)
+            cultivarlists = read_cultivar_DB(self.cropname) 
+            self.cultivarcombo.clear()
+            self.cultivarcombo.addItem("Select from list")  
+            self.cultivarcombo.addItem("Add New Cultivar ("+self.cropname+")") 
+            for key in cultivarlists:
+                self.cultivarcombo.addItem(self.cropname + ":" + str(key)) 
+              
+            self.cultivarcombo.setVisible(True)   
+            self.cultivarlistlabel.setVisible(True)  
+            self.cornFieldSwitch(False)
+            self.potatoFieldSwitch(False)
+            self.soybeanFieldSwitch(False)
+            self.cottonFieldSwitch(False)
+       
+            if self.cultivarcombo.currentText() == "Select from list":
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(False)
+                self.cultivarnamelabel.setVisible(False)
+                self.cultivarnameedit.setVisible(False)
+                self.cultivarbutton.setVisible(False) 
+                self.cultivarcombo.currentTextChanged.connect(self.showcultivardetailscombo)      
+
+            if self.helpcheckbox.isChecked():
+                self.importfaq("cultivar")              
+                self.faqtree.setVisible(True)
+        return True
+    
+
+
     def cornFieldSwitch(self, state):
         self.daylengthabel.setVisible(state)
         self.daylength_b1.setVisible(state)
@@ -468,7 +537,6 @@ class Cultivar_Widget(QWidget):
         self.staygreenlavel.setVisible(state)
         self.staygreenedit.setVisible(state)
         return True
-
 
     def potatoFieldSwitch(self,state):
         self.dailyAirTempEffectLabel.setVisible(state)
@@ -624,130 +692,52 @@ class Cultivar_Widget(QWidget):
         return True
 
 
-    def showcultivarcombo(self):
-        cropname = self.cropcombo.currentText()
-        self.cultivarcombo.setVisible(False)
-        self.cultivarlistlabel.setVisible(False)
-        self.cornFieldSwitch(False)
-        self.potatoFieldSwitch(False)
-        self.soybeanFieldSwitch(False)
-        self.cottonFieldSwitch(False)
-        self.cultivarnamelabel.setVisible(False)
-        self.cultivarnameedit.setVisible(False)
-        self.cultivarbutton.setVisible(False)       
-        self.cultivardeletebutton.setVisible(False)        
-
-        if cropname != "Select a crop":
-            self.cultivarcombo.setVisible(True)
-            self.cultivarlistlabel.setVisible(True)
-
-            cultivarlists = read_cultivar_DB(cropname) 
-            self.cultivarcombo.clear()
-            self.cultivarcombo.addItem("Select from list")    
-            self.cultivarcombo.addItem("Add New Cultivar ("+cropname+")") 
-            for key in cultivarlists:
-                self.cultivarcombo.addItem(cropname + ":" + str(key))   
-            self.cultivarcombo.currentIndexChanged.connect(self.showcultivardetailscombo)
-
-            if self.helpcheckbox.isChecked():
-                self.importfaq("cultivar")              
-                self.faqtree.setVisible(True)
-
-        return True
 
 
     def showcultivardetailscombo(self):
-        cultivarname = self.cultivarcombo.currentText()
 
-        self.cornFieldSwitch(False)
-        self.potatoFieldSwitch(False)
-        self.soybeanFieldSwitch(False)
-        self.cottonFieldSwitch(False)
-
-        self.cultivarnamelabel.setVisible(False)
-        self.cultivarnameedit.setVisible(False)
-        self.cultivarbutton.setVisible(False)       
-        self.cultivardeletebutton.setVisible(False)        
-
-        if cultivarname == "Select from list":  
-            action = ""
-            return True
-        else:      
-            if cultivarname.find(":") != -1:
-                (crop,cultivar) = cultivarname.split(":")
-                action = "Update"
-                self.cultivardeletebutton.setVisible(True)   
-                self.cultivardeletebutton.clicked.connect(lambda:self.on_cultivardeletebuttonclick(crop,cultivar))
-            else:
-                crop = self.cropcombo.currentText()
-                cultivar = ""
-                action = "SaveAs"
-                self.cultivarnamelabel.setVisible(True)
-                self.cultivarnameedit.setVisible(True)
-
-            self.cultivarbutton.setText(action)
+        if self.cultivarcombo.currentText() == "Add New Cultivar ("+self.cropname+")" or \
+             self.cultivarcombo.itemText(self.cultivarcombo.currentIndex()) == "":
+            print(self.cultivarcombo.currentText())
             self.cultivarbutton.setVisible(True)
-            self.cultivarbutton.clicked.connect(lambda:self.on_cultivarbuttonsclick(crop,cultivar))
+            self.cultivarbutton.setText("SaveAs")
+            self.cultivardeletebutton.setVisible(True)
+            self.cultivarnamelabel.setVisible(True)
+            self.cultivarnameedit.setVisible(True)
+           
+            cultivarname = self.cultivarcombo.currentText()
+            self.cultivarbutton.clicked.connect(lambda:self.on_cultivarbuttonsclick(self.cropname)) #(self.cropname,cultivarname))
+            if self.cropname == 'maize':
+                self.cornFieldSwitch(True)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(False)
+                self.leavesedit.setText("17")
+                self.ltaredit.setText("0.53")
+                self.ltiredit.setText("0.978")
+                self.tasseledit.setText("3.0")
+                self.staygreenedit.setText("4.0")
 
-        # Each cultivar has a different set of parameters, so this block of code will be specific for each crop maize
-        if(crop == "maize"):
-            self.cornFieldSwitch(True)
-            ## putting 2 separate buttons for UPDATE and SAVEAS tasks
-            if action == "SaveAs":
-                self.leavesedit.setText("0")
-                self.ltaredit.setText("0.46")
-                self.ltiredit.setText("0.8")
-                self.tasseledit.setText("4.0")
-                self.staygreenedit.setText("2.0")
-            elif action == "Update":
-                cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
+            elif self.cropname == 'potato':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(True)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(False)
+                self.dailyAirTempEffectEdit.setText("1.7")
+                self.dailyAirTempAmpEffectEdit.setText("2.0")
+                self.photoEffectEdit.setText("2.1")
+                self.highNiEffectEdit.setText("1.2")
+                self.lowNiEffectEdit.setText("0.8")
+                self.determEdit.setText("0.5")
+                self.maxCanLeafExpRateEdit.setText("450")
+                self.maxTuberGrowthRateEdit.setText("20")
+                self.specificLeafWeightEdit.setText("0.004")
 
-                if cultivartuple[0] is not None:
-                    self.leavesedit.setText(str(cultivartuple[0]))
-
-                if cultivartuple[1] > 0:
-                    self.daylength_b1.setChecked(True)
-                else:
-                    self.daylength_b2.setChecked(True)
-
-                if cultivartuple[2] is not None:
-                    self.ltaredit.setText(str(cultivartuple[2]))
-                if cultivartuple[3] is not None:
-                    self.ltiredit.setText(str(cultivartuple[3]))
-                if cultivartuple[4] is not None:
-                    self.tasseledit.setText(str(cultivartuple[4]))
-                if cultivartuple[5] is not None:
-                    self.staygreenedit.setText(str(cultivartuple[5]))
-          
-        # Potato
-        if(crop == "potato"):
-            self.potatoFieldSwitch(True)
-            if action == "SaveAs":
-                self.dailyAirTempEffectEdit.setText("0")
-                self.dailyAirTempAmpEffectEdit.setText("0")
-                self.photoEffectEdit.setText("0")
-                self.highNiEffectEdit.setText("0")
-                self.lowNiEffectEdit.setText("0")
-                self.determEdit.setText("0")
-                self.maxCanLeafExpRateEdit.setText("0")
-                self.maxTuberGrowthRateEdit.setText("0")
-                self.specificLeafWeightEdit.setText("0")
-            elif action == "Update":
-                cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
-                self.dailyAirTempEffectEdit.setText(str(cultivartuple[0]))
-                self.dailyAirTempAmpEffectEdit.setText(str(cultivartuple[1]))
-                self.photoEffectEdit.setText(str(cultivartuple[2]))
-                self.highNiEffectEdit.setText(str(cultivartuple[3]))
-                self.lowNiEffectEdit.setText(str(cultivartuple[4]))
-                self.determEdit.setText(str(cultivartuple[5]))
-                self.maxCanLeafExpRateEdit.setText(str(cultivartuple[6]))
-                self.maxTuberGrowthRateEdit.setText(str(cultivartuple[7]))
-                self.specificLeafWeightEdit.setText(str(cultivartuple[8]))
-
-        # Soybean
-        if(crop == "soybean"):
-            self.soybeanFieldSwitch(True)
-            if action == "SaveAs":
+            elif self.cropname == 'soybean':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(True)
+                self.cottonFieldSwitch(False)
                 self.matGrpEdit.setText("2.7")
                 self.seedLbEdit.setText("3800")
                 self.fillEdit.setText("7.5")
@@ -775,40 +765,12 @@ class Cultivar_Widget(QWidget):
                 self.g7Edit.setText("0.5")
                 self.g8Edit.setText("1.3")
                 self.g9Edit.setText("1")
-            elif action == "Update":
-                cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
-                self.matGrpEdit.setText(str(cultivartuple[0]))
-                self.seedLbEdit.setText(str(cultivartuple[1]))
-                self.fillEdit.setText(str(cultivartuple[2]))
-                self.v1Edit.setText(str(cultivartuple[3]))
-                self.v2Edit.setText(str(cultivartuple[4]))
-                self.v3Edit.setText(str(cultivartuple[5]))
-                self.r1Edit.setText(str(cultivartuple[6]))
-                self.r2Edit.setText(str(cultivartuple[7]))
-                self.r3Edit.setText(str(cultivartuple[8]))
-                self.r4Edit.setText(str(cultivartuple[9]))
-                self.r5Edit.setText(str(cultivartuple[10]))
-                self.r6Edit.setText(str(cultivartuple[11]))
-                self.r7Edit.setText(str(cultivartuple[12]))
-                self.r8Edit.setText(str(cultivartuple[13]))
-                self.r9Edit.setText(str(cultivartuple[14]))
-                self.r10Edit.setText(str(cultivartuple[15]))
-                self.r11Edit.setText(str(cultivartuple[16]))
-                self.r12Edit.setText(str(cultivartuple[17]))
-                self.g1Edit.setText(str(cultivartuple[18]))
-                self.g2Edit.setText(str(cultivartuple[19]))
-                self.g3Edit.setText(str(cultivartuple[20]))
-                self.g4Edit.setText(str(cultivartuple[21]))
-                self.g5Edit.setText(str(cultivartuple[22]))
-                self.g6Edit.setText(str(cultivartuple[23]))
-                self.g7Edit.setText(str(cultivartuple[24]))
-                self.g8Edit.setText(str(cultivartuple[25]))
-                self.g9Edit.setText(str(cultivartuple[26]))
-                   
-        # Cotton
-        if(crop == "cotton"):
-            self.cottonFieldSwitch(True)
-            if action == "SaveAs":
+
+            elif self.cropname == 'cotton':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(True)
                 self.calbrt11Edit.setText("4")
                 self.calbrt12Edit.setText("6.75")
                 self.calbrt13Edit.setText("35")
@@ -844,292 +806,249 @@ class Cultivar_Widget(QWidget):
                 self.calbrt50Edit.setText("1")
                 self.calbrt52Edit.setText("1.35")
                 self.calbrt57Edit.setText("1")
-            elif action == "Update":
-                cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
-                self.calbrt11Edit.setText(str(cultivartuple[0]))
-                self.calbrt12Edit.setText(str(cultivartuple[1]))
-                self.calbrt13Edit.setText(str(cultivartuple[2]))
-                self.calbrt15Edit.setText(str(cultivartuple[3]))
-                self.calbrt16Edit.setText(str(cultivartuple[4]))
-                self.calbrt17Edit.setText(str(cultivartuple[5]))
-                self.calbrt18Edit.setText(str(cultivartuple[6]))
-                self.calbrt19Edit.setText(str(cultivartuple[7]))
-                self.calbrt22Edit.setText(str(cultivartuple[8]))
-                self.calbrt26Edit.setText(str(cultivartuple[9]))
-                self.calbrt27Edit.setText(str(cultivartuple[10]))
-                self.calbrt28Edit.setText(str(cultivartuple[11]))
-                self.calbrt29Edit.setText(str(cultivartuple[12]))
-                self.calbrt30Edit.setText(str(cultivartuple[13]))
-                self.calbrt31Edit.setText(str(cultivartuple[14]))
-                self.calbrt32Edit.setText(str(cultivartuple[15]))
-                self.calbrt33Edit.setText(str(cultivartuple[16]))
-                self.calbrt34Edit.setText(str(cultivartuple[17]))
-                self.calbrt35Edit.setText(str(cultivartuple[18]))
-                self.calbrt36Edit.setText(str(cultivartuple[19]))
-                self.calbrt37Edit.setText(str(cultivartuple[20]))
-                self.calbrt38Edit.setText(str(cultivartuple[21]))
-                self.calbrt39Edit.setText(str(cultivartuple[22]))
-                self.calbrt40Edit.setText(str(cultivartuple[23]))
-                self.calbrt41Edit.setText(str(cultivartuple[24]))
-                self.calbrt42Edit.setText(str(cultivartuple[25]))
-                self.calbrt43Edit.setText(str(cultivartuple[26]))
-                self.calbrt44Edit.setText(str(cultivartuple[27]))
-                self.calbrt45Edit.setText(str(cultivartuple[28]))
-                self.calbrt47Edit.setText(str(cultivartuple[29]))
-                self.calbrt48Edit.setText(str(cultivartuple[30]))
-                self.calbrt49Edit.setText(str(cultivartuple[31]))
-                self.calbrt50Edit.setText(str(cultivartuple[32]))
-                self.calbrt52Edit.setText(str(cultivartuple[33]))
-                self.calbrt57Edit.setText(str(cultivartuple[34]))
-
-
-    @pyqtSlot()    
-    def on_cultivarbuttonsclick(self, crop, cultivar):
-        if crop == "maize" or crop == "soybean":
-            alpm = 0.55
-            diffx = 2.4
-            diffz = 2.9
-            velz = 0.0
-            if crop == "maize":
-                daylength_v = 1 if self.daylength_b1.isChecked() else 0       
-                lm_min = 100.0 
-        elif crop == "potato":
-            alpm = 0.35
-            diffx = 0.5
-            diffz = 0.5
-            velz = 0.5
-
-        rrrm = 166.7
-        rrry = 31.3
-        rvrl = 0.73
-        alpy = 0.04
-        rtwl = 0.000106
-        rtminwt = 0.0002
-        epsi = 1.0
-        iupw = 1.0
-        courmax = 1.0
-        lsink = 1.0
-        rroot = 0.017
-        constl_m = 35.0
-        constk_m = 0.5
-        cmin0_m = 0.01
-        consti_y = 17.3
-        constk_y = 0.75
-        cmin0_y = 0.03
-        if self.cultivarbutton.text() == "Update":
-            self.cultivarbutton.blockSignals(True)
-            self.cultivarbutton.blockSignals(False)
-            if crop == "maize":
-                record_tuple = (cultivar, int(self.leavesedit.text()), daylength_v, float(self.ltaredit.text()), \
-                               float(self.ltiredit.text()), float(self.tasseledit.text()), float(self.staygreenedit.text()), \
-                               lm_min, rrrm, rrry, rvrl, alpm, alpy, rtwl, rtminwt, epsi, iupw, courmax, diffx, diffz, velz, \
-                               lsink, rroot, constl_m, constk_m, cmin0_m, consti_y, constk_y, cmin0_y)
-                c1 = insertUpdateCultivarMaize(record_tuple,self.cultivarbutton.text())
-            elif crop == "potato":
-                record_tuple = (self.cultivarnameedit.text(), float(self.dailyAirTempEffectEdit.text()), \
-                               float(self.dailyAirTempAmpEffectEdit.text()), float(self.photoEffectEdit.text()), \
-                               float(self.highNiEffectEdit.text()), float(self.lowNiEffectEdit.text()), \
-                               float(self.determEdit.text()), float(self.maxCanLeafExpRateEdit.text()), \
-                               float(self.maxTuberGrowthRateEdit.text()), float(self.specificLeafWeightEdit.text()), rrrm, \
-                               rrry, rvrl, alpm, alpy, rtwl, rtminwt, epsi, iupw, courmax, diffx, diffz, velz, lsink, rroot, \
-                               constl_m, constk_m, cmin0_m, consti_y, constk_y, cmin0_y)
-                c1 = insertUpdateCultivarPotato(record_tuple,self.cultivarbutton.text())
-            elif crop == "soybean":
-                record_tuple = (cultivar, float(self.matGrpEdit.text()), float(self.seedLbEdit.text()), \
-                               float(self.fillEdit.text()), float(self.v1Edit.text()), float(self.v2Edit.text()), \
-                               float(self.v3Edit.text()), float(self.r1Edit.text()), float(self.r2Edit.text()), \
-                               float(self.r3Edit.text()), float(self.r4Edit.text()), float(self.r5Edit.text()), \
-                               float(self.r6Edit.text()), float(self.r7Edit.text()), float(self.r8Edit.text()), \
-                               float(self.r9Edit.text()), float(self.r10Edit.text()), float(self.r11Edit.text()), \
-                               float(self.r12Edit.text()), float(self.g1Edit.text()), float(self.g2Edit.text()), \
-                               float(self.g3Edit.text()), float(self.g4Edit.text()), float(self.g5Edit.text()), \
-                               float(self.g6Edit.text()), float(self.g7Edit.text()), float(self.g8Edit.text()), \
-                               float(self.g9Edit.text()), rrrm, rrry, rvrl, alpm, alpy, rtwl, rtminwt, epsi, iupw, \
-                               courmax, diffx, diffz, velz, lsink, rroot, constl_m, constk_m, cmin0_m, consti_y, \
-                               constk_y, cmin0_y)
-                c1 = insertUpdateCultivarSoybean(record_tuple,self.cultivarbutton.text())
-            elif crop == "cotton":
-                record_tuple = (cultivar, float(self.calbrt11Edit.text()), float(self.calbrt12Edit.text()), \
-                                float(self.calbrt13Edit.text()), float(self.calbrt15Edit.text()), \
-                                float(self.calbrt16Edit.text()), float(self.calbrt17Edit.text()), \
-                                float(self.calbrt18Edit.text()), float(self.calbrt19Edit.text()), \
-                                float(self.calbrt22Edit.text()), float(self.calbrt26Edit.text()), \
-                                float(self.calbrt27Edit.text()), float(self.calbrt28Edit.text()), \
-                                float(self.calbrt29Edit.text()), float(self.calbrt30Edit.text()), \
-                                float(self.calbrt31Edit.text()), float(self.calbrt32Edit.text()), \
-                                float(self.calbrt33Edit.text()), float(self.calbrt34Edit.text()), \
-                                float(self.calbrt35Edit.text()), float(self.calbrt36Edit.text()), \
-                                float(self.calbrt37Edit.text()), float(self.calbrt38Edit.text()), \
-                                float(self.calbrt39Edit.text()), float(self.calbrt40Edit.text()), \
-                                float(self.calbrt41Edit.text()), float(self.calbrt42Edit.text()), \
-                                float(self.calbrt43Edit.text()), float(self.calbrt44Edit.text()), \
-                                float(self.calbrt45Edit.text()), float(self.calbrt47Edit.text()), \
-                                float(self.calbrt48Edit.text()), float(self.calbrt49Edit.text()), \
-                                float(self.calbrt50Edit.text()), float(self.calbrt52Edit.text()), \
-                                float(self.calbrt57Edit.text()))
-                c1 = insertUpdateCultivarCotton(record_tuple,self.cultivarbutton.text())
-            if not c1:
-                return False
-        elif self.cultivarbutton.text() == "SaveAs":
-            ## check if new name is empty
-            if len(self.cultivarnameedit.text()) <= 0:
-                self.cultivarbutton.blockSignals(False)
-                return messageUser("Cultivar name is empty, please provide a name.")
-            else:
-                matchedindex = self.cultivarcombo.findText(self.cropcombo.currentText()+":"+self.cultivarnameedit.text())                
-                if matchedindex > 0:
-                    self.cultivarbutton.blockSignals(False)
-                    return messageUser("Cultivar name exist, please use a different name.")
-                else:
-                    self.cultivarbutton.blockSignals(True)
-                    #save the table        
-                    cultivartuple = read_cultivar_DB_detailed(self.cultivarnameedit.text(),self.cropcombo.currentText())  
-                    if cultivartuple:
-                        return False
-                    if crop == "maize":
-                        record_tuple = (self.cultivarnameedit.text(), int(self.leavesedit.text()), daylength_v, \
-                                       float(self.ltaredit.text()), float(self.ltiredit.text()), float(self.tasseledit.text()), \
-                                       float(self.staygreenedit.text()), lm_min, rrrm, rrry, rvrl, alpm, alpy, rtwl, rtminwt, \
-                                       epsi, iupw, courmax, diffx, diffz, velz, lsink, rroot, constl_m, constk_m, cmin0_m, \
-                                       consti_y, constk_y, cmin0_y)
-                        c1 = insertUpdateCultivarMaize(record_tuple,self.cultivarbutton.text())
-                    elif crop == "potato":
-                        record_tuple = (self.cultivarnameedit.text(), float(self.dailyAirTempEffectEdit.text()), \
-                                       float(self.dailyAirTempAmpEffectEdit.text()), float(self.photoEffectEdit.text()), \
-                                       float(self.highNiEffectEdit.text()), float(self.lowNiEffectEdit.text()), \
-                                       float(self.determEdit.text()), float(self.maxCanLeafExpRateEdit.text()), \
-                                       float(self.maxTuberGrowthRateEdit.text()), float(self.specificLeafWeightEdit.text()), \
-                                       rrrm, rrry, rvrl, alpm, alpy, rtwl, rtminwt, epsi, iupw, courmax, diffx, diffz, velz, \
-                                       lsink, rroot, constl_m, constk_m, cmin0_m, consti_y, constk_y, cmin0_y)
-                        c1 = insertUpdateCultivarPotato(record_tuple,self.cultivarbutton.text())
-                    elif crop == "soybean":
-                        record_tuple = (self.cultivarnameedit.text(), float(self.matGrpEdit.text()), float(self.seedLbEdit.text()), \
-                                       float(self.fillEdit.text()), float(self.v1Edit.text()), float(self.v2Edit.text()), \
-                                       float(self.v3Edit.text()), float(self.r1Edit.text()), float(self.r2Edit.text()), \
-                                       float(self.r3Edit.text()), float(self.r4Edit.text()), float(self.r5Edit.text()), \
-                                       float(self.r6Edit.text()), float(self.r7Edit.text()), float(self.r8Edit.text()), \
-                                       float(self.r9Edit.text()), float(self.r10Edit.text()), float(self.r11Edit.text()), \
-                                       float(self.r12Edit.text()), float(self.g1Edit.text()), float(self.g2Edit.text()), \
-                                       float(self.g3Edit.text()), float(self.g4Edit.text()), float(self.g5Edit.text()), \
-                                       float(self.g6Edit.text()), float(self.g7Edit.text()), float(self.g8Edit.text()), \
-                                       float(self.g9Edit.text()), rrrm, rrry, rvrl, alpm, alpy, rtwl, rtminwt, epsi, iupw, \
-                                       courmax, diffx, diffz, velz, lsink, rroot, constl_m, constk_m, cmin0_m, consti_y, \
-                                       constk_y, cmin0_y)
-                        c1 = insertUpdateCultivarSoybean(record_tuple,self.cultivarbutton.text())
-                    elif crop == "cotton":
-                        record_tuple = (self.cultivarnameedit.text(), float(self.calbrt11Edit.text()), float(self.calbrt12Edit.text()), \
-                                        float(self.calbrt13Edit.text()), float(self.calbrt15Edit.text()), \
-                                        float(self.calbrt16Edit.text()), float(self.calbrt17Edit.text()), \
-                                        float(self.calbrt18Edit.text()), float(self.calbrt19Edit.text()), \
-                                        float(self.calbrt22Edit.text()), float(self.calbrt26Edit.text()), \
-                                        float(self.calbrt27Edit.text()), float(self.calbrt28Edit.text()), \
-                                        float(self.calbrt29Edit.text()), float(self.calbrt30Edit.text()), \
-                                        float(self.calbrt31Edit.text()), float(self.calbrt32Edit.text()), \
-                                        float(self.calbrt33Edit.text()), float(self.calbrt34Edit.text()), \
-                                        float(self.calbrt35Edit.text()), float(self.calbrt36Edit.text()), \
-                                        float(self.calbrt37Edit.text()), float(self.calbrt38Edit.text()), \
-                                        float(self.calbrt39Edit.text()), float(self.calbrt40Edit.text()), \
-                                        float(self.calbrt41Edit.text()), float(self.calbrt42Edit.text()), \
-                                        float(self.calbrt43Edit.text()), float(self.calbrt44Edit.text()), \
-                                        float(self.calbrt45Edit.text()), float(self.calbrt47Edit.text()), \
-                                        float(self.calbrt48Edit.text()), float(self.calbrt49Edit.text()), \
-                                        float(self.calbrt50Edit.text()), float(self.calbrt52Edit.text()), \
-                                        float(self.calbrt57Edit.text()))
-                        c1 = insertUpdateCultivarCotton(record_tuple,self.cultivarbutton.text())
-                    self.cultivarbutton.blockSignals(False)
-                    if not c1:
-                        return False
-
-        self.cultivarcombo.clear()
-        cultivarlists = read_cultivar_DB(self.cropcombo.currentText()) 
-        self.cultivarcombo.addItem("Select Cultivar")    
-        self.cultivarcombo.addItem("Add New Cultivar ("+crop+")")
-        for key in cultivarlists:            
-            key_aux = crop + ":" + str(key)
-            self.cultivarcombo.addItem(key_aux)   
-        self.cultivarbutton.setText("")
-        self.cultivarnameedit.setText("")
-        self.cultivarcombo.setVisible(False)
-        self.cultivarlistlabel.setVisible(False)
-        self.cultivarnamelabel.setVisible(False)
-        self.cultivarnameedit.setVisible(False)
-        self.cultivarcombo.blockSignals(False)
-
-        if crop == "maize":
-            self.cornFieldSwitch(False)
-        elif crop == "potato":
-            self.potatoFieldSwitch(False)
-        elif crop == "soybean":
-            self.soybeanFieldSwitch(False)
-        elif crop == "cotton":
-            self.cottonFieldSwitch(False)
-
-        self.cultivarbutton.setVisible(False)       
-        self.cultivardeletebutton.setVisible(False)        
-        self.cropcombo.setCurrentIndex(0)
-        return True
-
-
-    @pyqtSlot()    
-    def on_cultivardeletebuttonclick(self, crop, cultivar):
-        '''
-         Delete record on cultivar table
-        '''
-        c1 = delete_cultivar(crop,cultivar)
-
-        self.cultivarcombo.blockSignals(True)
-        self.cultivarcombo.clear()
-        cultivarlists = read_cultivar_DB(self.cropcombo.currentText()) 
-        self.cultivarcombo.addItem("Select Cultivar")    
-        self.cultivarcombo.addItem("Add New Cultivar ("+crop+")") 
-        for key in cultivarlists:            
-            key_aux = crop + ":" + str(key)
-            self.cultivarcombo.addItem(key_aux)   
-        self.cultivarcombo.setVisible(False)
-        self.cultivarlistlabel.setVisible(False)
-        self.cultivarcombo.blockSignals(False)
-
-        if crop == "maize":
-            self.cornFieldSwitch(False)
-        elif crop == "potato":
-            self.potatoFieldSwitch(False)
-        elif crop == "soybean":
-            self.soybeanFieldSwitch(False)
-        elif crop == "cotton":
-            self.cottonFieldSwitch(False)
-
-        self.cultivarnamelabel.setVisible(False)
-        self.cultivarnameedit.setVisible(False)
-        self.cultivarbutton.setText("")
-        self.cultivarbutton.setVisible(False)       
-        self.cultivardeletebutton.setVisible(False)        
-        self.cropcombo.setCurrentIndex(0)
-
-
-    def importfaq(self, thetabname=None):        
-        cropname = self.cropcombo.currentText()
-        faqlist = read_FaqDB(thetabname,cropname)         
-        self.faqtree.clear()
-
-        for item in faqlist:
-            roottreeitem = QTreeWidgetItem(self.faqtree)
-            roottreeitem.setText(0,item[2])
-            childtreeitem = QTreeWidgetItem()
-            childtreeitem.setText(0,item[3])
-            roottreeitem.addChild(childtreeitem)
-
-
-    def controlfaq(self):                
-        if self.helpcheckbox.isChecked():
-            self.importfaq("cultivar")              
-            self.faqtree.setVisible(True)
+            pass
         else:
-            self.faqtree.setVisible(False)
+            self.cornFieldSwitch(False)
+            self.potatoFieldSwitch(False)
+            self.soybeanFieldSwitch(False)
+            self.cottonFieldSwitch(False)
+            self.cultivarbutton.setVisible(True)
+            self.cultivarbutton.setText("Update")
+            self.cultivardeletebutton.setVisible(True)
+            self.cultivarnamelabel.setVisible(False)
+            self.cultivarnameedit.setVisible(False)
+          
+            if self.cropname == 'maize':
+                self.cornFieldSwitch(True)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(False)
+                print(self.cultivarcombo.currentText())           
+                if self.cultivarcombo.currentText() != "Select from list" :
+                    (crop,cultivar) =(self.cultivarcombo.currentText()).split(":")
+                    cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
+                    print(cultivartuple)
+                    if cultivartuple[0] is not None:
+                        self.leavesedit.setText(str(cultivartuple[0]))
+                    if cultivartuple[1] > 0:
+                        self.daylength_b1.setChecked(True)
+                    else:
+                        self.daylength_b2.setChecked(True)
+                    if cultivartuple[2] is not None:
+                        self.ltaredit.setText(str(cultivartuple[2]))
+                    if cultivartuple[3] is not None:
+                        self.ltiredit.setText(str(cultivartuple[3]))
+                    if cultivartuple[4] is not None:
+                        self.tasseledit.setText(str(cultivartuple[4]))
+                    if cultivartuple[5] is not None:
+                        self.staygreenedit.setText(str(cultivartuple[5]))
+                else:
+                    self.cultivardeletebutton.disconnect()
+
+            elif self.cropname == 'potato':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(True)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(False)           
+                if self.cultivarcombo.currentText() != "Select from list" :
+                    (crop,cultivar) =(self.cultivarcombo.currentText()).split(":")
+                    cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
+                    self.dailyAirTempEffectEdit.setText(str(cultivartuple[0]))
+                    self.dailyAirTempAmpEffectEdit.setText(str(cultivartuple[1]))
+                    self.photoEffectEdit.setText(str(cultivartuple[2]))
+                    self.highNiEffectEdit.setText(str(cultivartuple[3]))
+                    self.lowNiEffectEdit.setText(str(cultivartuple[4]))
+                    self.determEdit.setText(str(cultivartuple[5]))
+                    self.maxCanLeafExpRateEdit.setText(str(cultivartuple[6]))
+                    self.maxTuberGrowthRateEdit.setText(str(cultivartuple[7]))
+                    self.specificLeafWeightEdit.setText(str(cultivartuple[8]))
+                else:
+                    self.cultivardeletebutton.disconnect()
+
+            elif self.cropname == 'soybean':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(True)
+                self.cottonFieldSwitch(False)
+                print(self.cultivarcombo.currentText())
+                if self.cultivarcombo.currentText() != "Select from list" :
+                    (crop,cultivar) =(self.cultivarcombo.currentText()).split(":")
+                    cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
+                    self.matGrpEdit.setText(str(cultivartuple[0]))
+                    self.seedLbEdit.setText(str(cultivartuple[1]))
+                    self.fillEdit.setText(str(cultivartuple[2]))
+                    self.v1Edit.setText(str(cultivartuple[3]))
+                    self.v2Edit.setText(str(cultivartuple[4]))
+                    self.v3Edit.setText(str(cultivartuple[5]))
+                    self.r1Edit.setText(str(cultivartuple[6]))
+                    self.r2Edit.setText(str(cultivartuple[7]))
+                    self.r3Edit.setText(str(cultivartuple[8]))
+                    self.r4Edit.setText(str(cultivartuple[9]))
+                    self.r5Edit.setText(str(cultivartuple[10]))
+                    self.r6Edit.setText(str(cultivartuple[11]))
+                    self.r7Edit.setText(str(cultivartuple[12]))
+                    self.r8Edit.setText(str(cultivartuple[13]))
+                    self.r9Edit.setText(str(cultivartuple[14]))
+                    self.r10Edit.setText(str(cultivartuple[15]))
+                    self.r11Edit.setText(str(cultivartuple[16]))
+                    self.r12Edit.setText(str(cultivartuple[17]))
+                    self.g1Edit.setText(str(cultivartuple[18]))
+                    self.g2Edit.setText(str(cultivartuple[19]))
+                    self.g3Edit.setText(str(cultivartuple[20]))
+                    self.g4Edit.setText(str(cultivartuple[21]))
+                    self.g5Edit.setText(str(cultivartuple[22]))
+                    self.g6Edit.setText(str(cultivartuple[23]))
+                    self.g7Edit.setText(str(cultivartuple[24]))
+                    self.g8Edit.setText(str(cultivartuple[25]))
+                    self.g9Edit.setText(str(cultivartuple[26]))
+                else:
+                    self.cultivardeletebutton.disconnect()
+                 
+            elif self.cropname == 'cotton':
+                self.cornFieldSwitch(False)
+                self.potatoFieldSwitch(False)
+                self.soybeanFieldSwitch(False)
+                self.cottonFieldSwitch(True)
+                if self.cultivarcombo.currentText() != "Select from list" :
+                    (crop,cultivar) =(self.cultivarcombo.currentText()).split(":")
+                    cultivartuple = read_cultivar_DB_detailed(cultivar,crop)  
+                    self.calbrt11Edit.setText(str(cultivartuple[0]))
+                    self.calbrt12Edit.setText(str(cultivartuple[1]))
+                    self.calbrt13Edit.setText(str(cultivartuple[2]))
+                    self.calbrt15Edit.setText(str(cultivartuple[3]))
+                    self.calbrt16Edit.setText(str(cultivartuple[4]))
+                    self.calbrt17Edit.setText(str(cultivartuple[5]))
+                    self.calbrt18Edit.setText(str(cultivartuple[6]))
+                    self.calbrt19Edit.setText(str(cultivartuple[7]))
+                    self.calbrt22Edit.setText(str(cultivartuple[8]))
+                    self.calbrt26Edit.setText(str(cultivartuple[9]))
+                    self.calbrt27Edit.setText(str(cultivartuple[10]))
+                    self.calbrt28Edit.setText(str(cultivartuple[11]))
+                    self.calbrt29Edit.setText(str(cultivartuple[12]))
+                    self.calbrt30Edit.setText(str(cultivartuple[13]))
+                    self.calbrt31Edit.setText(str(cultivartuple[14]))
+                    self.calbrt32Edit.setText(str(cultivartuple[15]))
+                    self.calbrt33Edit.setText(str(cultivartuple[16]))
+                    self.calbrt34Edit.setText(str(cultivartuple[17]))
+                    self.calbrt35Edit.setText(str(cultivartuple[18]))
+                    self.calbrt36Edit.setText(str(cultivartuple[19]))
+                    self.calbrt37Edit.setText(str(cultivartuple[20]))
+                    self.calbrt38Edit.setText(str(cultivartuple[21]))
+                    self.calbrt39Edit.setText(str(cultivartuple[22]))
+                    self.calbrt40Edit.setText(str(cultivartuple[23]))
+                    self.calbrt41Edit.setText(str(cultivartuple[24]))
+                    self.calbrt42Edit.setText(str(cultivartuple[25]))
+                    self.calbrt43Edit.setText(str(cultivartuple[26]))
+                    self.calbrt44Edit.setText(str(cultivartuple[27]))
+                    self.calbrt45Edit.setText(str(cultivartuple[28]))
+                    self.calbrt47Edit.setText(str(cultivartuple[29]))
+                    self.calbrt48Edit.setText(str(cultivartuple[30]))
+                    self.calbrt49Edit.setText(str(cultivartuple[31]))
+                    self.calbrt50Edit.setText(str(cultivartuple[32]))
+                    self.calbrt52Edit.setText(str(cultivartuple[33]))
+                    self.calbrt57Edit.setText(str(cultivartuple[34]))
+                else:
+                    self.cultivardeletebutton.disconnect()
+            self.cultivardeletebutton.clicked.connect(lambda: self.on_cultivardeletebuttonclick())
+            self.cultivarbutton.clicked.connect(lambda:self.on_cultivarbuttonsclick(self.cropname))
+                 
+
+    def on_cultivarbuttonsclick(self, crop):
+        '''
+        aim: to save the soil data from the soil tab
+        '''
+      
+        # find if it is update or save as
+        cultivar = str(self.cultivarnameedit.text())
+        self.cultivarnameedit.clear()
+        
+        if self.cultivarbutton.text() == 'SaveAs':
+    
+            if cultivar == "":          
+                return messageUser("Please, provide cultivar name")
+            else:
+                if crop == 'maize':
+                    record_tuple = (cultivar, self.leavesedit.text(), self.ltaredit.text(),self.ltiredit.text(), self.tasseledit.text(), self.staygreenedit.text())
+            
+                elif crop == 'soybean':
+                    record_tuple = (cultivar, self.seedLbEdit.text(), self.fillEdit.text(), self.v1Edit.text(), self.v2Edit.text(), self.v3Edit.text(), self.r1Edit.text(), \
+                        self.r2Edit.text(), self.r3Edit.text(), self.r4Edit.text(), self.r5Edit.text(), self.r6Edit.text(), self.r7Edit.text(), self.r8Edit.text(), \
+                        self.r9Edit.text(), self.r10Edit.text(), self.r11Edit.text(), self.r12Edit.text(), self.g1Edit.text(), self.g2Edit.text(), self.g3Edit.text(), \
+                        self.g4Edit.text(), self.g5Edit.text(), self.g6Edit.text(), self.g7Edit.text(), self.g8Edit.text(), self.g9Edit.text() 
+)
+                elif crop == 'potato':
+                    record_tuple = (cultivar, self.dailyAirTempEffectEdit.text(), self.dailyAirTempAmpEffectEdit.text(), self.photoEffectEdit.text(), self.highNiEffectEdit.text(), \
+                        self.lowNiEffectEdit.text(), self.determEdit.text(), self.maxCanLeafExpRateEdit.text(), self.maxTuberGrowthRateEdit.text(), self.specificLeafWeightEdit.text())
+            
+                elif crop == 'cotton':
+                    record_tuple = (cultivar, self.calbrt11Edit.text(), self.calbrt12Edit.text(), self.calbrt13Edit.text(), self.calbrt15Edit.text(), self.calbrt16Edit.text(), \
+                        self.calbrt17Edit.text(), self.calbrt18Edit.text(), self.calbrt19Edit.text(), self.calbrt22Edit.text(), self.calbrt26Edit.text(), self.calbrt27Edit.text(), \
+                        self.calbrt28Edit.text(), self.calbrt29Edit.text(), self.calbrt30Edit.text(), self.calbrt31Edit.text(), self.calbrt32Edit.text(), self.calbrt33Edit.text(), self.calbrt34Edit.text(), self.calbrt35Edit.text(), self.calbrt36Edit.text(), self.calbrt37Edit.text(), self.calbrt38Edit.text(), self.calbrt39Edit.text(), self.calbrt40Edit.text(), self.calbrt41Edit.text(), self.calbrt42Edit.text(), self.calbrt43Edit.text(),  self.calbrt44Edit.text(), self.calbrt45Edit.text(), self.calbrt47Edit.text(), self.calbrt48Edit.text(), self.calbrt49Edit.text(), self.calbrt50Edit.text(), self.calbrt52Edit.text(), self.calbrt57Edit.text())
+            
+                insert_cultivarDB(crop, record_tuple)
+                self.refresh()   
+
+        elif self.cultivarbutton.text() == 'Update':
+            if self.cultivarcombo.currentText() != "Select from list":
+                crop_cultivar = str(self.cultivarcombo.currentText())  
+                print(crop_cultivar)
+                print("The data have been updated")
+                if crop == 'maize':
+                        record_tuple = (crop_cultivar, self.leavesedit.text(), self.ltaredit.text(),self.ltiredit.text(), self.tasseledit.text(), self.staygreenedit.text())
+            
+                elif crop == 'soybean':
+                    record_tuple = (crop_cultivar, self.seedLbEdit.text(), self.fillEdit.text(), self.v1Edit.text(), self.v2Edit.text(), self.v3Edit.text(), self.r1Edit.text(), \
+                        self.r2Edit.text(), self.r3Edit.text(), self.r4Edit.text(), self.r5Edit.text(), self.r6Edit.text(), self.r7Edit.text(), self.r8Edit.text(), self.r9Edit.text(), \
+                        self.r10Edit.text(), self.r11Edit.text(), self.r12Edit.text(), self.g1Edit.text(), self.g2Edit.text(), self.g3Edit.text(), self.g4Edit.text(), self.g5Edit.text(),\
+                        self.g6Edit.text(), self.g7Edit.text(), self.g8Edit.text(), self.g9Edit.text() 
+    )
+                elif crop == 'potato':
+                    record_tuple = (crop_cultivar, self.dailyAirTempEffectEdit.text(), self.dailyAirTempAmpEffectEdit.text(), self.photoEffectEdit.text(), self.highNiEffectEdit.text(), 
+                                    self.lowNiEffectEdit.text(), self.determEdit.text(), self.maxCanLeafExpRateEdit.text(), self.maxTuberGrowthRateEdit.text(), self.specificLeafWeightEdit.text())
+            
+                elif crop == 'cotton':
+                    record_tuple = (crop_cultivar, self.calbrt11Edit.text(), self.calbrt12Edit.text(), self.calbrt13Edit.text(), self.calbrt15Edit.text(), self.calbrt16Edit.text(), \
+                        self.calbrt17Edit.text(), self.calbrt18Edit.text(), self.calbrt19Edit.text(), self.calbrt22Edit.text(), self.calbrt26Edit.text(), self.calbrt27Edit.text(), \
+                        self.calbrt28Edit.text(), self.calbrt29Edit.text(), self.calbrt30Edit.text(), self.calbrt31Edit.text(), self.calbrt32Edit.text(), self.calbrt33Edit.text(), \
+                        self.calbrt34Edit.text(), self.calbrt35Edit.text(), self.calbrt36Edit.text(), self.calbrt37Edit.text(), self.calbrt38Edit.text(), self.calbrt39Edit.text(), \
+                        self.calbrt40Edit.text(), self.calbrt41Edit.text(), self.calbrt42Edit.text(), self.calbrt43Edit.text(),  self.calbrt44Edit.text(), self.calbrt45Edit.text(), \
+                        self.calbrt47Edit.text(), self.calbrt48Edit.text(), self.calbrt49Edit.text(), self.calbrt50Edit.text(), self.calbrt52Edit.text(), self.calbrt57Edit.text())
+            
+                update_cultivarDB(crop, record_tuple)
+                self.refresh()   
         
 
-    def resource_path(self,relative_path):
-        """
-        Get absolute path to resource, works for dev and for PyInstaller 
-        """
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_path, relative_path)  
+  
+
+  #  @pyqtSlot()
+    def on_cultivardeletebuttonclick(self):       
+        '''
+        Delete existing culvitar data
+        '''
+        (crop,cultivar) =(self.cultivarcombo.currentText()).split(":")        
+        delete_cultivar(crop, cultivar, True)
+        self.refresh()     
+            
+    def refresh(self):
+        self.cultivarcombo.clear()
+        cultivarlists = read_cultivar_DB(self.cropname)        
+        self.cultivarcombo.addItem("Select from list")  
+        self.cultivarcombo.addItem("Add New Cultivar ("+self.cropname+")") 
+        for key in cultivarlists:
+            self.cultivarcombo.addItem(self.cropname + ":" + str(key)) 
+              
+        self.cultivarcombo.setVisible(True)   
+        self.cultivarlistlabel.setVisible(True)  
+        self.cornFieldSwitch(False)
+        self.potatoFieldSwitch(False)
+        self.soybeanFieldSwitch(False)
+        self.cottonFieldSwitch(False)
+        return True
+
+  
+    
+
+
+
+
+     

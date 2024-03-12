@@ -483,8 +483,12 @@ please provide a column named weather_id with the identifier you want.  For site
         weathertuple = extract_sitedetails(site)     
         lat = str(weathertuple[1])
         lon = str(weathertuple[2])  
-        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&start=2015-1-1&attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv&predicted=true"
+        currentyear = datetime.now().year
+       # print("Cuurent Date: ", currentyear)
+        year = str(currentyear+2)
+        url = "https://weather.covercrop-data.org/hourly?lat="+lat+"&lon="+lon+"&start=2015-1-1&end="+year+"-12-31&1attributes=air_temperature,relative_humidity,wind_speed,shortwave_radiation,precipitation&output=csv&options=predicted"
         try:
+          #  print(url)
             data = pd.read_csv(url,storage_options={'User-Agent':'Mozilla/5.0'})
         except:
             return messageUser("Website has reported an error.  Please, try again later.")

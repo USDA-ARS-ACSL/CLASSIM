@@ -70,6 +70,7 @@ class SiteWidget(QWidget):
         self.sitecombo.currentIndexChanged.connect(self.showsitedetails)
 
         # Setting up MapWidget
+
         self.MapWidget = MapWidget()
 
         # Setting the map with pyqtlet

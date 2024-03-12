@@ -559,103 +559,78 @@ class RotOutput_Widget(QWidget):
         # Loop through each run model to give detail information about each run
         t51 = []
         t51_max = []
-        t51_max_index = []
+
         data_df_mid = pd.DataFrame([])
         for runNum in range(len(self.simIDArr)):
+            print(runNum)
             t5 = pd.DataFrame([])
             self.g05Tablename = "g05_" + self.cropArr[runNum]
-            exid = read_experimentDB_id(self.cropArr[runNum],self.expArr[runNum])
-            tid = read_treatmentDB_id(exid,self.treatArr[runNum])
-            plantDensity = getPlantDensity(tid)
             t5 = extract_cropOutputData(self.g05Tablename,self.simIDArr[runNum])
+
             tableID = self.g05Tablename + "_id"
             t5.drop(columns={tableID}, inplace=True)
             # Converting from ugco2/plant to kg/ha
             t5['CO2Flux'] = (t5['CO2Flux']/10)
             t5['O2Flux'] = (t5['O2Flux']/10)
-          #  print(t5['SeasPSoEv'])
 
-            if runNum != 0:
-                 n = runNum - 1
-                 t51 = extract_cropOutputData("g05_" + self.cropArr[n], self.simIDArr[n])
-                 t51 = np.asarray(t51)
+            t5['TotIrrig']  = 0
 
-                 t51_max = np.max(t51, axis=0, keepdims=True)
-                 t51_max_df = pd.DataFrame(t51_max)
+            t5['Date_Time'] = pd.to_datetime(t5['Date_Time'])
 
-                 t51_max_index = np.argmax(t51, axis=0)
-                 t51_max_index_df = pd.DataFrame(t51_max_index)
+            # Check if the data is hourly or daily
+            time_diff = t5['Date_Time'].diff().mean()
 
-                 t5_cum = t5.values[:, 14:20]
-
-            if runNum == 0:
-                 data_df = data_df.append(t5, ignore_index=False)
+            if time_diff == pd.Timedelta(hours=1):
+                print('Data is hourly')
+                daily_data = t5.resample('D', on='Date_Time').mean().reset_index()    
+                print(type(data_df))
+            elif time_diff == pd.Timedelta(days=1):
+                print('Data is daily')
+                daily_data = t5.resample('D', on='Date_Time').mean().reset_index()    
+                print(type(data_df))
             else:
-                t5_cum_joined = t5_cum + t51_max_df.values[:, 15:21]
-                t5.values[:, 14:20] = t5_cum_joined
-                data_df_mid = data_df_mid.append(t5, ignore_index=False)
-                data_df = data_df.append(data_df_mid, ignore_index=False)
+                print('Data is neither hourly nor daily')
+       
+            daily_data.columns.values[0] = 'Date'
+            print(daily_data)
 
-
-            #if runNum != 0:
-            #    n = runNum -1
-            #    t51 = extract_cropOutputData("g05_" + self.cropArr[n],self.simIDArr[n])
-            #    t51 = np.asarray(t51)
-            #    t51_max = t51.max(axis=0, keepdims=True)
-            #    t51_max_df = pd.DataFrame(t51_max)    
-            #  #  print("t51_max_df.iloc[:, 15]:", t51_max_df.iloc[:, 15:21])    
-            #    t51_max_index = t51.argmax(axis=0)
-            #    t51_max_index_df = pd.DataFrame(t51_max_index)
-         
-            #    t5_cum = t5.iloc[:, 14:20]
-                       
-            #if runNum == 0:
-	           # data_df = data_df.append(t5, ignore_index=False)             
-            #else:
-            #    for i in range(15, 21):
-            #        t5_cum_joined = t5_cum.iloc[:, i-15].apply(lambda x:x + t51_max_df.iloc[:, i] )        
-            #        t5.iloc[:,i-1] = t5_cum_joined
-            #    data_df_mid = data_df_mid.append(t5,ignore_index=False)
-                                
-      
-            #    data_df= data_df.append(data_df_mid, ignore_index=False)
-
-        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        for runNum in range(len(self.simIDArr)):
             o_t_exid = getTreatmentID(self.treatArr[runNum],self.expArr[runNum],self.cropArr[runNum]) 
             t5_Irrig = getIrrigationData(self.simIDArr[runNum],o_t_exid)
-            Irrig_df = pd.DataFrame(t5_Irrig, columns=['Date','AmtIrrAppl'])
-       
-            new_Irrig_df = Irrig_df
-            new_Irrig_df['Date'] = pd.to_datetime(Irrig_df['Date'])
+            Irrig_df = pd.DataFrame(t5_Irrig, columns=['Date','AmtIrrAppl'])         
 
-             # convert the date column to object format
-            new_Irrig_df['Date'] = new_Irrig_df['Date'].dt.strftime('%Y-%m-%d')
-         
-            rot_Irrig_df =  rot_Irrig_df.append(new_Irrig_df, ignore_index=True)
-            
+            new_dates = []
+            for date in Irrig_df['Date']:
+                date_obj = datetime.strptime(date, "%m/%d/%Y")
+                new_date_str = date_obj.strftime("%Y-%m-%d")
+                new_dates.append(new_date_str)
+            Irrig_df['Date'] = new_dates
+            print(Irrig_df)
 
-        new_df = data_df['Date_Time'].str.split(' ', n=1, expand=True)
-        data_df['Date'] = new_df[0]
-        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
+            daily_data.loc[daily_data['Date'].isin(Irrig_df['Date']), 'TotIrrig'] = Irrig_df['AmtIrrAppl'].values      
 
+            if runNum == 0:
+                data_df = data_df.append(daily_data, ignore_index=False) 
+            else:               
+                t5_cum = daily_data.loc[:, ['SeasPSoEv','SeasASoEv','SeasPTran','SeasATran','SeasRain','SeasInfil']]
+ 
+                n = runNum -1
+                t51 = extract_cropOutputData("g05_" + self.cropArr[n],self.simIDArr[n])
+                t51 = np.asarray(t51)
+                t51_max = t51.max(axis=0, keepdims=True)
+                t51_max_df = pd.DataFrame(t51_max) 
+
+                for i in range(15, 21):
+                    t5_cum_joined = t5_cum.iloc[:, i-15].apply(lambda x:x + t51_max_df.iloc[:, i] )        
+                    daily_data.iloc[:,i-1] = t5_cum_joined
+                data_df_mid = data_df_mid.append(daily_data,ignore_index=False)                           
+                data_df= data_df.append(data_df_mid, ignore_index=False)
+
+        data_df['TotIrrig'] = data_df['TotIrrig'].cumsum()
+
+      
         for key in self.varSurfChaFuncDict:
-            if key == "TotIrrig":               
-                data_df =  data_df.groupby(['Date'], as_index=False).agg(sum)
-                merged_df = pd.merge(data_df['Date'],rot_Irrig_df, on='Date', how ='outer').fillna(0) 
-                data_df['Date'] = merged_df['Date']     
-                t51 = []
-                for e, element in merged_df['Date'].iteritems() :
-                    if np.all(merged_df['AmtIrrAppl'][e] == 0.0) : 
-                       t51.append(0) 
-                    else:                          
-                        t51.append(merged_df['AmtIrrAppl'][e])
-                data_df[key] = Cumulative(t51)
-            else :      
-                
-                data_df[key] = pd.to_numeric(data_df[key], errors='coerce')
-                data_df =  data_df.groupby(['Date'], as_index=False).agg(max)
+            data_df[key] = pd.to_numeric(data_df[key], errors='coerce')
+            
 
         data_df = data_df.fillna(0)
    
@@ -954,7 +929,7 @@ class RotOutput_Widget(QWidget):
                         self.simSummaryAgroData = "<i>Simulation Agronomic Data at <br>" + HarvestDate + " (harvest date)</i>"
                     self.simSummaryAgroData += "<br><i>Yield: </i>" + '{:3.2f}'.format(agroDataTuple[0]*plantDensity*10) + " kg/ha"
                     self.simSummaryAgroData += "<br><i>Total biomass: </i>" + '{:3.2f}'.format(agroDataTuple[1]*plantDensity*10) + " kg/ha"
-                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(agroDataTuple[2]*plantDensity*10) + " kg/ha"
+                    self.simSummaryAgroData += "<br><i>Nitrogen Uptake: </i>" +  '{:3.2f}'.format(agroDataTuple[2]/10) + " kg/ha"
                 elif self.cropArr[runNum] == "cotton":
                     yieldDataTuple = getCottonAgronomicData(self.simIDArr[runNum])
                     yieldDate = dt.strptime(yieldDataTuple[0], '%Y-%m-%d %H:%M:%S').strftime('%m/%d/%Y %H:%M')

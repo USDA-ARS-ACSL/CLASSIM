@@ -80,7 +80,9 @@ def WriteDripIrrigationFile(field_name,field_path):
 
 def WriteCropVariety(crop,cultivar,field_name,field_path):
     hybridname = cultivar
+    print(cultivar, crop)
     hybridparameters = read_cultivar_DB_detailed(hybridname,crop)
+    print(hybridparameters)
     CODEC="UTF-8"
 
     filename ="".join([os.path.join(field_path, hybridname), ".var"])

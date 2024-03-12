@@ -937,19 +937,23 @@ make sure to press the Execute Rotation button.")
                 fout<<"Stresses (Nitrogen, Water stress: 1-nonlimiting, 2-limiting): Simulation Type (1-meteorological, 2-physiological)"<<"\n"
                 fout<<"Nstressoff  Wstressoff  Water-stress-simulation-method"<<"\n"
                 fout<<"%d    %d    %d" %(waterStressFlag,nitroStressFlag,0)<<"\n"
-                rootWeightPerSlab = seedpieceMass * pop  * 0.25 * RowSP / 100 * 0.5 * 0.01
+                popSlab = RowSP/100 * 0.5 * 0.01 * pop  
+                rootWeightPerSlab = seedpieceMass * 0.25 * popSlab
+              #  rootWeightPerSlab = seedpieceMass * pop  * 0.25 * RowSP / 100 * 0.5 * 0.01
             elif cropname == "soybean":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
                 fout<<"Sowing          Emergence          End	TimeStep(m)"<<"\n"
                 fout<<"'%-10s'  '%-10s'  '%-10s'  %d" %(SowingDate,EmergenceDate, EndDate,60)<<"\n"
-                rootWeightPerSlab = 0.0275
+                popSlab = RowSP/100 * eomult * 0.01 * pop
+                rootWeightPerSlab = 0.0275 * popSlab
             elif cropname == "cotton":
                 fout<<"AutoIrrigate"<<"\n"
                 fout<<'%d' %(autoirrigation)<<"\n"
                 fout<<"Emergence          End	TimeStep(m)"<<"\n"
                 fout<<"'%-10s'  '%-10s'  %d" %(EmergenceDate, HarvestDate,60)<<"\n"
-                rootWeightPerSlab = 0.0275
+                popSlab = RowSP/100 * eomult * 0.01 * pop
+                rootWeightPerSlab = 0.2 * popSlab
             fout<<"output soils data (g03, g04, g05 and g06 files) 1 if true"<<"\n"
             fout<<"no soil files        output soil files"<<"\n"
             fout<<"    0                     1  "<<"\n"         
